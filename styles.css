@@ -1,4 +1,4 @@
-/* === Force Dowels — Master Theme (Aligned Header + Rounded Logo + Fixed Dropdown) ===
+/* === Force Dowels — Master Theme (Aligned Dropdown) =======================
    Replace your styles.css with this file.
 ============================================================================ */
 
@@ -66,27 +66,27 @@ a { color: inherit; text-decoration: none; }
 .header-inner {
   min-height: 84px;
   display: grid;
-  grid-template-columns: auto 1fr auto;   /* logo | nav | actions */
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   column-gap: 18px;
 }
 
-/* Logo: rounded image */
+/* Logo */
 .brand img {
   height: 42px;
   width: auto;
   border-radius: 8px;
 }
 
-/* Nav (centered, aligned) */
+/* Nav */
 .nav {
   display: flex;
   justify-content: center;
-  align-items: center;   /* ensures vertical centering */
+  align-items: center;
   gap: 22px;
 }
 
-/* Links + dropdown trigger identical */
+/* Links + Distributors trigger */
 .nav a,
 .nav .nav-dropbtn {
   background: transparent;
@@ -99,14 +99,15 @@ a { color: inherit; text-decoration: none; }
   cursor: pointer;
   line-height: 1;
   display: inline-flex;
-  align-items: center;      /* aligns text baseline with links */
-  padding: 0;               /* no extra padding */
+  align-items: center;
+  padding: 0;
   position: relative;
+  vertical-align: middle;
 }
 .nav a:hover,
 .nav .nav-dropbtn:hover { opacity: 1; }
 
-/* Underline animation */
+/* Underline */
 .nav a::after,
 .nav .nav-dropbtn::after {
   content: "";
@@ -119,8 +120,26 @@ a { color: inherit; text-decoration: none; }
 .nav a:hover::after,
 .nav .nav-dropbtn:hover::after { width: 100%; }
 
-/* Dropdown menu */
+/* Dropdown wrapper */
 .nav-dropdown { position: relative; }
+
+/* Dropdown label + caret */
+.nav-dropbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.nav-drop-label {
+  line-height: 1;
+  transform: translateY(1px); /* baseline alignment fix */
+}
+.nav-caret {
+  font-size: 12px;
+  opacity: .85;
+  transform: translateY(1px); /* let caret sit slightly lower */
+}
+
+/* Dropdown menu */
 .nav-dropmenu {
   display: none;
   position: absolute; top: 120%; left: 0;
