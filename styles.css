@@ -1,4 +1,4 @@
-/* === Force Dowels — Master Theme (Distributors Alignment Fixed) ==========
+/* === Force Dowels — Master Theme (Header/Dropdown aligned + Footer built) ==
    Replace your styles.css with this file.
 ============================================================================ */
 
@@ -10,9 +10,9 @@
   --muted: #667085;
 
   /* Brand */
-  --brand: #224d8f;
-  --brand-ink: #183a6b;
-  --accent: #eead1a;
+  --brand: #224d8f;       /* main blue */
+  --brand-ink: #183a6b;   /* darker blue for hover/focus */
+  --accent: #eead1a;      /* orange accent */
 
   /* UI */
   --radius: 16px;
@@ -66,19 +66,19 @@ a { color: inherit; text-decoration: none; }
 .header-inner {
   min-height: 84px;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto;  /* logo | nav | actions */
   align-items: center;
   column-gap: 18px;
 }
 
-/* Logo */
+/* Logo (rounded, not squished) */
 .brand img {
-  height: 42px;
+  height: 42px;        /* tweak 40–48px if desired */
   width: auto;
   border-radius: 8px;
 }
 
-/* Nav */
+/* Centered nav */
 .nav {
   display: flex;
   justify-content: center;
@@ -86,7 +86,7 @@ a { color: inherit; text-decoration: none; }
   gap: 22px;
 }
 
-/* Links + Distributors trigger */
+/* Links + Distributors trigger look identical */
 .nav a,
 .nav .nav-dropbtn {
   background: transparent;
@@ -102,11 +102,12 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   padding: 0;
   position: relative;
+  vertical-align: middle;
 }
 .nav a:hover,
 .nav .nav-dropbtn:hover { opacity: 1; }
 
-/* Underline */
+/* Underline hover */
 .nav a::after,
 .nav .nav-dropbtn::after {
   content: "";
@@ -119,26 +120,12 @@ a { color: inherit; text-decoration: none; }
 .nav a:hover::after,
 .nav .nav-dropbtn:hover::after { width: 100%; }
 
-/* Dropdown wrapper */
+/* Distributors dropdown */
 .nav-dropdown { position: relative; }
+.nav-dropbtn { display: inline-flex; align-items: center; gap: 6px; }
+.nav-drop-label { line-height: 1; transform: translateY(0); } /* baseline aligned */
+.nav-caret { font-size: 12px; opacity: .85; transform: translateY(1px); }
 
-/* Dropdown label + caret (arrow stays right) */
-.nav-dropbtn {
-  display: inline-flex;
-  align-items: baseline;   /* align text baselines with links */
-  gap: 6px;
-}
-.nav-drop-label {
-  line-height: 1;
-  transform: translateY(0);   /* keep text level */
-}
-.nav-caret {
-  font-size: 12px;
-  opacity: .85;
-  transform: translateY(1px); /* slight visual nudge */
-}
-
-/* Dropdown menu */
 .nav-dropmenu {
   display: none;
   position: absolute; top: 120%; left: 0;
@@ -156,10 +143,10 @@ a { color: inherit; text-decoration: none; }
 .nav-dropdown:focus-within .nav-dropmenu,
 .nav-dropdown:hover .nav-dropmenu { display: block; }
 
-/* Right actions */
+/* Right actions (Cart + Auth) */
 .header-actions { display: flex; align-items: center; gap: 10px; }
 
-/* ── Buttons ─────────────────────────────────────────────────────────────── */
+/* Buttons */
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
   gap: 8px;
@@ -187,19 +174,21 @@ a { color: inherit; text-decoration: none; }
 .btn--invert { color: #fff; border-color: rgba(255,255,255,.45); }
 .btn--invert:hover { border-color: #fff; }
 
+/* Orange buttons (Contact / Sign Up) aligned with links */
 .site-header .nav .btn {
   min-height: 0;
-  padding: 8px 12px;
+  padding: 8px 12px;      /* tighter so baseline matches links */
   border-radius: 10px;
 }
 .btn--accent { background: var(--accent); color: #1b2540; }
 .btn--accent:hover { filter: brightness(.96); transform: translateY(-1px); }
 
-/* Auth */
+/* Auth visibility */
 .auth-buttons { display: inline-flex; align-items: center; gap: 10px; }
 .authed .auth-buttons { display: none; }
 .authed #user-button { display: block; }
 
+/* Hide mobile toggle (not wired) */
 .nav-toggle { display: none; }
 
 /* ── Hero ───────────────────────────────────────────────────────────────── */
@@ -222,6 +211,7 @@ a { color: inherit; text-decoration: none; }
     radial-gradient(900px 520px at 90% 0%, rgba(238,173,26,.12), transparent);
 }
 
+/* Badges under hero */
 .hero--apd .badges {
   display: flex; gap: 10px; flex-wrap: wrap;
   margin-top: 16px; padding: 0; list-style: none;
@@ -232,7 +222,7 @@ a { color: inherit; text-decoration: none; }
   font-weight: 700; box-shadow: var(--shadow-xs);
 }
 
-/* ── Cards ──────────────────────────────────────────────────────────────── */
+/* ── Cards / grids ──────────────────────────────────────────────────────── */
 .grid-2 { display: grid; grid-template-columns: 1.15fr .85fr; gap: 28px; align-items: center; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 18px; }
 .card {
@@ -260,7 +250,7 @@ a { color: inherit; text-decoration: none; }
 }
 .form-note { font-size: .9rem; color: var(--muted); }
 
-/* ── Footer ─────────────────────────────────────────────────────────────── */
+/* ── Footer (layout + styling) ─────────────────────────────────────────── */
 .site-footer {
   border-top: 1px solid rgba(255,255,255,.12);
   background: var(--brand);
@@ -268,11 +258,35 @@ a { color: inherit; text-decoration: none; }
 }
 .site-footer a { color: #fff; opacity: .9; }
 .site-footer a:hover { opacity: 1; }
-.footer-inner {
-  display: flex; justify-content: space-between; align-items: center;
-  min-height: 84px;
+
+.footer-grid{
+  display:grid;
+  grid-template-columns: 1.1fr .7fr .9fr;  /* Brand • Pages • Contact */
+  gap:28px;
+  align-items:start;
+  padding:28px 0;
+  color:#fff;
 }
-.nav--footer { display: flex; gap: 14px; }
+.footer-brand img{
+  height:44px; width:auto; border-radius:8px; display:block;
+  margin-bottom:10px;
+}
+.footer-tagline{ margin:6px 0 0; opacity:.9; }
+
+.footer-col h4{
+  margin:0 0 10px; color:#fff; font-size:16px; letter-spacing:.2px;
+}
+.footer-list{ list-style:none; margin:0; padding:0; }
+.footer-list li{ margin:8px 0; }
+.footer-list a{ color:#fff; opacity:.9; }
+.footer-list a:hover{ opacity:1; text-decoration:underline; }
+
+/* Bottom bar */
+.footer-bottom{ border-top:1px solid rgba(255,255,255,.12); }
+.footer-bottom-inner{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:16px; min-height:64px; color:#fff;
+}
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
@@ -289,4 +303,8 @@ a { color: inherit; text-decoration: none; }
   .brand { grid-area: logo; }
   .nav { grid-area: nav; justify-content: start; flex-wrap: wrap; gap: 14px; }
   .header-actions { grid-area: actions; justify-content: end; }
+
+  .footer-grid{ grid-template-columns:1fr; gap:18px; }
+  .footer-bottom-inner{ flex-direction:column; align-items:flex-start; min-height:unset; padding:14px 0; }
+  .nav--footer{ gap:10px; flex-wrap:wrap; }
 }
