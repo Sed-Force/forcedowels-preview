@@ -16,10 +16,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <!-- Cache-bust to ensure new CSS loads -->
-  <link rel="stylesheet" href="/styles.css?v=6">
+  <link rel="stylesheet" href="/styles.css?v=4">
 
-  <!-- Clerk (optional until wired) -->
+  <!-- Clerk (Browser) -->
   <script
     async
     crossorigin="anonymous"
@@ -36,19 +35,19 @@
           window.Clerk.mountUserButton(userBtn);
           document.body.classList.add('authed');
         }
-      } catch (e) {}
+      } catch (e) { /* no-op */ }
     });
   </script>
   <script defer src="/script.js"></script>
 </head>
 <body>
-
+  
 <!-- Header / Nav -->
 <header class="site-header">
   <div class="container header-inner">
     <!-- Left: Logo -->
     <a class="brand" href="/" aria-label="Force Dowel Company">
-      <img src="/images/force-dowel-logo.jpg?v=6" alt="Force Dowel Company logo" />
+      <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" />
     </a>
 
     <!-- Center: Nav -->
@@ -94,84 +93,131 @@
   </div>
 </header>
 
-<main id="content">
-  <!-- HERO -->
-  <section class="section hero hero--apd">
-    <div class="container grid-2">
-      <div>
-        <h1>Force Dowels™</h1>
-        <p class="eyebrow eyebrow--accent">Patent Pending</p>
-        <p class="subline">Experience the next generation of cabinet assembly: faster, stronger, and with a flawless finish.</p>
 
-        <div class="actions">
-          <a class="btn btn--primary" href="/order.html">Order Now</a>
-          <a class="btn btn--ghost" href="/contact.html">Request a Quote</a>
+  <main id="content">
+    <!-- HERO -->
+    <section class="section hero hero--apd">
+      <div class="container grid-2">
+        <div>
+          <h1>Force Dowels™</h1>
+
+          <!-- Orange "Patent Pending" line -->
+          <p class="eyebrow eyebrow--accent">Patent Pending</p>
+
+          <!-- Same size as the line above, standard color -->
+          <p class="subline">Experience the next generation of cabinet assembly: faster, stronger, and with a flawless finish.</p>
+
+          <div class="actions">
+            <a class="btn btn--primary" href="/order.html">Order Now</a>
+            <a class="btn btn--ghost" href="/contact.html">Request a Quote</a>
+          </div>
+
+          <!-- Your requested “bubbles/buttons” (non-clickable) -->
+          <ul class="badges">
+            <li>No Exterior Fastener for a Cleaner Look</li>
+            <li>No Glue Necessary</li>
+            <li>Significantly Reduced Labor Cost</li>
+            <li>Patent Pending</li>
+            <li>Built for RTA Efficiency — Strong, Simple, Reliable</li>
+            <li>Integrates Seamlessly With Most 8mm Dowel Systems</li>
+          </ul>
         </div>
 
-        <ul class="badges">
-          <li>No Exterior Fastener for a Cleaner Look</li>
-          <li>No Glue Necessary</li>
-          <li>Significantly Reduced Labor Cost</li>
-          <li>Patent Pending</li>
-          <li>Built for RTA Efficiency — Strong, Simple, Reliable</li>
-          <li>Integrates Seamlessly With Most 8mm Dowel Systems</li>
-        </ul>
+        <div>
+          <img class="hero-img" src="/images/hero-forcedowel.jpg" alt="Force Dowels used in cabinet assembly">
+        </div>
       </div>
+    </section>
 
-      <div>
-        <img class="hero-img" src="/images/hero-forcedowel.jpg" alt="Force Dowels used in cabinet assembly">
-      </div>
+    <!-- You can keep your other sections below as-is, or we’ll refine after the hero -->
+    <section class="section">
+      <div class="container">
+        
+    <section class="section alt">
+      <div class="container">
+ <!-- Why Choose Force Dowels -->
+<section class="section alt">
+  <div class="container">
+    <h2>Why Choose Force Dowels</h2>
+    <div class="cards">
+      <article class="card">
+        <h3>Invisible Fasteners</h3>
+        <p>Completely hidden fastening system</p>
+      </article>
+
+      <article class="card">
+        <h3>Assembly Speed</h3>
+        <p>Reduce labor time and rework with a simple, process that takes only minutes.</p>
+      </article>
+
+      <article class="card">
+        <h3>Professional Finish</h3>
+        <p>No visible screws or fasteners—premium look out of the box.</p>
+      </article>
+
+      <article class="card">
+        <h3>Labor Costs</h3>
+        <p>Significantly reduce the costs on rework, and assembly.</p>
+      </article>
+
+      <article class="card">
+        <h3>No Glue Required</h3>
+        <p>No glue necessary for strong joints; No unnecessary dry time saving you countless hours.</p>
+      </article>
+
+      <!-- ✅ New bubble -->
+      <article class="card">
+        <h3>Order With Ease</h3>
+        <p>Order online with simple replenishment and distribution options.</p>
+      </article>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Why Choose Force Dowels -->
-  <section class="section alt">
-    <div class="container">
-      <h2>Why Choose Force Dowels</h2>
-      <div class="cards">
-        <article class="card"><h3>Invisible Fasteners</h3><p>Completely hidden fastening system</p></article>
-        <article class="card"><h3>Assembly Speed</h3><p>Reduce labor time and rework with a simple, process that takes only minutes.</p></article>
-        <article class="card"><h3>Professional Finish</h3><p>No visible screws or fasteners—premium look out of the box.</p></article>
-        <article class="card"><h3>Labor Costs</h3><p>Significantly reduce the costs on rework, and assembly.</p></article>
-        <article class="card"><h3>No Glue Required</h3><p>No glue necessary for strong joints; No unnecessary dry time saving you countless hours.</p></article>
-        <article class="card"><h3>Order With Ease</h3><p>Order online with simple replenishment and distribution options.</p></article>
-      </div>
+
+
+   <!-- Contact / Quote -->
+<section class="section" id="contact">
+  <div class="container grid-2">
+    <div>
+      <h2>Contact Us</h2>
+      <ul class="list">
+        <li><strong>Phone:</strong> (480)-581-7145</li>
+        <li><strong>Hours:</strong> Mon–Thurs 7:30AM–4:30PM; Friday 7:30AM–11:30AM</li>
+        <li><strong>Email:</strong> info@forcedowels.com</li>
+        <li><strong>Service:</strong> Will respond to customer requests within 1 business day</li>
+        <li><strong>Address:</strong> 4455 E Nunneley Rd, Ste 103, Gilbert, AZ 85296</li>
+      </ul>
     </div>
-  </section>
 
-  <!-- Contact / Quote -->
-  <section class="section" id="contact">
-    <div class="container grid-2">
-      <div>
-        <h2>Contact Us</h2>
-        <ul class="list">
-          <li><strong>Phone:</strong> (480)-581-7145</li>
-          <li><strong>Hours:</strong> Mon–Thurs 7:30AM–4:30PM; Friday 7:30AM–11:30AM</li>
-          <li><strong>Email:</strong> info@forcedowels.com</li>
-          <li><strong>Service:</strong> Will respond to customer requests within 1 business day</li>
-          <li><strong>Address:</strong> 4455 E Nunneley Rd, Ste 103, Gilbert, AZ 85296</li>
-        </ul>
-      </div>
+    <form class="form" method="post" action="https://formspree.io/f/REPLACE_ME">
+      <label>
+        <span>Name</span>
+        <input required name="name" type="text" autocomplete="name">
+      </label>
+      <label>
+        <span>Email</span>
+        <input required name="email" type="email" autocomplete="email">
+      </label>
+      <label>
+        <span>Message</span>
+        <textarea required name="message" rows="5"></textarea>
+      </label>
+      <button class="btn btn--primary" type="submit">Send</button>
+      <p class="form-note">By submitting, you agree to our <a href="/privacy.html">Privacy Policy</a>.</p>
+    </form>
+  </div>
+</section>
 
-      <form class="form" method="post" action="https://formspree.io/f/REPLACE_ME">
-        <label><span>Name</span><input required name="name" type="text" autocomplete="name"></label>
-        <label><span>Email</span><input required name="email" type="email" autocomplete="email"></label>
-        <label><span>Message</span><textarea required name="message" rows="5"></textarea></label>
-        <button class="btn btn--primary" type="submit">Send</button>
-        <p class="form-note">By submitting, you agree to our <a href="/privacy.html">Privacy Policy</a>.</p>
-      </form>
-    </div>
-  </section>
-</main>
+  </main>
 
 <!-- Footer -->
 <footer class="site-footer">
   <div class="container footer-main">
     <!-- 1) Brand + Tagline -->
     <section class="footer-sec footer-sec--brand">
-      <!-- Use SAME markup as header so sizing/color match exactly -->
-      <a class="brand footer-brand" href="/" aria-label="Force Dowels home">
-        <img src="/images/force-dowel-logo.jpg?v=6" alt="Force Dowels logo" />
+      <a href="/" aria-label="Force Dowels home">
+        <img src="/images/force-dowel-logo.jpg?v=4" alt="Force Dowels logo" class="footer-logo" />
       </a>
       <p class="footer-tagline">
         Revolutionary cabinetry fasteners that deliver faster assembly, stronger connections, and flawless finishes.
@@ -235,5 +281,3 @@
 <script>
   (function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})();
 </script>
-</body>
-</html>
