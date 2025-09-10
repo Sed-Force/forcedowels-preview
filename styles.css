@@ -1,6 +1,5 @@
-/* === Force Dowels — APD-style Theme (MASTER) ===============================
-   Drop this in as styles.css at the project root (same level as index.html).
-   Edit only the tokens in :root to retheme quickly.
+/* === Force Dowels — APD-style Theme (MASTER, header/footer blue) ==========
+   Drop in as styles.css at the project root (same level as index.html).
 ============================================================================ */
 
 /* ── Design tokens ───────────────────────────────────────────────────────── */
@@ -53,44 +52,55 @@ a{ color:inherit; text-decoration:none; }
 .section{ padding:var(--space-6) 0; }
 .section.alt{ background:var(--bg-alt); }
 
-/* ── Header / Nav (glass header + underline hover) ───────────────────────── */
-.site-header{ position:sticky; top:0; background:#fff; border-bottom:1px solid #e9eef5; z-index:20; }
-.site-header.is-glass{ background:rgba(255,255,255,.88); backdrop-filter:blur(8px); }
-.header-inner{ display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:72px; }
-.brand{ font-weight:800; letter-spacing:.2px; display:inline-flex; align-items:center; }
+/* ── Header / Nav (BLUE header) ─────────────────────────────────────────── */
+.site-header{
+  position:sticky; top:0; background:var(--brand); border-bottom:1px solid rgba(255,255,255,.12); z-index:20;
+}
+.site-header.is-glass{ background:var(--brand); backdrop-filter:none; }
+.header-inner{ display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:80px; }
 
-/* ✅ Logo size + rounded corners */
+/* Logo fills header height with rounded corners */
+.brand{ font-weight:800; letter-spacing:.2px; display:inline-flex; align-items:center; }
 .brand img{
-  height:42px;      /* adjust as needed */
+  height:56px;           /* fills vertical space of 80px header nicely */
   width:auto;
   display:block;
-  border-radius:8px;  /* change this number for more/less rounding */
+  border-radius:10px;    /* adjust radius if you want more/less rounding */
 }
 
-.nav{ display:flex; gap:22px; align-items:center; }
-.nav a{ position:relative; font-weight:600; color:#253046; }
+/* Nav links over blue background */
+.nav{ display:flex; gap:18px; align-items:center; }
+.nav a{ position:relative; font-weight:600; color:#ffffff; opacity:.95; }
+.nav a:hover{ opacity:1; }
 .nav a::after{
   content:""; position:absolute; left:0; bottom:-6px; height:2px; width:0;
-  background:var(--brand); transition:width .18s ease;
+  background:#ffffff; transition:width .18s ease; opacity:.7;
 }
 .nav a:hover::after{ width:100%; }
 .nav .btn{ margin-left:8px; }
+
+/* Inverted button style for blue header background */
+.btn--invert{ color:#fff; border-color:rgba(255,255,255,.35); }
+.btn--invert:hover{ border-color:#fff; }
+
+/* Show/hide auth controls depending on state */
+.auth-buttons{ display:flex; gap:10px; }
+.authed .auth-buttons{ display:none; }   /* hide login/sign up when signed in */
+.authed #user-button{ display:block; }   /* ensure Clerk user button shows */
+
+/* Mobile toggle (not wired yet, optional) */
 .nav-toggle{ display:none; }
 
 /* ── Hero (APD vibe: big type, soft gradients, pill badges) ─────────────── */
 .hero{ padding:var(--space-7) 0 var(--space-6); }
 .hero h1{ font-size:var(--h1); line-height:1.08; margin:0 0 var(--space-2); letter-spacing:-.3px; }
 
-/* New supporting lines */
-.eyebrow{
-  margin:8px 0 6px; font-weight:800; font-size:var(--lead); letter-spacing:.2px;
-}
-.eyebrow--accent{ color:var(--accent); }      /* “Patent Pending” */
-.subline{
-  margin:0 0 var(--space-3); font-size:var(--lead); color:var(--text);
-}
+/* Supporting lines */
+.eyebrow{ margin:8px 0 6px; font-weight:800; font-size:var(--lead); letter-spacing:.2px; }
+.eyebrow--accent{ color:var(--accent); } /* “Patent Pending” */
+.subline{ margin:0 0 var(--space-3); font-size:var(--lead); color:var(--text); }
 
-.hero .lead{ font-size:var(--lead); color:var(--muted); } /* (kept for other pages if used) */
+.hero .lead{ font-size:var(--lead); color:var(--muted); } /* (left for reuse) */
 .hero .actions{ display:flex; gap:var(--space-2); margin-top:var(--space-3); flex-wrap:wrap; }
 .hero-img{ border-radius:calc(var(--radius) + 4px); box-shadow:var(--shadow); }
 .hero--apd{
@@ -99,7 +109,7 @@ a{ color:inherit; text-decoration:none; }
     radial-gradient(900px 520px at 90% 0%, rgba(238,173,26,.12), transparent);
 }
 
-/* Badges/bubbles list under hero */
+/* Badges/bubbles */
 .hero--apd .badges{
   display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; padding:0; list-style:none;
 }
@@ -120,16 +130,23 @@ a{ color:inherit; text-decoration:none; }
 /* ── Buttons ─────────────────────────────────────────────────────────────── */
 .btn{
   display:inline-flex; align-items:center; justify-content:center;
+  gap:8px;
   padding:12px 18px; border-radius:var(--radius);
   border:1px solid transparent; font-weight:800;
   text-decoration:none; box-shadow:var(--shadow-xs);
-  transition:transform .12s ease, box-shadow .12s ease, background .12s ease, color .12s ease;
+  transition:transform .12s ease, box-shadow .12s ease, background .12s ease, color .12s ease, border-color .12s ease;
 }
+.btn svg{ display:block; }
+
 .btn--primary{ background:var(--brand); color:#fff; }
 .btn--primary:hover{ transform:translateY(-1px); box-shadow:0 12px 24px rgba(34,77,143,.25); background:var(--brand-ink); }
-.btn--ghost{ background:#fff; border-color:#e4e9f2; color:#1b2540; }
+
+.btn--ghost{ background:transparent; border-color:#e4e9f2; color:#1b2540; }
 .btn--ghost:hover{ border-color:var(--brand); color:var(--brand); }
-.btn--link{ background:transparent; border:0; padding:0; color:var(--brand); box-shadow:none; }
+
+/* ORANGE button (Contact, Sign Up) */
+.btn--accent{ background:var(--accent); color:#1b2540; }
+.btn--accent:hover{ filter:brightness(0.96); transform:translateY(-1px); }
 
 /* Focus styles */
 .btn--primary:focus,
@@ -147,21 +164,32 @@ a:focus{ outline:2px solid var(--ring); outline-offset:2px; border-radius:10px; 
 .form input:focus,.form textarea:focus{ outline:2px solid var(--ring); border-color:var(--brand); }
 .form-note{ font-size:.9rem; color:var(--muted); }
 
-/* ── Tables (for other pages) ───────────────────────────────────────────── */
+/* ── Tables (optional) ──────────────────────────────────────────────────── */
 .table-wrap{ overflow:auto; border:1px solid #e9eef5; border-radius:var(--radius); background:#fff; }
 .table{ width:100%; border-collapse:collapse; }
 .table th,.table td{ padding:12px 14px; border-bottom:1px solid #eef2f8; text-align:left; }
 
-/* ── Footer ──────────────────────────────────────────────────────────────── */
-.site-footer{ border-top:1px solid #e9eef5; background:#fff; }
-.footer-inner{ display:flex; justify-content:space-between; align-items:center; min-height:72px; }
+/* ── Footer (BLUE footer) ───────────────────────────────────────────────── */
+.site-footer{
+  border-top:1px solid rgba(255,255,255,.12);
+  background:var(--brand);
+  color:#fff;
+}
+.site-footer a{ color:#fff; opacity:.9; }
+.site-footer a:hover{ opacity:1; }
+.footer-inner{ display:flex; justify-content:space-between; align-items:center; min-height:84px; }
 .nav--footer{ display:flex; gap:14px; }
 .list{ padding-left:18px; }
+
+/* Small helpers */
+.hide-sm{ display:inline; }
+@media (max-width:640px){ .hide-sm{ display:none; } }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width:900px){
   .grid-2{ grid-template-columns:1fr; }
   .cards{ grid-template-columns:1fr; }
-  .nav{ display:none; }
-  .nav-toggle{ display:inline-block; background:transparent; border:0; font-size:24px; }
+  .nav{ display:none; }          /* (optional — wire nav-toggle if you want) */
+  .nav-toggle{ display:inline-block; background:transparent; border:0; font-size:24px; color:#fff; }
 }
+
