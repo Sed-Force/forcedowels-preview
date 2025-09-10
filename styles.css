@@ -1,6 +1,5 @@
-/* === Force Dowels — Master Theme (Updated) ================================
-   - Distributors dropdown looks like other nav links
-   - Logo back to rounded-image style (no pill background)
+/* === Force Dowels — Master Theme (Aligned Header + Rounded Logo) ==========
+   Replace your styles.css with this file.
 ============================================================================ */
 
 /* ── Design tokens ───────────────────────────────────────────────────────── */
@@ -11,9 +10,9 @@
   --muted: #667085;
 
   /* Brand */
-  --brand: #224d8f;
-  --brand-ink: #183a6b;
-  --accent: #eead1a;
+  --brand: #224d8f;       /* main blue */
+  --brand-ink: #183a6b;   /* darker blue for hover/focus */
+  --accent: #eead1a;      /* orange accent */
 
   /* UI */
   --radius: 16px;
@@ -67,26 +66,29 @@ a { color: inherit; text-decoration: none; }
 .header-inner {
   min-height: 84px;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto;   /* logo | nav | actions */
   align-items: center;
   column-gap: 18px;
 }
 
-/* Logo: simple rounded image */
+/* Logo: rounded image (no pill), original feel */
 .brand img {
-  height: 56px;     /* fills header nicely */
-  width: auto;
+  height: 42px;     /* ← matches your preferred earlier look */
+  width: auto;      /* keeps aspect ratio (no squish) */
   border-radius: 8px;
 }
 
-/* Nav links */
+/* Nav (centered, perfectly aligned) */
 .nav {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: center;   /* vertical alignment */
   gap: 22px;
 }
-.nav a, .nav .nav-dropbtn {
+
+/* Links AND the Distributors trigger share identical styling */
+.nav a,
+.nav .nav-dropbtn {
   background: transparent;
   border: none;
   font: inherit;
@@ -97,21 +99,28 @@ a { color: inherit; text-decoration: none; }
   cursor: pointer;
   padding: 0;
   line-height: 1;
-  display: inline-block;
-  vertical-align: middle;
+  display: inline-flex;      /* ensures same vertical centering */
+  align-items: center;
   position: relative;
+  vertical-align: middle;
 }
-.nav a:hover, .nav .nav-dropbtn:hover { opacity: 1; }
-.nav a::after, .nav .nav-dropbtn::after {
+.nav a:hover,
+.nav .nav-dropbtn:hover { opacity: 1; }
+
+/* Underline animation for both links and dropbtn */
+.nav a::after,
+.nav .nav-dropbtn::after {
   content: "";
-  position: absolute; left: 0; bottom: -6px;
+  position: absolute;
+  left: 0; bottom: -6px;
   height: 2px; width: 0;
   background: #fff; opacity: .7;
   transition: width .18s ease;
 }
-.nav a:hover::after, .nav .nav-dropbtn:hover::after { width: 100%; }
+.nav a:hover::after,
+.nav .nav-dropbtn:hover::after { width: 100%; }
 
-/* Dropdown menu */
+/* Dropdown menu for Distributors */
 .nav-dropdown { position: relative; }
 .nav-dropmenu {
   display: none;
@@ -130,10 +139,10 @@ a { color: inherit; text-decoration: none; }
 .nav-dropdown:focus-within .nav-dropmenu,
 .nav-dropdown:hover .nav-dropmenu { display: block; }
 
-/* Right actions */
+/* Right actions (Cart + Auth) */
 .header-actions { display: flex; align-items: center; gap: 10px; }
 
-/* Buttons */
+/* ── Buttons (consistent size + alignment) ──────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
   gap: 8px;
@@ -158,13 +167,20 @@ a { color: inherit; text-decoration: none; }
 .btn--ghost { background: transparent; border-color: #e4e9f2; color: #1b2540; }
 .btn--ghost:hover { border-color: var(--brand); color: var(--brand); }
 
+/* On blue header */
 .btn--invert { color: #fff; border-color: rgba(255,255,255,.45); }
 .btn--invert:hover { border-color: #fff; }
 
+/* Orange buttons (Contact / Sign Up) — aligned with links */
+.site-header .nav .btn {           /* only buttons inside the nav */
+  min-height: 0;
+  padding: 8px 12px;               /* tighter so baseline matches links */
+  border-radius: 10px;
+}
 .btn--accent { background: var(--accent); color: #1b2540; }
 .btn--accent:hover { filter: brightness(.96); transform: translateY(-1px); }
 
-/* Clerk auth */
+/* Clerk auth visibility */
 .auth-buttons { display: inline-flex; align-items: center; gap: 10px; }
 .authed .auth-buttons { display: none; }
 .authed #user-button { display: block; }
@@ -192,6 +208,7 @@ a { color: inherit; text-decoration: none; }
     radial-gradient(900px 520px at 90% 0%, rgba(238,173,26,.12), transparent);
 }
 
+/* Badges under hero */
 .hero--apd .badges {
   display: flex; gap: 10px; flex-wrap: wrap;
   margin-top: 16px; padding: 0; list-style: none;
@@ -230,7 +247,7 @@ a { color: inherit; text-decoration: none; }
 }
 .form-note { font-size: .9rem; color: var(--muted); }
 
-/* ── Footer ─────────────────────────────────────────────────────────────── */
+/* ── Footer (blue) ─────────────────────────────────────────────────────── */
 .site-footer {
   border-top: 1px solid rgba(255,255,255,.12);
   background: var(--brand);
