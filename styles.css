@@ -1,4 +1,4 @@
-/* === Force Dowels — Master Theme (Aligned Dropdown) =======================
+/* === Force Dowels — Master Theme (Distributors Alignment Fixed) ==========
    Replace your styles.css with this file.
 ============================================================================ */
 
@@ -102,7 +102,6 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   padding: 0;
   position: relative;
-  vertical-align: middle;
 }
 .nav a:hover,
 .nav .nav-dropbtn:hover { opacity: 1; }
@@ -123,20 +122,20 @@ a { color: inherit; text-decoration: none; }
 /* Dropdown wrapper */
 .nav-dropdown { position: relative; }
 
-/* Dropdown label + caret */
+/* Dropdown label + caret (arrow stays right) */
 .nav-dropbtn {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;   /* align text baselines with links */
   gap: 6px;
 }
 .nav-drop-label {
   line-height: 1;
-  transform: translateY(1px); /* baseline alignment fix */
+  transform: translateY(0);   /* keep text level */
 }
 .nav-caret {
   font-size: 12px;
   opacity: .85;
-  transform: translateY(1px); /* let caret sit slightly lower */
+  transform: translateY(1px); /* slight visual nudge */
 }
 
 /* Dropdown menu */
