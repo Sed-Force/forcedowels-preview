@@ -41,25 +41,46 @@
   <script defer src="/script.js"></script>
 </head>
 <body>
-  <!-- Header / Nav -->
-  <header class="site-header is-glass">
-    <div class="container header-inner">
-      <a class="brand" href="/" aria-label="Force Dowel Company">
-        <!-- ✅ Replace the src if you used a different filename -->
-       <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" />
+ <!-- Header / Nav -->
+<header class="site-header is-glass">
+  <div class="container header-inner">
+    <a class="brand" href="/" aria-label="Force Dowel Company">
+      <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" />
+    </a>
+
+    <nav class="nav" aria-label="Primary">
+      <a href="/">Home</a>
+      <a href="/order.html">Order</a>
+      <a href="/videos.html">Videos</a>
+      <a href="/faq.html">FAQ</a>
+      <a href="/distribution.html">Distribution</a>
+
+      <!-- Contact is now ORANGE -->
+      <a href="/contact.html" class="btn btn--accent">Contact</a>
+
+      <!-- Cart / Auth -->
+      <a href="/order.html#cart" class="btn btn--ghost btn--invert" id="btn-cart" aria-label="Shopping cart">
+        <!-- simple cart icon -->
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M7 18a2 2 0 1 0 0 4a2 2 0 0 0 0-4m10 0a2 2 0 1 0 0 4a2 2 0 0 0 0-4M6.2 6l.3 2h12.3a1 1 0 0 1 1 1l-1.2 6a2 2 0 0 1-2 1.6H8.7a2 2 0 0 1-2-1.7L5.3 5H3V3h3a1 1 0 0 1 1 .9L7.2 6Z"/>
+        </svg>
+        <span class="hide-sm">Cart</span>
       </a>
-      <nav class="nav" aria-label="Primary">
-        <a href="/">Home</a>
-        <a href="/order.html">Order</a>
-        <a href="/videos.html">Videos</a>
-        <a href="/faq.html">FAQ</a>
-        <a href="/distribution.html">Distribution</a>
-        <a href="/contact.html" class="btn btn--primary">Contact</a>
-        <div id="user-button"></div>
-      </nav>
-      <button class="nav-toggle" aria-expanded="false" aria-controls="menu" aria-label="Toggle navigation">☰</button>
-    </div>
-  </header>
+
+      <!-- If signed OUT show these; if signed IN we'll hide via JS -->
+      <div class="auth-buttons">
+        <button class="btn btn--ghost btn--invert" id="btn-login" type="button">Log In</button>
+        <button class="btn btn--accent" id="btn-signup" type="button">Sign Up</button>
+      </div>
+
+      <!-- If signed IN, Clerk will mount here -->
+      <div id="user-button"></div>
+    </nav>
+
+    <button class="nav-toggle" aria-expanded="false" aria-controls="menu" aria-label="Toggle navigation">☰</button>
+  </div>
+</header>
+
 
   <main id="content">
     <!-- HERO -->
