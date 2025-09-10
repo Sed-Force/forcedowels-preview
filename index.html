@@ -44,9 +44,9 @@
   
 <!-- Header / Nav -->
 <header class="site-header">
-  <div class="container header-inner header-grid">
+  <div class="container header-inner">
     <!-- Left: Logo -->
-    <a class="brand brand--pill" href="/" aria-label="Force Dowel Company">
+    <a class="brand" href="/" aria-label="Force Dowel Company">
       <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" />
     </a>
 
@@ -57,9 +57,11 @@
       <a href="/videos.html">Videos</a>
       <a href="/faq.html">FAQ</a>
 
+      <!-- Distributors dropdown -->
       <div class="nav-dropdown">
         <button class="nav-dropbtn" type="button" aria-haspopup="true" aria-expanded="false">
-          Distributors ▾
+          <span class="nav-drop-label">Distributors</span>
+          <span class="nav-caret">▾</span>
         </button>
         <div class="nav-dropmenu" role="menu">
           <a href="/distribution.html" role="menuitem">Find a Distributor</a>
@@ -87,12 +89,10 @@
 
       <!-- Shown when signed IN (Clerk mounts here) -->
       <div id="user-button"></div>
-
-      <!-- Mobile toggle (hidden on desktop) -->
-      <button class="nav-toggle" aria-expanded="false" aria-controls="menu" aria-label="Toggle navigation">☰</button>
     </div>
   </div>
 </header>
+
 
   <main id="content">
     <!-- HERO -->
