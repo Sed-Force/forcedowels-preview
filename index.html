@@ -214,8 +214,8 @@
 <!-- Footer -->
 <footer class="site-footer">
   <div class="container footer-main">
-    <!-- LEFT COLUMN -->
-    <div class="footer-left-col">
+    <!-- 1) Brand + Tagline -->
+    <section class="footer-sec footer-sec--brand">
       <a href="/" aria-label="Force Dowels home">
         <img src="/images/force-dowel-logo.jpg" alt="Force Dowels logo" class="footer-logo" />
       </a>
@@ -223,57 +223,58 @@
         Revolutionary cabinetry fasteners that deliver faster assembly, stronger connections, and flawless finishes.
         Experience the next generation of cabinet construction.
       </p>
+    </section>
 
-      <nav class="footer-quick">
-        <h4>Quick Links</h4>
-        <ul class="footer-list">
-          <li><a href="/">Home</a></li>
-          <li><a href="/order.html">Order Now</a></li>
-          <li><a href="/videos.html">Product Videos</a></li>
-          <li><a href="/distribution.html">Find a Distributor</a></li>
-          <li><a href="/distribution.html#become">Become a Distributor</a></li>
-        </ul>
-      </nav>
-    </div>
+    <!-- 2) Quick Links -->
+    <section class="footer-sec">
+      <h4>Quick Links</h4>
+      <ul class="footer-list">
+        <li><a href="/">Home</a></li>
+        <li><a href="/order.html">Order Now</a></li>
+        <li><a href="/videos.html">Product Videos</a></li>
+        <li><a href="/distribution.html">Find a Distributor</a></li>
+        <li><a href="/distribution.html#become">Become a Distributor</a></li>
+      </ul>
+    </section>
 
-    <!-- RIGHT COLUMN -->
-    <div class="footer-right-col">
-      <div class="footer-contact">
-        <h4>Contact Us</h4>
-        <ul class="footer-list">
-          <li>(480)-581-7145</li>
-          <li>Mon–Fri 7:30AM–4:30PM</li>
-          <li><a href="mailto:info@forcedowels.com">info@forcedowels.com</a></li>
-          <li>24/7 Support</li>
-          <li>4455 E Nunneley Rd, Ste 103<br>Gilbert, AZ 85296</li>
-        </ul>
-      </div>
+    <!-- 3) Contact Us -->
+    <section class="footer-sec">
+      <h4>Contact Us</h4>
+      <ul class="footer-list">
+        <li>(480)-581-7145</li>
+        <li>Mon–Fri 7:30AM–4:30PM</li>
+        <li><a href="mailto:info@forcedowels.com">info@forcedowels.com</a></li>
+        <li>24/7 Support</li>
+        <li>4455 E Nunneley Rd, Ste 103<br>Gilbert, AZ 85296</li>
+      </ul>
+    </section>
 
-      <div class="footer-updates">
-        <h4>Stay Updated</h4>
-        <p class="footer-note">Get the latest updates on our patent-pending technology and new product releases.</p>
-        <form class="footer-form" onsubmit="return false;">
-          <label class="sr-only" for="newsletter-email">Enter your email</label>
-          <input id="newsletter-email" type="email" placeholder="Enter your email" required>
-          <button type="submit" class="btn btn--accent">Subscribe</button>
-        </form>
-        <p class="footer-privacy-note">We respect your privacy. Unsubscribe at any time.</p>
-      </div>
-    </div>
+    <!-- 4) Stay Updated -->
+    <section class="footer-sec">
+      <h4>Stay Updated</h4>
+      <p class="footer-note">Get the latest updates on our patent-pending technology and new product releases.</p>
+      <form class="footer-form" onsubmit="return false;">
+        <label class="sr-only" for="newsletter-email">Enter your email</label>
+        <input id="newsletter-email" type="email" placeholder="Enter your email" required>
+        <button type="submit" class="btn btn--accent">Subscribe</button>
+      </form>
+      <p class="footer-privacy-note">We respect your privacy. Unsubscribe at any time.</p>
+    </section>
   </div>
 
+  <!-- Divider line -->
+  <div class="footer-separator"></div>
+
   <!-- Bottom bar -->
-  <div class="footer-bottom">
-    <div class="container footer-bottom-inner">
-      <div class="footer-bottom-left">
-        <p>© <span id="year"></span> Force Dowels. All rights reserved.</p>
-        <p class="footer-patent">Patent Pending Technology - Revolutionary Cabinetry Fasteners</p>
-      </div>
-      <nav class="footer-bottom-right">
-        <a href="/privacy.html">Privacy Policy</a>
-        <a href="/terms.html">Terms of Service</a>
-      </nav>
+  <div class="container footer-bottom">
+    <div class="footer-bottom-left">
+      <p>© <span id="year"></span> Force Dowels. All rights reserved.</p>
+      <p class="footer-patent">Patent Pending Technology - Revolutionary Cabinetry Fasteners</p>
     </div>
+    <nav class="footer-bottom-right">
+      <a href="/privacy.html">Privacy Policy</a>
+      <a href="/terms.html">Terms of Service</a>
+    </nav>
   </div>
 </footer>
 
