@@ -1,5 +1,6 @@
-/* === Force Dowels — Master Theme ==========================================
-   Replace your styles.css with this file.
+/* === Force Dowels — Master Theme (Updated) ================================
+   - Distributors dropdown looks like other nav links
+   - Logo back to rounded-image style (no pill background)
 ============================================================================ */
 
 /* ── Design tokens ───────────────────────────────────────────────────────── */
@@ -10,9 +11,9 @@
   --muted: #667085;
 
   /* Brand */
-  --brand: #224d8f;       /* main blue */
-  --brand-ink: #183a6b;   /* darker blue for hover/focus */
-  --accent: #eead1a;      /* orange accent */
+  --brand: #224d8f;
+  --brand-ink: #183a6b;
+  --accent: #eead1a;
 
   /* UI */
   --radius: 16px;
@@ -56,7 +57,7 @@ a { color: inherit; text-decoration: none; }
 .section { padding: var(--space-6) 0; }
 .section.alt { background: var(--bg-alt); }
 
-/* ── Header (blue bar, pill logo, centered nav, right actions) ──────────── */
+/* ── Header (blue bar, centered nav, right actions) ─────────────────────── */
 .site-header {
   position: sticky; top: 0;
   background: var(--brand);
@@ -66,25 +67,19 @@ a { color: inherit; text-decoration: none; }
 .header-inner {
   min-height: 84px;
   display: grid;
-  grid-template-columns: auto 1fr auto;   /* logo | nav | actions */
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   column-gap: 18px;
 }
 
-/* Pill logo */
-.brand--pill {
-  background: #fff;
-  padding: 10px 18px;
-  border-radius: 14px;
-  box-shadow: 0 4px 14px rgba(0,0,0,.18);
-}
-.brand--pill img {
-  height: 56px;           /* fills header nicely; tweak 52–60px as desired */
+/* Logo: simple rounded image */
+.brand img {
+  height: 56px;     /* fills header nicely */
   width: auto;
-  border-radius: 8px;     /* rounded logo corners */
+  border-radius: 8px;
 }
 
-/* Centered nav */
+/* Nav links */
 .nav {
   display: flex;
   justify-content: center;
@@ -92,24 +87,32 @@ a { color: inherit; text-decoration: none; }
   gap: 22px;
 }
 .nav a, .nav .nav-dropbtn {
-  color: #fff;
+  background: transparent;
+  border: none;
+  font: inherit;
+  font-size: 16px;
   font-weight: 600;
+  color: #fff;
   opacity: .95;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  display: inline-block;
+  vertical-align: middle;
   position: relative;
 }
 .nav a:hover, .nav .nav-dropbtn:hover { opacity: 1; }
-.nav a::after {
+.nav a::after, .nav .nav-dropbtn::after {
   content: "";
   position: absolute; left: 0; bottom: -6px;
   height: 2px; width: 0;
   background: #fff; opacity: .7;
   transition: width .18s ease;
 }
-.nav a:hover::after { width: 100%; }
+.nav a:hover::after, .nav .nav-dropbtn:hover::after { width: 100%; }
 
-/* Dropdown (for “Distributors”) */
+/* Dropdown menu */
 .nav-dropdown { position: relative; }
-.nav-dropbtn { background: transparent; border: 0; cursor: pointer; }
 .nav-dropmenu {
   display: none;
   position: absolute; top: 120%; left: 0;
@@ -127,12 +130,10 @@ a { color: inherit; text-decoration: none; }
 .nav-dropdown:focus-within .nav-dropmenu,
 .nav-dropdown:hover .nav-dropmenu { display: block; }
 
-/* Right actions (Cart + Auth) */
-.header-actions {
-  display: flex; align-items: center; gap: 10px;
-}
+/* Right actions */
+.header-actions { display: flex; align-items: center; gap: 10px; }
 
-/* Buttons — consistent size and style */
+/* Buttons */
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
   gap: 8px;
@@ -157,23 +158,21 @@ a { color: inherit; text-decoration: none; }
 .btn--ghost { background: transparent; border-color: #e4e9f2; color: #1b2540; }
 .btn--ghost:hover { border-color: var(--brand); color: var(--brand); }
 
-/* On blue header */
 .btn--invert { color: #fff; border-color: rgba(255,255,255,.45); }
 .btn--invert:hover { border-color: #fff; }
 
-/* Orange buttons (Contact / Sign Up) */
 .btn--accent { background: var(--accent); color: #1b2540; }
 .btn--accent:hover { filter: brightness(.96); transform: translateY(-1px); }
 
-/* Auth visibility with Clerk */
+/* Clerk auth */
 .auth-buttons { display: inline-flex; align-items: center; gap: 10px; }
-.authed .auth-buttons { display: none; }   /* hide when signed in */
+.authed .auth-buttons { display: none; }
 .authed #user-button { display: block; }
 
 /* Hide mobile toggle (not wired) */
 .nav-toggle { display: none; }
 
-/* ── Hero (APD vibe) ────────────────────────────────────────────────────── */
+/* ── Hero ───────────────────────────────────────────────────────────────── */
 .hero { padding: var(--space-7) 0 var(--space-6); }
 .hero h1 {
   font-size: var(--h1);
@@ -193,7 +192,6 @@ a { color: inherit; text-decoration: none; }
     radial-gradient(900px 520px at 90% 0%, rgba(238,173,26,.12), transparent);
 }
 
-/* Badges under hero */
 .hero--apd .badges {
   display: flex; gap: 10px; flex-wrap: wrap;
   margin-top: 16px; padding: 0; list-style: none;
@@ -232,12 +230,7 @@ a { color: inherit; text-decoration: none; }
 }
 .form-note { font-size: .9rem; color: var(--muted); }
 
-/* ── Tables (optional reuse) ────────────────────────────────────────────── */
-.table-wrap { overflow: auto; border: 1px solid #e9eef5; border-radius: var(--radius); background: #fff; }
-.table { width: 100%; border-collapse: collapse; }
-.table th, .table td { padding: 12px 14px; border-bottom: 1px solid #eef2f8; text-align: left; }
-
-/* ── Footer (blue) ─────────────────────────────────────────────────────── */
+/* ── Footer ─────────────────────────────────────────────────────────────── */
 .site-footer {
   border-top: 1px solid rgba(255,255,255,.12);
   background: var(--brand);
@@ -251,20 +244,19 @@ a { color: inherit; text-decoration: none; }
 }
 .nav--footer { display: flex; gap: 14px; }
 
-/* ── Responsive tweaks ──────────────────────────────────────────────────── */
+/* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .grid-2 { grid-template-columns: 1fr; }
   .cards { grid-template-columns: 1fr; }
 
-  /* Compact header layout */
   .header-inner {
-    grid-template-columns: auto 1fr;      /* logo | actions */
+    grid-template-columns: auto 1fr;
     grid-template-areas:
       "logo actions"
       "nav nav";
     row-gap: 12px;
   }
-  .brand--pill { grid-area: logo; }
+  .brand { grid-area: logo; }
   .nav { grid-area: nav; justify-content: start; flex-wrap: wrap; gap: 14px; }
   .header-actions { grid-area: actions; justify-content: end; }
 }
