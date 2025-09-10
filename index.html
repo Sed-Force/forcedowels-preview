@@ -211,18 +211,56 @@
 
   </main>
 
-  <footer class="site-footer">
-    <div class="container footer-inner">
-      <p>© 2025 Force Dowel Company™. All rights reserved.</p>
-      <nav class="nav nav--footer" aria-label="Footer">
-        <a href="/privacy.html">Privacy Policy</a>
-        <a href="/terms.html">Terms of Service</a>
-        <a href="/contact.html">Contact</a>
+  <!-- Footer -->
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <!-- Brand / Tagline -->
+    <div class="footer-brand">
+      <a href="/" aria-label="Force Dowels home">
+        <img src="/images/force-dowel-logo.jpg" alt="Force Dowels logo" />
+      </a>
+      <p class="footer-tagline">Faster, stronger cabinet assembly with a flawless finish.</p>
+    </div>
+
+    <!-- Quick links -->
+    <nav class="footer-col">
+      <h4>Pages</h4>
+      <ul class="footer-list">
+        <li><a href="/">Home</a></li>
+        <li><a href="/order.html">Order</a></li>
+        <li><a href="/videos.html">Videos</a></li>
+        <li><a href="/faq.html">FAQ</a></li>
+        <li><a href="/distribution.html">Distributors</a></li>
+        <li><a href="/contact.html">Contact</a></li>
+      </ul>
+    </nav>
+
+    <!-- Contact -->
+    <div class="footer-col">
+      <h4>Contact</h4>
+      <ul class="footer-list">
+        <li><strong>Phone:</strong> (480)-581-7145</li>
+        <li><strong>Email:</strong> info@forcedowels.com</li>
+        <li><strong>Hours:</strong> Mon–Thurs 7:30AM–4:30PM; Friday 7:30AM–11:30AM</li>
+        <li><strong>Service:</strong> Will respond to customer requests within 1 business day</li>
+        <li><strong>Address:</strong> 4455 E Nunneley Rd, Ste 103, Gilbert, AZ 85296</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <div class="container footer-bottom-inner">
+      <p>© <span id="year"></span> Force Dowels. All rights reserved.</p>
+      <nav class="nav--footer">
+        <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
       </nav>
     </div>
-    <div class="container" style="padding:12px 20px 24px; color:#667085;">
-      <small>Patent Pending Technology - Revolutionary Cabinetry Fasteners</small>
-    </div>
-  </footer>
-</body>
-</html>
+  </div>
+</footer>
+
+<!-- Optional: auto-set year -->
+<script>
+  (function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})();
+</script>
+
