@@ -1,4 +1,4 @@
-/* === Force Dowels — Master Theme (Aligned Header + Rounded Logo) ==========
+/* === Force Dowels — Master Theme (Aligned Header + Rounded Logo + Fixed Dropdown) ===
    Replace your styles.css with this file.
 ============================================================================ */
 
@@ -10,9 +10,9 @@
   --muted: #667085;
 
   /* Brand */
-  --brand: #224d8f;       /* main blue */
-  --brand-ink: #183a6b;   /* darker blue for hover/focus */
-  --accent: #eead1a;      /* orange accent */
+  --brand: #224d8f;
+  --brand-ink: #183a6b;
+  --accent: #eead1a;
 
   /* UI */
   --radius: 16px;
@@ -56,7 +56,7 @@ a { color: inherit; text-decoration: none; }
 .section { padding: var(--space-6) 0; }
 .section.alt { background: var(--bg-alt); }
 
-/* ── Header (blue bar, centered nav, right actions) ─────────────────────── */
+/* ── Header ─────────────────────────────────────────────────────────────── */
 .site-header {
   position: sticky; top: 0;
   background: var(--brand);
@@ -71,22 +71,22 @@ a { color: inherit; text-decoration: none; }
   column-gap: 18px;
 }
 
-/* Logo: rounded image (no pill), original feel */
+/* Logo: rounded image */
 .brand img {
-  height: 42px;     /* ← matches your preferred earlier look */
-  width: auto;      /* keeps aspect ratio (no squish) */
+  height: 42px;
+  width: auto;
   border-radius: 8px;
 }
 
-/* Nav (centered, perfectly aligned) */
+/* Nav (centered, aligned) */
 .nav {
   display: flex;
   justify-content: center;
-  align-items: center;   /* vertical alignment */
+  align-items: center;   /* ensures vertical centering */
   gap: 22px;
 }
 
-/* Links AND the Distributors trigger share identical styling */
+/* Links + dropdown trigger identical */
 .nav a,
 .nav .nav-dropbtn {
   background: transparent;
@@ -97,17 +97,16 @@ a { color: inherit; text-decoration: none; }
   color: #fff;
   opacity: .95;
   cursor: pointer;
-  padding: 0;
   line-height: 1;
-  display: inline-flex;      /* ensures same vertical centering */
-  align-items: center;
+  display: inline-flex;
+  align-items: center;      /* aligns text baseline with links */
+  padding: 0;               /* no extra padding */
   position: relative;
-  vertical-align: middle;
 }
 .nav a:hover,
 .nav .nav-dropbtn:hover { opacity: 1; }
 
-/* Underline animation for both links and dropbtn */
+/* Underline animation */
 .nav a::after,
 .nav .nav-dropbtn::after {
   content: "";
@@ -120,7 +119,7 @@ a { color: inherit; text-decoration: none; }
 .nav a:hover::after,
 .nav .nav-dropbtn:hover::after { width: 100%; }
 
-/* Dropdown menu for Distributors */
+/* Dropdown menu */
 .nav-dropdown { position: relative; }
 .nav-dropmenu {
   display: none;
@@ -139,10 +138,10 @@ a { color: inherit; text-decoration: none; }
 .nav-dropdown:focus-within .nav-dropmenu,
 .nav-dropdown:hover .nav-dropmenu { display: block; }
 
-/* Right actions (Cart + Auth) */
+/* Right actions */
 .header-actions { display: flex; align-items: center; gap: 10px; }
 
-/* ── Buttons (consistent size + alignment) ──────────────────────────────── */
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
   gap: 8px;
@@ -167,25 +166,22 @@ a { color: inherit; text-decoration: none; }
 .btn--ghost { background: transparent; border-color: #e4e9f2; color: #1b2540; }
 .btn--ghost:hover { border-color: var(--brand); color: var(--brand); }
 
-/* On blue header */
 .btn--invert { color: #fff; border-color: rgba(255,255,255,.45); }
 .btn--invert:hover { border-color: #fff; }
 
-/* Orange buttons (Contact / Sign Up) — aligned with links */
-.site-header .nav .btn {           /* only buttons inside the nav */
+.site-header .nav .btn {
   min-height: 0;
-  padding: 8px 12px;               /* tighter so baseline matches links */
+  padding: 8px 12px;
   border-radius: 10px;
 }
 .btn--accent { background: var(--accent); color: #1b2540; }
 .btn--accent:hover { filter: brightness(.96); transform: translateY(-1px); }
 
-/* Clerk auth visibility */
+/* Auth */
 .auth-buttons { display: inline-flex; align-items: center; gap: 10px; }
 .authed .auth-buttons { display: none; }
 .authed #user-button { display: block; }
 
-/* Hide mobile toggle (not wired) */
 .nav-toggle { display: none; }
 
 /* ── Hero ───────────────────────────────────────────────────────────────── */
@@ -208,7 +204,6 @@ a { color: inherit; text-decoration: none; }
     radial-gradient(900px 520px at 90% 0%, rgba(238,173,26,.12), transparent);
 }
 
-/* Badges under hero */
 .hero--apd .badges {
   display: flex; gap: 10px; flex-wrap: wrap;
   margin-top: 16px; padding: 0; list-style: none;
@@ -219,7 +214,7 @@ a { color: inherit; text-decoration: none; }
   font-weight: 700; box-shadow: var(--shadow-xs);
 }
 
-/* ── Cards / grids ──────────────────────────────────────────────────────── */
+/* ── Cards ──────────────────────────────────────────────────────────────── */
 .grid-2 { display: grid; grid-template-columns: 1.15fr .85fr; gap: 28px; align-items: center; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 18px; }
 .card {
@@ -247,7 +242,7 @@ a { color: inherit; text-decoration: none; }
 }
 .form-note { font-size: .9rem; color: var(--muted); }
 
-/* ── Footer (blue) ─────────────────────────────────────────────────────── */
+/* ── Footer ─────────────────────────────────────────────────────────────── */
 .site-footer {
   border-top: 1px solid rgba(255,255,255,.12);
   background: var(--brand);
