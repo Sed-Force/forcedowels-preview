@@ -71,7 +71,7 @@ a { color: inherit; text-decoration: none; }
   column-gap: 18px;
 }
 
-/* Logo (header) */
+/* Logo */
 .brand img {
   height: 42px;
   width: auto;
@@ -252,24 +252,6 @@ a { color: inherit; text-decoration: none; }
 .footer-sec { display: flex; flex-direction: column; justify-content: flex-start; }
 .footer-sec h4 { margin: 0 0 10px; font-size: 16px; color:#fff; }
 
-/* Footer logo block (kept; harmless if not used) */
-.footer-logo {
-  height: auto;
-  width: auto;
-  max-height: 56px;
-  border-radius: 8px;
-  object-fit: contain;
-  display: block;
-  margin-bottom: 14px;
-
-  filter: none !important;
-  -webkit-filter: none !important;
-  mix-blend-mode: normal !important;
-  opacity: 1 !important;
-  background: transparent;
-  image-rendering: auto;
-}
-
 .footer-tagline { margin: 6px 0 0; opacity:.9; font-size:15px; line-height:1.5; }
 
 .footer-list { list-style:none; margin:0; padding:0; }
@@ -287,13 +269,9 @@ a { color: inherit; text-decoration: none; }
   background:rgba(255,255,255,.06); color:#fff;
 }
 .footer-form input::placeholder{ color:rgba(255,255,255,.75); }
-.footer-privacy-note{ margin:0; font-size:13px; opacity:.85; }
 
 /* Divider line */
-.footer-separator {
-  border-top: 2px solid rgba(255,255,255,.35);
-  margin: 0;
-}
+.footer-separator { border-top: 2px solid rgba(255,255,255,.35); margin: 0; }
 
 /* Bottom bar */
 .footer-bottom {
@@ -316,7 +294,7 @@ a { color: inherit; text-decoration: none; }
   overflow:hidden; clip:rect(0,0,0,0); border:0;
 }
 
-/* ── Responsive ─────────────────────────────────────────────────────────── */
+/* Responsive */
 @media (max-width: 1000px) {
   .footer-main { grid-template-columns: repeat(2, 1fr); column-gap: 36px; }
 }
@@ -326,18 +304,18 @@ a { color: inherit; text-decoration: none; }
   .footer-bottom-right { gap: 12px; flex-wrap: wrap; }
 }
 
-/* === Footer logo cleanup ====================================== */
+/* === Footer logo: FORCE MATCH header size + force WHITE on blue ==========
+   If your source logo is black, this makes it appear white in the footer. */
 .site-footer .brand img {
-  height: 42px;      /* same as header */
-  width: auto;
-  border-radius: 8px;
+  height: 42px !important;         /* identical size as header */
+  width: auto !important;
+  border-radius: 8px !important;
   display: block;
 
-  /* stop weird inversion */
-  filter: none !important;
-  -webkit-filter: none !important;
+  /* color control */
+  filter: invert(1) !important;    /* black -> white */
+  -webkit-filter: invert(1) !important;
   mix-blend-mode: normal !important;
   opacity: 1 !important;
   background: transparent !important;
 }
-
