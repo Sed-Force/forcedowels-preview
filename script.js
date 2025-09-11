@@ -1,6 +1,4 @@
-/* Force Dowels — Slider + minor helpers */
-
-/* Clerk user button (existing safe guard) */
+/* Clerk user button (kept safe) */
 window.addEventListener('load', async () => {
   try {
     if (window.Clerk) {
@@ -14,7 +12,7 @@ window.addEventListener('load', async () => {
   } catch (_) {}
 });
 
-/* ======= Simple Slider =================================================== */
+/* ======= Simple Slider (5 slides) ======================================= */
 (function () {
   const viewport = document.getElementById('fd-viewport');
   if (!viewport) return;
@@ -37,7 +35,6 @@ window.addEventListener('load', async () => {
       d.setAttribute('aria-selected', idx === index ? 'true' : 'false');
     });
   }
-
   function next() { goTo(index + 1); }
   function prev() { goTo(index - 1); }
 
@@ -55,13 +52,13 @@ window.addEventListener('load', async () => {
   // Keyboard
   window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight') { next(); restart(); }
-    if (e.key === 'ArrowLeft') { prev(); restart(); }
+    if (e.key === 'ArrowLeft')  { prev(); restart(); }
   });
 
   // Autoplay with pause on hover
   function start() { timer = setInterval(next, AUTOPLAY_MS); }
-  function stop() { if (timer) clearInterval(timer); timer = null; }
-  function restart() { stop(); start(); }
+  function stop()  { if (timer) clearInterval(timer); timer = null; }
+  function restart(){ stop(); start(); }
 
   const slider = document.querySelector('.slider');
   if (slider) {
@@ -70,25 +67,19 @@ window.addEventListener('load', async () => {
   }
 
   // Touch swipe
-  let touchStartX = 0;
-  let touchDx = 0;
-
+  let sx = 0, dx = 0;
   viewport.addEventListener('touchstart', (e) => {
     if (e.touches.length !== 1) return;
-    touchStartX = e.touches[0].clientX;
-    touchDx = 0;
-    stop();
+    sx = e.touches[0].clientX; dx = 0; stop();
   }, { passive: true });
-
   viewport.addEventListener('touchmove', (e) => {
     if (e.touches.length !== 1) return;
-    touchDx = e.touches[0].clientX - touchStartX;
+    dx = e.touches[0].clientX - sx;
   }, { passive: true });
-
   viewport.addEventListener('touchend', () => {
-    const threshold = 40; // pixels
-    if (touchDx > threshold) prev();
-    else if (touchDx < -threshold) next();
+    const threshold = 40;
+    if (dx > threshold) prev();
+    else if (dx < -threshold) next();
     restart();
   });
 
