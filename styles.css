@@ -326,18 +326,18 @@ a { color: inherit; text-decoration: none; }
   .footer-bottom-right { gap: 12px; flex-wrap: wrap; }
 }
 
-/* === Footer logo exact-match patch (place LAST) ===========================
-   Ensures the footer logo renders exactly like the header logo
-   (same size, no squish, no color inversion/blend). */
+/* === Footer logo cleanup ====================================== */
 .site-footer .brand img {
-  height: 42px !important;   /* identical to header */
-  width: auto !important;
-  border-radius: 8px !important;
+  height: 42px;      /* same as header */
+  width: auto;
+  border-radius: 8px;
   display: block;
 
+  /* stop weird inversion */
   filter: none !important;
   -webkit-filter: none !important;
   mix-blend-mode: normal !important;
   opacity: 1 !important;
   background: transparent !important;
 }
+
