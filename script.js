@@ -123,3 +123,116 @@ window.addEventListener('load', async () => {
   // Initial render
   render();
 })();
+
+/* ===== Order page logic: tiers + calculator ============================= */
+(function () {
+  const tiers = document.querySelectorAll('.tier');
+  const qtyInput = document.getElementById('qty');
+  const ppuEl = document.getElementById('ppu');
+  const totalEl = document.getElementById('total');
+  const addBulkBtn = document.getElementById('add-bulk');
+  const starterKitBtn = document.getElementById('starter-kit');
+
+  if (!qtyInput || !ppuEl || !totalEl) return;
+
+  // Current active tier (defaults to the one marked active)
+  let active = document.querySelector('.tier.active');
+  let ppu = parseFloat(active?.dataset.price || '0.072');
+  let min = parseInt(active?.dataset.min || '5000', 10);
+  let max = parseInt(active?.dataset.max || '20000', 10);
+
+  function clampToStep(v) {
+    const step = 5000;
+    v = Math.round(v / step) * step;
+    v = Math.max(5000, Math.min(960000, v));
+    return v;
+  }
+
+  function syncPrice() {
+    const q = clampToStep(parseInt(qtyInput.value || '5000', 10));
+    qtyInput.value = q;
+
+    // If quantity leaves this tier's bounds, keep the price from active tier (like screenshot).
+    const total = q * ppu;
+    ppuEl.textContent = `$${ppu.toFixed(3)}`;
+    totalEl.textContent = `$${total.toFixed(2)}`;
+  }
+
+  tiers.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.classList.contains('locked') || btn.disabled) return;
+      tiers.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      active = btn;
+      ppu = parseFloat(btn.dataset.price);
+      min = parseInt(btn.dataset.min, 10);
+      max = parseInt(btn.dataset.max, 10);
+      // Snap qty into the selected tier range
+      let q = parseInt(qtyInput.value || '5000', 10);
+      if (q < min) q = min;
+      if (q > max) q = max;
+      qtyInput.value = q;
+      syncPrice();
+    });
+  });
+
+  // Step buttons
+  document.querySelectorAll('.qtywrap .step').forEach(b => {
+    b.addEventListener('click', () => {
+      const delta = parseInt(b.dataset.delta, 10);
+      let q = parseInt(qtyInput.value || '5000', 10);
+      q = clampToStep(q + delta);
+      qtyInput.value = q;
+      syncPrice();
+    });
+  });
+
+  qtyInput.addEventListener('change', syncPrice);
+  syncPrice();
+
+  // Add bulk to cart (uses the cart code already in script.js)
+  if (addBulkBtn) {
+    addBulkBtn.addEventListener('click', () => {
+      const q = parseInt(qtyInput.value || '5000', 10);
+      const item = {
+        sku: `FD-8MM-BULK-${q}`,
+        name: `Force Dowels — Bulk (${q.toLocaleString()} units)`,
+        price: ppu * q, // store as line price; cart UI shows subtotal anyway
+        qty: 1,
+        img: '/images/slider-3.jpg'
+      };
+      // Reuse cart helpers if present:
+      try {
+        const data = JSON.parse(localStorage.getItem('fd_cart') || '[]');
+        data.push(item);
+        localStorage.setItem('fd_cart', JSON.stringify(data));
+        // open cart
+        const cart = document.getElementById('cart');
+        if (cart) cart.setAttribute('aria-hidden', 'false');
+        // trigger re-render if our cart UI is on this page
+        const evt = new Event('storage'); window.dispatchEvent(evt);
+      } catch (_) {}
+    });
+  }
+
+  // Starter kit add to cart
+  if (starterKitBtn) {
+    starterKitBtn.addEventListener('click', () => {
+      const item = {
+        sku: starterKitBtn.dataset.sku,
+        name: starterKitBtn.dataset.name,
+        price: parseFloat(starterKitBtn.dataset.price),
+        qty: 1,
+        img: '/images/slider-5.jpg'
+      };
+      try {
+        const data = JSON.parse(localStorage.getItem('fd_cart') || '[]');
+        data.push(item);
+        localStorage.setItem('fd_cart', JSON.stringify(data));
+        const cart = document.getElementById('cart');
+        if (cart) cart.setAttribute('aria-hidden', 'false');
+        const evt = new Event('storage'); window.dispatchEvent(evt);
+      } catch (_) {}
+    });
+  }
+})();
