@@ -1138,3 +1138,25 @@ a { color: inherit; text-decoration: none; }
   display: inline-flex; align-items: center; gap: 10px;
 }
 .faq-cta p { margin: 0; font-weight: 700; }
+
+/* === FAQ adjustments ==================================== */
+
+/* Center the trigger text in each accordion bubble */
+.faq .accordion-trigger,
+.faq summary,
+.accordion-trigger {
+  justify-content: center;
+  text-align: center;
+}
+
+/* Center the final CTA */
+.faq-cta {
+  text-align: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.faq-cta p {
+  font-size: 1.2rem;
+  margin-bottom: 12px;
+}
