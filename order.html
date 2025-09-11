@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Order — Force Dowels™</title>
+  <meta name="description" content="Order Force Dowels™ packs. Faster assembly, flawless finish.">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=18">
+
+  <!-- Clerk (optional; keeps your header behavior consistent) -->
+  <script async crossorigin="anonymous"
+    data-clerk-publishable-key="pk_live_REPLACE_ME"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
+
+  <script defer src="/script.js?v=18"></script>
+</head>
+<body>
+
+<!-- Header (reuse your existing header markup from index.html) -->
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="/" aria-label="Force Dowel Company">
+      <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" />
+    </a>
+
+    <nav class="nav" aria-label="Primary">
+      <a href="/">Home</a>
+      <a href="/order.html" class="active">Order</a>
+      <a href="/videos.html">Videos</a>
+      <a href="/faq.html">FAQ</a>
+
+      <div class="nav-dropdown">
+        <button class="nav-dropbtn" type="button">
+          <span class="nav-drop-label">Distributors</span>
+          <span class="nav-caret">▾</span>
+        </button>
+        <div class="nav-dropmenu" role="menu">
+          <a href="/distribution.html" role="menuitem">Find a Distributor</a>
+          <a href="/distribution.html#become" role="menuitem">Become a Distributor</a>
+        </div>
+      </div>
+
+      <a href="/contact.html" class="btn btn--accent">Contact</a>
+    </nav>
+
+  <div class="header-actions">
+    <a href="#cart" class="btn btn--ghost btn--invert" id="btn-cart">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M7 18a2 2 0 1 0 0 4a2 2 0 0 0 0-4m10 0a2 2 0 1 0 0 4a2 2 0 0 0 0-4M6.2 6l.3 2h12.3a1 1 0 0 1 1 1l-1.2 6a2 2 0 0 1-2 1.6H8.7a2 2 0 0 1-2-1.7L5.3 5H3V3h3a1 1 0 0 1 1 .9L7.2 6Z"/>
+      </svg>
+      <span class="hide-sm">Cart</span>
+    </a>
+
+    <div class="auth-buttons">
+      <button class="btn btn--ghost btn--invert" id="btn-login" type="button">Login</button>
+      <button class="btn btn--accent" id="btn-signup" type="button">Sign Up</button>
+    </div>
+    <div id="user-button"></div>
+  </div>
+  </div>
+</header>
+
+<main id="content">
+  <!-- Page header -->
+  <section class="section">
+    <div class="container order-head">
+      <h1>Order Force Dowels™</h1>
+      <p class="muted">Choose your pack size and add to cart. Checkout & shipping will be finalized at the next step.</p>
+    </div>
+  </section>
+
+  <!-- Products -->
+  <section class="section">
+    <div class="container products-grid" id="products">
+      <!-- Product card #1 -->
+      <article class="product" data-sku="FD-8MM-050" data-name="Force Dowels — 8mm Pack of 50" data-price="29.00">
+        <img src="/images/slider-3.jpg" alt="Force Dowels 8mm — pack of 50">
+        <div class="product-body">
+          <h3>8mm Force Dowels</h3>
+          <p class="muted">High-strength, no-glue fastener. Pack of 50.</p>
+          <div class="product-row">
+            <span class="price">$29.00</span>
+            <div class="qty">
+              <button class="qty-btn" data-delta="-1">−</button>
+              <input type="number" min="1" value="1" inputmode="numeric">
+              <button class="qty-btn" data-delta="1">+</button>
+            </div>
+          </div>
+          <button class="btn btn--primary add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Product card #2 -->
+      <article class="product" data-sku="FD-8MM-100" data-name="Force Dowels — 8mm Pack of 100" data-price="54.00">
+        <img src="/images/slider-4.jpg" alt="Force Dowels 8mm — pack of 100">
+        <div class="product-body">
+          <h3>8mm Force Dowels</h3>
+          <p class="muted">High-strength, no-glue fastener. Pack of 100.</p>
+          <div class="product-row">
+            <span class="price">$54.00</span>
+            <div class="qty">
+              <button class="qty-btn" data-delta="-1">−</button>
+              <input type="number" min="1" value="1" inputmode="numeric">
+              <button class="qty-btn" data-delta="1">+</button>
+            </div>
+          </div>
+          <button class="btn btn--primary add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+
+      <!-- Product card #3 -->
+      <article class="product" data-sku="FD-8MM-500" data-name="Force Dowels — 8mm Pack of 500" data-price="239.00">
+        <img src="/images/slider-5.jpg" alt="Force Dowels 8mm — pack of 500">
+        <div class="product-body">
+          <h3>8mm Force Dowels</h3>
+          <p class="muted">High-strength, no-glue fastener. Pack of 500.</p>
+          <div class="product-row">
+            <span class="price">$239.00</span>
+            <div class="qty">
+              <button class="qty-btn" data-delta="-1">−</button>
+              <input type="number" min="1" value="1" inputmode="numeric">
+              <button class="qty-btn" data-delta="1">+</button>
+            </div>
+          </div>
+          <button class="btn btn--primary add-to-cart">Add to Cart</button>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- Cart drawer -->
+  <aside class="cart" id="cart" aria-hidden="true">
+    <div class="cart-inner">
+      <header class="cart-head">
+        <h3>Your Cart</h3>
+        <button class="cart-close" aria-label="Close">✕</button>
+      </header>
+
+      <div class="cart-items" id="cart-items">
+        <!-- items injected here -->
+      </div>
+
+      <footer class="cart-foot">
+        <div class="cart-row">
+          <span>Subtotal</span>
+          <strong id="cart-subtotal">$0.00</strong>
+        </div>
+        <p class="cart-note muted">Shipping & taxes calculated at checkout.</p>
+        <div class="cart-actions">
+          <a href="/contact.html" class="btn btn--ghost">Request a Quote</a>
+          <a href="/checkout.html" class="btn btn--accent">Proceed to Checkout</a>
+        </div>
+      </footer>
+    </div>
+    <button class="cart-backdrop" aria-label="Close"></button>
+  </aside>
+</main>
+
+<!-- Footer (reuse your existing footer exactly as on index.html) -->
+<footer class="site-footer">
+  <!-- … copy the same footer from your home page … -->
+</footer>
+
+</body>
+</html>
