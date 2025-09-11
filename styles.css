@@ -1201,3 +1201,95 @@ a { color: inherit; text-decoration: none; }
   color: var(--text);                     /* normal body color */
   padding: 16px 20px;
 }
+
+/* ==== Distributor Finder ================================================== */
+.text-center { text-align: center; }
+.pt-0 { padding-top: 0 !important; }
+
+.finder-card{
+  background:#0f1420;
+  border:1px solid #1e2942;
+  border-radius:16px;
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+.finder-head h3{
+  margin:0 0 6px;
+  font-size: 20px;
+}
+.finder-head p{
+  margin:0 0 12px;
+  color:#aab4c8;
+}
+
+.finder-controls{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+/* Inputs row */
+.input-row{
+  display:grid;
+  grid-template-columns: 1fr auto auto;
+  gap:10px;
+}
+.input{
+  width:100%;
+  border:1px solid #d9e2ef;
+  border-radius:10px;
+  padding:12px 14px;
+  background:#fff;
+  color:#101828;
+  font:inherit;
+}
+.input:focus{
+  outline:2px solid var(--ring);
+  border-color: var(--brand);
+}
+
+/* Filters row */
+.filter-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.label{ font-weight:700; color:#e6edff; }
+.select{
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid #d9e2ef;
+  background:#fff;
+  color:#101828;
+  font:inherit;
+}
+.checkbox{
+  display:inline-flex; align-items:center; gap:8px; color:#e6edff;
+}
+.checkbox input{ transform: translateY(1px); }
+.spacer{ flex:1; }
+
+/* Results card */
+.results-card{
+  margin-top:14px;
+  background:#0b101a;
+  border:1px solid #1e2942;
+  border-radius:12px;
+  min-height:240px;
+  padding:24px;
+}
+.no-results{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  gap:8px;
+  color:#aab4c8;
+}
+.no-results .strong{ font-weight:800; color:#eaf0ff; }
+.no-results svg{ opacity:.9; color:#aab4c8; }
+
+/* Buttons already themed; reinforce primary to brand blue/orange set */
+.btn--primary { background: var(--brand); color:#fff; }
+.btn--primary:hover { background: var(--brand-ink); }
