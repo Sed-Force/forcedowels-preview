@@ -3,190 +3,139 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Order — Force Dowels™</title>
-  <meta name="description" content="Order Force Dowels™ in bulk tiers or starter kits.">
+  <title>Order Force Dowels™</title>
+  <meta name="description" content="Order Force Dowels™ — Patent Pending Cabinet Assembly Fasteners. Faster, stronger, flawless finishes.">
+
   <link rel="icon" href="/favicon.ico">
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20">
-
-  <!-- Clerk (optional to keep header behavior consistent) -->
-  <script async crossorigin="anonymous"
-    data-clerk-publishable-key="pk_live_REPLACE_ME"
-    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
-
-  <script defer src="/script.js?v=20"></script>
+  <link rel="stylesheet" href="/styles.css?v=4">
 </head>
 <body>
 
-<!-- Header (same as your home page) -->
+<!-- Header -->
 <header class="site-header">
   <div class="container header-inner">
     <a class="brand" href="/" aria-label="Force Dowel Company">
       <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" />
     </a>
-
-    <nav class="nav" aria-label="Primary">
+    <nav class="nav">
       <a href="/">Home</a>
-      <a href="/order.html" class="active">Order</a>
+      <a href="/order.html">Order</a>
       <a href="/videos.html">Videos</a>
       <a href="/faq.html">FAQ</a>
-
       <div class="nav-dropdown">
         <button class="nav-dropbtn" type="button">
           <span class="nav-drop-label">Distributors</span>
           <span class="nav-caret">▾</span>
         </button>
-        <div class="nav-dropmenu" role="menu">
-          <a href="/distribution.html" role="menuitem">Find a Distributor</a>
-          <a href="/distribution.html#become" role="menuitem">Become a Distributor</a>
+        <div class="nav-dropmenu">
+          <a href="/distribution.html">Find a Distributor</a>
+          <a href="/distribution.html#become">Become a Distributor</a>
         </div>
       </div>
-
       <a href="/contact.html" class="btn btn--accent">Contact</a>
     </nav>
-
     <div class="header-actions">
-      <a href="#cart" class="btn btn--ghost btn--invert" id="btn-cart" aria-label="Cart">
-        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="currentColor" d="M7 18a2 2 0 1 0 0 4a2 2 0 0 0 0-4m10 0a2 2 0 1 0 0 4a2 2 0 0 0 0-4M6.2 6l.3 2h12.3a1 1 0 0 1 1 1l-1.2 6a2 2 0 0 1-2 1.6H8.7a2 2 0 0 1-2-1.7L5.3 5H3V3h3a1 1 0 0 1 1 .9L7.2 6Z"/>
-        </svg>
-        <span class="hide-sm">Cart</span>
-      </a>
-
+      <a href="/order.html#cart" class="btn btn--ghost btn--invert">Cart</a>
       <div class="auth-buttons">
-        <button class="btn btn--ghost btn--invert" id="btn-login" type="button">Login</button>
-        <button class="btn btn--accent" id="btn-signup" type="button">Sign Up</button>
+        <button class="btn btn--ghost btn--invert">Login</button>
+        <button class="btn btn--accent">Sign Up</button>
       </div>
-      <div id="user-button"></div>
     </div>
   </div>
 </header>
 
+<!-- Main content -->
 <main id="content">
-  <!-- Page header -->
   <section class="section">
     <div class="container">
       <h1>Order Force Dowels™</h1>
-    </div>
-  </section>
-
-  <!-- Pricing + Calculator -->
-  <section class="section">
-    <div class="container order-grid">
-      <!-- LEFT: Tiers -->
-      <div class="tiers">
-        <div class="notice">
-          <strong>Guest Checkout Available:</strong>
-          Orders of 5,000 dowels or less, and all kit purchases, can be completed without an account. Larger orders require sign-in for business verification.
+      <div class="grid-2">
+        
+        <!-- Pricing Tiers -->
+        <div>
+          <h2>Pricing Tiers</h2>
+          <p><strong>Guest Checkout Available:</strong> Orders of 5,000 dowels or less, and all kit purchases, can be completed without an account. Larger orders require sign-in for business verification.</p>
+          <div class="pricing-tier selected">5,000–20,000 <span>$0.072/Unit</span></div>
+          <div class="pricing-tier locked">&lt;20,000–160,000 <span>$0.0675/Unit</span></div>
+          <div class="pricing-tier locked">&lt;160,000–960,000 <span>$0.063/Unit</span></div>
+          <h3>Or Try Our Starter Kit</h3>
+          <p><strong>Force Dowels Kit</strong> — Perfect for small projects and testing</p>
+          <p>300 dowels • $0.12/unit <strong>$36.00</strong></p>
+          <h3>Need a Custom Quote?</h3>
+          <p>For orders exceeding 960,000 units or for special requirements, please contact our sales team for a specialized quote.</p>
+          <a href="/contact.html" class="btn btn--accent">Contact Sales</a>
         </div>
 
-        <!-- Active tier -->
-        <button class="tier active" data-min="5000" data-max="20000" data-price="0.072">
-          <span class="tier-range">5,000–20,000</span>
-          <span class="tier-price">$0.072/Unit</span>
-        </button>
-
-        <!-- Locked tiers (examples; you can change thresholds & prices) -->
-        <button class="tier locked" data-min="20000" data-max="160000" data-price="0.0675" disabled>
-          <span class="tier-range">&lt;20,000–160,000</span>
-          <span class="tier-lock">Sign in required</span>
-          <span class="tier-price">$0.0675/Unit</span>
-        </button>
-
-        <button class="tier locked" data-min="160000" data-max="960000" data-price="0.063" disabled>
-          <span class="tier-range">&lt;160,000–960,000</span>
-          <span class="tier-lock">Sign in required</span>
-          <span class="tier-price">$0.063/Unit</span>
-        </button>
-
-        <h3 class="mt">Or Try Our Starter Kit</h3>
-        <button class="kit" id="starter-kit" data-sku="FD-KIT-300" data-name="Force Dowels Kit — 300 units" data-price="36.00">
-          <div>
-            <strong>Force Dowels Kit</strong>
-            <div class="muted">Perfect for small projects and testing</div>
+        <!-- Calculator -->
+        <div>
+          <h2>Calculate Your Price</h2>
+          <p><strong>Ordering Requirements:</strong> Force Dowels are available in 5,000-unit increments only. Minimum order quantity is 5,000 units, maximum is 960,000 units.</p>
+          <div class="calculator">
+            <label for="qty">Quantity (units)</label>
+            <input id="qty" type="number" min="5000" step="5000" value="5000">
+            <p>Price per unit: <strong>$0.072</strong></p>
+            <p>Total price: <strong>$360.00</strong></p>
+            <button class="btn btn--accent">Add to Cart</button>
           </div>
-          <div class="kit-right">
-            <strong>$36.00</strong>
-            <div class="muted">300 dowels • $0.12/unit</div>
-          </div>
-        </button>
-
-        <h3 class="mt">Need a Custom Quote?</h3>
-        <p>For orders exceeding 960,000 units or for special requirements, please contact our sales team for a specialized quote.</p>
-        <a class="btn btn--accent" href="/contact.html">Contact Sales</a>
+        </div>
       </div>
-
-      <!-- RIGHT: Calculator -->
-      <aside class="calc">
-        <h2>Calculate Your Price</h2>
-
-        <div class="calc-callout">
-          <strong>Ordering Requirements:</strong> Force Dowels are available in 5,000-unit increments only. Minimum order quantity is 5,000 units, maximum is 960,000 units.
-        </div>
-
-        <div class="field">
-          <label>Quantity (units)</label>
-          <div class="qtywrap">
-            <button class="step" data-delta="-5000" aria-label="decrease">–</button>
-            <input id="qty" type="number" step="5000" min="5000" max="960000" value="5000" inputmode="numeric">
-            <button class="step" data-delta="5000" aria-label="increase">+</button>
-            <span class="units">units</span>
-          </div>
-        </div>
-
-        <div class="row">
-          <span>Price per unit:</span>
-          <strong id="ppu">$0.072</strong>
-        </div>
-
-        <div class="row">
-          <span>Total price:</span>
-          <strong id="total">$360.00</strong>
-        </div>
-
-        <button id="add-bulk" class="btn btn--accent btn-wide">
-          <span style="display:inline-flex;align-items:center;gap:8px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 18a2 2 0 1 0 0 4a2 2 0 0 0 0-4m10 0a2 2 0 1 0 0 4a2 2 0 0 0 0-4M6.2 6l.3 2h12.3a1 1 0 0 1 1 1l-1.2 6a2 2 0 0 1-2 1.6H8.7a2 2 0 0 1-2-1.7L5.3 5H3V3h3a1 1 0 0 1 1 .9L7.2 6Z"/></svg>
-            Add to Cart
-          </span>
-        </button>
-
-        <p class="viewcart"><a href="#cart">View Cart</a></p>
-      </aside>
     </div>
   </section>
-
-  <!-- Cart drawer (same as home; script.js handles it) -->
-  <aside class="cart" id="cart" aria-hidden="true">
-    <div class="cart-inner">
-      <header class="cart-head">
-        <h3>Your Cart</h3>
-        <button class="cart-close" aria-label="Close">✕</button>
-      </header>
-      <div class="cart-items" id="cart-items"></div>
-      <footer class="cart-foot">
-        <div class="cart-row">
-          <span>Subtotal</span>
-          <strong id="cart-subtotal">$0.00</strong>
-        </div>
-        <p class="cart-note muted">Shipping & taxes calculated at checkout.</p>
-        <div class="cart-actions">
-          <a href="/contact.html" class="btn btn--ghost">Request a Quote</a>
-          <a href="/checkout.html" class="btn btn--accent">Proceed to Checkout</a>
-        </div>
-      </footer>
-    </div>
-    <button class="cart-backdrop" aria-label="Close"></button>
-  </aside>
 </main>
 
-<!-- Footer (reuse your current footer markup) -->
+<!-- Footer (same as homepage) -->
 <footer class="site-footer">
-  <!-- paste the same footer from index.html -->
+  <div class="container footer-main">
+    <section class="footer-sec footer-sec--brand">
+      <a href="/"><img src="/images/force-dowel-logo.jpg" alt="Force Dowels logo" class="footer-logo" /></a>
+      <p class="footer-tagline">
+        Revolutionary cabinetry fasteners that deliver faster assembly, stronger connections, and flawless finishes.
+        Experience the next generation of cabinet construction.
+      </p>
+    </section>
+    <section class="footer-sec">
+      <h4>Quick Links</h4>
+      <ul class="footer-list">
+        <li><a href="/">Home</a></li>
+        <li><a href="/order.html">Order Now</a></li>
+        <li><a href="/videos.html">Product Videos</a></li>
+        <li><a href="/distribution.html">Find a Distributor</a></li>
+        <li><a href="/distribution.html#become">Become a Distributor</a></li>
+      </ul>
+    </section>
+    <section class="footer-sec">
+      <h4>Contact Us</h4>
+      <ul class="footer-list">
+        <li>(480)-581-7145</li>
+        <li>Hours: Mon–Thurs 7:30AM–4:30PM; Friday 7:30AM–11:30AM</li>
+        <li><a href="mailto:info@forcedowels.com">info@forcedowels.com</a></li>
+        <li>4455 E Nunneley Rd, Ste 103<br>Gilbert, AZ 85296</li>
+      </ul>
+    </section>
+    <section class="footer-sec">
+      <h4>Stay Updated</h4>
+      <form class="footer-form">
+        <input type="email" placeholder="Enter your email">
+        <button type="submit" class="btn btn--accent">Subscribe</button>
+      </form>
+      <p class="footer-privacy-note">We respect your privacy. Unsubscribe at any time.</p>
+    </section>
+  </div>
+  <div class="footer-separator"></div>
+  <div class="container footer-bottom">
+    <div class="footer-bottom-left">
+      <p>© <span id="year"></span> Force Dowels. All rights reserved.</p>
+      <p class="footer-patent">Patent Pending Technology - Revolutionary Cabinetry Fasteners</p>
+    </div>
+    <nav class="footer-bottom-right">
+      <a href="/privacy.html">Privacy Policy</a>
+      <a href="/terms.html">Terms of Service</a>
+    </nav>
+  </div>
 </footer>
 
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
 </body>
 </html>
