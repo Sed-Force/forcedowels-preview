@@ -1139,24 +1139,41 @@ a { color: inherit; text-decoration: none; }
 }
 .faq-cta p { margin: 0; font-weight: 700; }
 
-/* === FAQ adjustments ==================================== */
-
-/* Center the trigger text in each accordion bubble */
-.faq .accordion-trigger,
-.faq summary,
-.accordion-trigger {
-  justify-content: center;
+/* === FAQ centering fixes =============================================== */
+/* Center question text inside each bubble while keeping the caret on the right */
+.acc-trigger{
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;           /* center the text */
   text-align: center;
+  padding-right: 44px;               /* room for the caret */
+  width: 100%;
+}
+.acc-trigger span{
+  display: block;                    /* makes centering consistent */
+}
+.acc-trigger svg{
+  position: absolute;                /* keep caret on the right edge */
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--accent);
+  transition: transform .18s ease;
+}
+.acc-item.open .acc-trigger svg{
+  transform: translateY(-50%) rotate(45deg); /* plus → minus */
 }
 
-/* Center the final CTA */
-.faq-cta {
+/* Center the "Still have questions?" card and its button */
+.faq-cta{
+  max-width: 560px;
+  margin: 20px auto 0;               /* centers the whole card */
   text-align: center;
-  justify-content: center;
+  display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
-
-.faq-cta p {
-  font-size: 1.2rem;
-  margin-bottom: 12px;
-}
+.faq-cta p{ margin: 0 0 12px; font-size: 1.1rem; }
+.faq-cta .btn{ margin-top: 4px; }
