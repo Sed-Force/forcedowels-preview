@@ -271,7 +271,11 @@ a { color: inherit; text-decoration: none; }
 .footer-form input::placeholder{ color:rgba(255,255,255,.75); }
 
 /* Divider line */
-.footer-separator { border-top: 2px solid rgba(255,255,255,.35); margin: 0; }
+.footer-separator {
+  border-top: 3px solid var(--accent); /* orange brand color */
+  margin: 0;
+}
+
 
 /* Bottom bar */
 .footer-bottom {
