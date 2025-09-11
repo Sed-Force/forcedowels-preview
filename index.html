@@ -95,83 +95,70 @@
 
 
   <main id="content">
-    <!-- HERO -->
-    <section class="section hero hero--apd">
-      <div class="container grid-2">
-        <div>
-          <h1>Force Dowels™</h1>
+ <!-- HERO (slider on the right) -->
+<section class="section hero hero--apd">
+  <div class="container grid-2">
+    <!-- Left: headline + bullets -->
+    <div>
+      <h1>Force Dowels™</h1>
 
-          <!-- Orange "Patent Pending" line -->
-          <p class="eyebrow eyebrow--accent">Patent Pending</p>
+      <!-- Orange "Patent Pending" line -->
+      <p class="eyebrow eyebrow--accent">Patent Pending</p>
 
-          <!-- Same size as the line above, standard color -->
-          <p class="subline">Experience the next generation of cabinet assembly: faster, stronger, and with a flawless finish.</p>
+      <!-- Same size as above, standard color -->
+      <p class="subline">Experience the next generation of cabinet assembly: faster, stronger, and with a flawless finish.</p>
 
-          <div class="actions">
-            <a class="btn btn--primary" href="/order.html">Order Now</a>
-            <a class="btn btn--ghost" href="/contact.html">Request a Quote</a>
+      <div class="actions">
+        <a class="btn btn--primary" href="/order.html">Order Now</a>
+        <a class="btn btn--ghost" href="/contact.html">Request a Quote</a>
+      </div>
+
+      <!-- “bubbles” -->
+      <ul class="badges">
+        <li>No Exterior Fastener for a Cleaner Look</li>
+        <li>No Glue Necessary</li>
+        <li>Significantly Reduced Labor Cost</li>
+        <li>Patent Pending</li>
+        <li>Built for RTA Efficiency — Strong, Simple, Reliable</li>
+        <li>Integrates Seamlessly With Most 8mm Dowel Systems</li>
+      </ul>
+    </div>
+
+    <!-- Right: slider lives inside the hero now -->
+    <div>
+      <div class="slider" aria-label="Product photos">
+        <div class="slider-viewport" id="fd-viewport">
+          <!-- Use your two renamed files first -->
+          <div class="slide is-active">
+            <img src="/images/dowel-still-photo.jpg?v=3" alt="Force Dowels close-up photo">
           </div>
-
-          <!-- Your requested “bubbles/buttons” (non-clickable) -->
-          <ul class="badges">
-            <li>No Exterior Fastener for a Cleaner Look</li>
-            <li>No Glue Necessary</li>
-            <li>Significantly Reduced Labor Cost</li>
-            <li>Patent Pending</li>
-            <li>Built for RTA Efficiency — Strong, Simple, Reliable</li>
-            <li>Integrates Seamlessly With Most 8mm Dowel Systems</li>
-          </ul>
+          <div class="slide">
+            <img src="/images/dowel-group-photo.jpg?v=3" alt="Force Dowels group photo">
+          </div>
+          <!-- Keep the 3 existing images -->
+          <div class="slide">
+            <img src="/images/slider-3.jpg?v=3" alt="Force Dowels product photo 3">
+          </div>
+          <div class="slide">
+            <img src="/images/slider-4.jpg?v=3" alt="Force Dowels product photo 4">
+          </div>
+          <div class="slide">
+            <img src="/images/slider-5.jpg?v=3" alt="Force Dowels product photo 5">
+          </div>
         </div>
 
-        <div>
-          <img class="hero-img" src="/images/hero-forcedowel.jpg" alt="Force Dowels used in cabinet assembly">
+        <!-- Controls -->
+        <button class="slider-arrow prev" aria-label="Previous slide" data-dir="prev">‹</button>
+        <button class="slider-arrow next" aria-label="Next slide" data-dir="next">›</button>
+
+        <!-- Dots (5) -->
+        <div class="slider-dots" role="tablist" aria-label="Slide dots">
+          <button class="dot is-active" role="tab" aria-selected="true" data-slide="0"><span class="sr-only">Slide 1</span></button>
+          <button class="dot" role="tab" aria-selected="false" data-slide="1"><span class="sr-only">Slide 2</span></button>
+          <button class="dot" role="tab" aria-selected="false" data-slide="2"><span class="sr-only">Slide 3</span></button>
+          <button class="dot" role="tab" aria-selected="false" data-slide="3"><span class="sr-only">Slide 4</span></button>
+          <button class="dot" role="tab" aria-selected="false" data-slide="4"><span class="sr-only">Slide 5</span></button>
         </div>
-      </div>
-    </section>
-
-    <!-- You can keep your other sections below as-is, or we’ll refine after the hero -->
-    <section class="section">
-      <div class="container">
-        
-    <section class="section alt">
-      <div class="container">
-
-     <!-- IMAGE SLIDER -->
-<section class="section" id="showcase">
-  <div class="container">
-    <h2 class="slider-title">See Force Dowels in Action</h2>
-
-    <div class="slider" aria-label="Product photos">
-      <div class="slider-viewport" id="fd-viewport">
-        <!-- Slides (put your actual images at /images/slider-N.jpg) -->
-        <div class="slide is-active">
-  <img src="/images/dowel-still-photo.jpg?v=3" alt="Force Dowels close-up photo">
-</div>
-<div class="slide">
-  <img src="/images/dowel-group-photo.jpg?v=3" alt="Force Dowels group photo">
-</div>
-        <div class="slide">
-          <img src="/images/slider-3.jpg" alt="Force Dowels product photo 3">
-        </div>
-        <div class="slide">
-          <img src="/images/slider-4.jpg" alt="Force Dowels product photo 4">
-        </div>
-        <div class="slide">
-          <img src="/images/slider-5.jpg" alt="Force Dowels product photo 5">
-        </div>
-      </div>
-
-      <!-- Controls -->
-      <button class="slider-arrow prev" aria-label="Previous slide" data-dir="prev">‹</button>
-      <button class="slider-arrow next" aria-label="Next slide" data-dir="next">›</button>
-
-      <!-- Dots (5 to match 5 slides) -->
-      <div class="slider-dots" role="tablist" aria-label="Slide dots">
-        <button class="dot is-active" role="tab" aria-selected="true" data-slide="0"><span class="sr-only">Slide 1</span></button>
-        <button class="dot" role="tab" aria-selected="false" data-slide="1"><span class="sr-only">Slide 2</span></button>
-        <button class="dot" role="tab" aria-selected="false" data-slide="2"><span class="sr-only">Slide 3</span></button>
-        <button class="dot" role="tab" aria-selected="false" data-slide="3"><span class="sr-only">Slide 4</span></button>
-        <button class="dot" role="tab" aria-selected="false" data-slide="4"><span class="sr-only">Slide 5</span></button>
       </div>
     </div>
   </div>
