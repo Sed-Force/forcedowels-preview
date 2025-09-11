@@ -319,3 +319,33 @@ a { color: inherit; text-decoration: none; }
   opacity: 1 !important;
   background: transparent !important;
 }
+
+/* === Footer logo & layout fix (no squish, more space) =================== */
+
+/* Give the brand column more width so the logo isn't compressed */
+.footer-main {
+  grid-template-columns: minmax(300px, 1.35fr) 1fr 1fr 1fr;  /* wider first column */
+  column-gap: 64px;                                        /* more breathing room */
+}
+
+/* Ensure the logo keeps its natural proportions and isn't constrained */
+.footer-sec--brand .brand {
+  display: inline-flex;
+  align-items: center;
+}
+
+.site-footer .brand img {
+  height: 42px !important;        /* identical size as header */
+  width: auto !important;         /* preserve aspect ratio */
+  max-width: none !important;     /* don’t let the grid squeeze it */
+  object-fit: contain;            /* never distort */
+  border-radius: 8px !important;
+  display: block;
+
+  /* keep the white-on-blue look */
+  filter: invert(1) !important;
+  -webkit-filter: invert(1) !important;
+  mix-blend-mode: normal !important;
+  opacity: 1 !important;
+  background: transparent !important;
+}
