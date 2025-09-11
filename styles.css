@@ -984,3 +984,29 @@ a { color: inherit; text-decoration: none; }
   object-fit: contain;
   background: transparent;
 }
+
+/* Video card border color update */
+.video-card {
+  border: 2px solid var(--brand); /* uses your new blue (#224d8f) */
+  border-radius: 12px;
+  background: #111; /* keeps dark background */
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.25);
+}
+
+.video-thumb img {
+  border-radius: 8px;
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 2px solid var(--brand);
+}
+
+.video-cta {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.video-cta:hover {
+  background: var(--brand);
+  color: #fff;
+}
