@@ -890,3 +890,97 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 980px) {
   .order-grid { grid-template-columns: 1fr; }
 }
+
+/* === Video gallery layout ================================================= */
+.video-header h1 {
+  margin: 0;
+}
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(260px, 1fr));
+  gap: 22px;
+}
+@media (max-width: 1100px) {
+  .video-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .video-grid { grid-template-columns: 1fr; }
+}
+
+.video-card {
+  background: #0f1420;               /* dark card to match theme */
+  border: 1px solid #20273a;
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.video-thumb {
+  position: relative;
+  display: block;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #1d2435;
+  background: #0b0f1a;
+}
+.video-thumb img {
+  display: block;
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  filter: saturate(0.95) contrast(1.02);
+  transition: transform .25s ease;
+}
+.video-thumb:hover img {
+  transform: scale(1.02);
+}
+
+.play-badge {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: var(--accent);        /* #eead1a */
+  color: #1b2540;
+  font-weight: 900;
+  font-size: 20px;
+  box-shadow: 0 8px 22px rgba(238,173,26,.35);
+}
+
+.video-title {
+  margin: 2px 4px 6px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #eef2f7;
+}
+
+.video-cta {
+  margin: 0 4px 4px;
+  border-color: #3a4663;
+  color: #e6ebff;
+}
+.video-cta:hover {
+  border-color: var(--brand);       /* #224d8f */
+  color: var(--brand);
+}
+
+/* Footer logo rounding (in case this page was added before fix) */
+.site-footer .footer-brand-wrap,
+.site-footer .footer-logo {
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+.site-footer .footer-logo {
+  max-height: 56px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  background: transparent;
+}
