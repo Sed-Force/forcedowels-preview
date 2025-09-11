@@ -548,3 +548,54 @@ a { color: inherit; text-decoration: none; }
     height: clamp(220px, 60vw, 420px);
   }
 }
+
+/* === Hero layout tweaks: wider slider, centered, vertical badges ======== */
+
+/* Give the hero a touch more max width without affecting other sections */
+.hero .container {
+  max-width: 1240px; /* was 1120px sitewide */
+}
+
+/* Make right column (slider) wider and increase spacing between columns */
+.hero .grid-2 {
+  grid-template-columns: 0.9fr 1.1fr; /* shift more space to the slider */
+  gap: 36px;                            /* a bit more breathing room */
+  align-items: center;                   /* vertical centering */
+}
+
+/* Slightly taller slider when used in hero so it feels roomier */
+.hero .slider-viewport {
+  height: clamp(320px, 50vw, 600px);
+}
+
+/* Stack badges vertically (one per row), keep them nicely centered width */
+.hero--apd .badges {
+  display: grid !important;
+  grid-template-columns: 1fr;           /* single column */
+  gap: 10px;
+  max-width: 560px;                     /* keeps the column tidy */
+  margin-top: 16px;
+  padding: 0;
+  list-style: none;
+}
+
+/* Make each badge fill its row neatly */
+.hero--apd .badges li {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
+/* Mobile: revert to single column layout and adjust heights/spacings */
+@media (max-width: 900px) {
+  .hero .grid-2 {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .hero .slider-viewport {
+    height: clamp(240px, 60vw, 460px);
+  }
+  .hero--apd .badges {
+    max-width: 100%;
+  }
+}
