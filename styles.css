@@ -1293,3 +1293,87 @@ a { color: inherit; text-decoration: none; }
 /* Buttons already themed; reinforce primary to brand blue/orange set */
 .btn--primary { background: var(--brand); color:#fff; }
 .btn--primary:hover { background: var(--brand-ink); }
+
+/* ==== Distributor Finder – palette + layout tweaks ===================== */
+.find-distributor .text-center { text-align: center; }
+.find-distributor .pt-0 { padding-top: 0 !important; }
+
+.finder-card{
+  background: rgba(34,77,143,.08);      /* light brand blue tint */
+  border: 1px solid var(--brand);       /* new blue */
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.finder-head h3{ margin:0 0 6px; font-size: 20px; }
+.finder-head p{ margin:0 0 12px; color:#23314f; opacity:.8; }
+
+.finder-controls{ display:flex; flex-direction:column; gap:12px; }
+
+.input-row{
+  display:grid;
+  grid-template-columns: 1fr auto auto;
+  gap:10px;
+}
+.input{
+  width:100%;
+  border:1px solid #d9e2ef;
+  border-radius:10px;
+  padding:12px 14px;
+  background:#fff;
+  color:#101828;
+  font:inherit;
+}
+.input:focus{ outline:2px solid var(--ring); border-color: var(--brand); }
+
+.filter-row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.label{ font-weight:800; color:#1b2540; }
+.select{
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid #d9e2ef;
+  background:#fff;
+  color:#101828;
+  font:inherit;
+}
+.checkbox{ display:inline-flex; align-items:center; gap:8px; color:#1b2540; }
+.checkbox input{ transform: translateY(1px); }
+.spacer{ flex:1; }
+
+/* Results panel uses the light brand blue background + blue border */
+.results-card{
+  margin-top:14px;
+  background: rgba(34,77,143,.08);
+  border: 1px solid var(--brand);
+  border-radius:12px;
+  min-height:240px;
+  padding:24px;
+}
+.no-results{
+  display:flex; flex-direction:column; align-items:center; text-align:center;
+  gap:8px; color:#23314f;
+}
+.no-results .strong{ font-weight:800; color:#1b2540; }
+
+/* Map pin icon (from your screenshot) */
+.map-pin-icon{
+  width:48px; height:48px;
+  color:#9aa3b2;               /* soft gray like the screenshot */
+  margin-bottom:12px;
+  display:inline-block;
+}
+
+/* Buttons: Search ZIP must be orange */
+.btn-search{ background: var(--accent) !important; color: #1b2540 !important; }
+.btn-search:hover{ filter: brightness(.96); }
+
+/* Optional: make ghost button borders visible on blue tint */
+.find-distributor .btn--ghost{
+  border-color: #d9e2ef;
+  color:#1b2540;
+}
+.find-distributor .btn--ghost:hover{
+  border-color: var(--brand);
+  color: var(--brand);
+}
