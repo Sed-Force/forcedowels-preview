@@ -447,3 +447,82 @@ a { color: inherit; text-decoration: none; }
   .slider-arrow { height: 40px; width: 40px; font-size: 24px; }
   .slider-dots { bottom: 10px; }
 }
+
+/* === IMAGE SLIDER ======================================================= */
+.slider-title {
+  margin: 0 0 12px;
+  font-size: var(--h2);
+  color: var(--text);
+}
+
+.slider {
+  position: relative;
+  border: 1px solid #e9eef5;
+  border-radius: calc(var(--radius) + 2px);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+  background: #fff;
+}
+
+.slider-viewport {
+  position: relative;
+  width: 100%;
+  height: clamp(260px, 48vw, 560px); /* adjust height if you want */
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 100%;
+  transition: transform .4s ease;
+}
+
+.slide { position: relative; width: 100%; height: 100%; overflow: hidden; }
+.slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;   /* fills without squish */
+  display: block;
+}
+
+/* Arrows */
+.slider-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 44px; width: 44px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.08);
+  background: #fff;
+  color: var(--brand);
+  font-size: 26px; font-weight: 700; line-height: 1;
+  box-shadow: var(--shadow-xs);
+  display: grid; place-items: center;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+  z-index: 5;
+}
+.slider-arrow:hover { transform: translateY(-50%) scale(1.04); box-shadow: 0 12px 24px rgba(0,0,0,.12); }
+.slider-arrow.prev { left: 12px; }
+.slider-arrow.next { right: 12px; }
+
+/* Dots */
+.slider-dots {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
+  display: flex; gap: 8px; padding: 6px 10px;
+  background: rgba(255,255,255,.85);
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 999px;
+  box-shadow: var(--shadow-xs);
+  backdrop-filter: blur(4px);
+}
+.dot {
+  height: 10px; width: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.15);
+  background: #fff;
+  cursor: pointer; padding: 0;
+}
+.dot.is-active { background: var(--brand); border-color: var(--brand); }
+
+@media (max-width: 560px) {
+  .slider-arrow { height: 40px; width: 40px; font-size: 24px; }
+  .slider-dots { bottom: 10px; }
+}
