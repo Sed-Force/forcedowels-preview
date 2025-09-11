@@ -691,3 +691,107 @@ a { color: inherit; text-decoration: none; }
 .cart-note { margin: 0; }
 .cart-actions { display: flex; gap: 10px; }
 
+/* === Order page: tiers + calculator ===================================== */
+.order-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr; /* left wider like the reference */
+  gap: 28px;
+}
+
+.tiers .notice {
+  background: rgba(34,77,143,.10);
+  border: 1px solid #e4e9f2;
+  border-left: 4px solid var(--brand);
+  color: #23314f;
+  padding: 12px 14px;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+
+.tier, .kit {
+  width: 100%;
+  text-align: left;
+  background: #14181f;
+  color: #eef2f7;
+  border: 1px solid #2a3040;
+  border-radius: 12px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+  margin-bottom: 12px;
+}
+.tier:hover, .kit:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(0,0,0,.18); }
+.tier.active {
+  border-color: var(--accent);
+  background: #1a1f29;
+  box-shadow: 0 12px 24px rgba(238,173,26,.12);
+}
+.tier.locked { opacity: .65; cursor: not-allowed; position: relative; }
+.tier-range { font-weight: 800; }
+.tier-price { font-weight: 800; color: #ffd66b; }
+.tier-lock { font-size: 13px; color: #98a2b3; margin-right: 10px; }
+
+.mt { margin-top: 16px; }
+.kit {
+  background: #1a1f29;
+  border-color: #2a3040;
+}
+.kit .kit-right { text-align: right; }
+.kit .muted { color: #98a2b3; }
+
+/* Calculator panel */
+.calc {
+  background: #0f1420;
+  border: 1px solid #20273a;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--shadow-xs);
+}
+.calc h2 { margin: 0 0 10px; }
+
+.calc-callout {
+  background: rgba(34,77,143,.12);
+  border: 1px solid #24365a;
+  border-left: 4px solid var(--brand);
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #d7e0f3;
+  margin-bottom: 16px;
+}
+
+.field { margin-bottom: 12px; }
+.field label { display:block; font-weight:800; margin-bottom:8px; }
+.qtywrap {
+  display:flex; align-items:center; gap: 10px;
+}
+.qtywrap input {
+  width: 160px; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid #32415f; background:#0b0f1a; color:#fff;
+  font: inherit; text-align:right;
+}
+.qtywrap .step {
+  width: 38px; height: 38px; border-radius: 10px; border:1px solid #2d3b59;
+  background:#121829; color:#fff; font-size:18px; cursor:pointer;
+}
+.qtywrap .units { margin-left: auto; color:#98a2b3; }
+
+.row {
+  display:flex; align-items:center; justify-content: space-between;
+  border-top: 1px dashed #2a3040;
+  padding: 10px 0;
+}
+#ppu, #total { font-size: 20px; }
+
+.btn-wide { width: 100%; margin-top: 8px; }
+.viewcart { text-align:center; margin: 10px 0 0; }
+
+/* Responsive */
+@media (max-width: 980px) {
+  .order-grid { grid-template-columns: 1fr; }
+}
