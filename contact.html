@@ -9,12 +9,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=contact1">
+  <link rel="stylesheet" href="/styles.css?v=contact2">
   <script defer src="/script.js"></script>
 </head>
 <body class="contact-page">
 
-<!-- Header (same component you use on other pages) -->
+<!-- Header -->
 <header class="site-header">
   <div class="container header-inner">
     <a class="brand" href="/" aria-label="Force Dowel Company">
@@ -103,6 +103,13 @@
             <input required name="email" type="email" autocomplete="email" />
           </label>
 
+            <label>
+              <span>Phone</span>
+              <input name="phone" type="tel" autocomplete="tel"
+                     placeholder="(555) 123-4567"
+                     pattern="^[0-9()+\-.\s]{7,}$" />
+            </label>
+
           <label>
             <span>Inquiry Type</span>
             <select name="inquiryType">
@@ -120,18 +127,15 @@
             <textarea required name="message" rows="5" placeholder="How can we help?"></textarea>
           </label>
 
-          <button class="btn btn--primary" type="submit">Send Message</button>
+          <button class="btn btn--primary" type="submit" id="contact-submit">Send Message</button>
           <p class="form-note">By submitting, you agree to our <a href="/privacy.html">Privacy Policy</a>.</p>
-
-          <!-- Success/Fail notice (client-side) -->
-          <p id="contact-status" class="form-note" style="display:none;"></p>
         </form>
       </div>
     </div>
   </section>
 </main>
 
-<!-- Footer (same as other pages) -->
+<!-- Footer -->
 <footer class="site-footer">
   <div class="container footer-main">
     <section class="footer-sec footer-sec--brand">
@@ -191,33 +195,80 @@
   </div>
 </footer>
 
+<!-- Success animation modal -->
+<div class="contact-success" id="contact-success" aria-hidden="true">
+  <div class="success-card" role="dialog" aria-live="polite" aria-modal="true">
+    <div class="success-icon">
+      <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true">
+        <polyline points="20 6 9 17 4 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h3>Message Sent!</h3>
+    <p>Thanks for reaching out. We’ll get back to you shortly.</p>
+    <button class="btn btn--accent" id="success-close" type="button">Close</button>
+  </div>
+</div>
+
 <script>
   // Footer year
   (function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})();
 
-  // Optional: client-side success message (still posts to Formspree)
-  const form = document.getElementById('contact-form');
-  const statusEl = document.getElementById('contact-status');
-  if (form && statusEl) {
-    form.addEventListener('submit', async (e) => {
-      // If you want *real* AJAX instead of native POST/redirect, uncomment this block
-      /*
+  // AJAX submit with success animation
+  (function(){
+    const form = document.getElementById('contact-form');
+    const submitBtn = document.getElementById('contact-submit');
+    const successWrap = document.getElementById('contact-success');
+    const successClose = document.getElementById('success-close');
+
+    if (!form) return;
+
+    form.addEventListener('submit', async function(e){
       e.preventDefault();
-      statusEl.style.display = 'none';
-      const data = new FormData(form);
-      const res = await fetch(form.action, { method: 'POST', body: data, headers: { 'Accept': 'application/json' }});
-      if (res.ok) {
-        form.reset();
-        statusEl.textContent = 'Thanks! Your message has been sent.';
-        statusEl.style.color = 'var(--brand)';
-      } else {
-        statusEl.textContent = 'Sorry, something went wrong. Please try again.';
-        statusEl.style.color = '#B00020';
+
+      // Disable button and set loading state
+      submitBtn.disabled = true;
+      const prev = submitBtn.textContent;
+      submitBtn.textContent = 'Sending…';
+
+      try {
+        const formData = new FormData(form);
+        const res = await fetch(form.action, {
+          method: 'POST',
+          body: formData,
+          headers: { 'Accept': 'application/json' }
+        });
+
+        if (res.ok) {
+          form.reset();
+          // show success
+          successWrap.classList.add('show');
+          successWrap.setAttribute('aria-hidden', 'false');
+        } else {
+          alert('Sorry, something went wrong. Please try again or email info@forcedowels.com.');
+        }
+      } catch(err){
+        alert('Network error. Please try again.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = prev;
       }
-      statusEl.style.display = 'block';
-      */
     });
-  }
+
+    if (successClose) {
+      successClose.addEventListener('click', function(){
+        successWrap.classList.remove('show');
+        successWrap.setAttribute('aria-hidden', 'true');
+      });
+    }
+
+    // Close on ESC
+    document.addEventListener('keydown', function(ev){
+      if (ev.key === 'Escape' && successWrap.classList.contains('show')) {
+        successWrap.classList.remove('show');
+        successWrap.setAttribute('aria-hidden', 'true');
+      }
+    });
+  })();
 </script>
 </body>
 </html>
