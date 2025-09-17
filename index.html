@@ -22,22 +22,10 @@
   <script
     async
     crossorigin="anonymous"
-    data-clerk-publishable-key="pk_live_REPLACE_ME"
+    data-clerk-publishable-key="pk_live_Y2xlcmsuZm9yY2Vkb3dlbHMuY29tJA"
     src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
   </script>
-  <script>
-    window.addEventListener('load', async () => {
-      try {
-        if (!window.Clerk) return;
-        await window.Clerk.load();
-        const userBtn = document.getElementById('user-button');
-        if (window.Clerk.user && userBtn) {
-          window.Clerk.mountUserButton(userBtn);
-          document.body.classList.add('authed');
-        }
-      } catch (e) { /* no-op */ }
-    });
-  </script>
+
   <script defer src="/script.js"></script>
 </head>
 <body>
@@ -87,6 +75,8 @@
         <button class="btn btn--ghost btn--invert" id="btn-login" type="button">Login</button>
         <button class="btn btn--accent" id="btn-signup" type="button">Sign Up</button>
       </div>
+
+      <button class="btn btn--ghost btn--invert" id="btn-signout" type="button" style="display:none;">Sign Out</button>
 
       <!-- Shown when signed IN (Clerk mounts here) -->
       <div id="user-button"></div>
