@@ -237,9 +237,9 @@ window.addEventListener('load', async () => {
   }
 })();
 
-// === Clerk auth wiring (append to the bottom of script.js) ===
+// === Clerk auth wiring (robust) ===
 (async function initClerkAuth() {
-  // Wait for the Clerk script tag to load
+  // Wait for Clerk script tag to load
   if (!window.Clerk) {
     await new Promise((resolve) => {
       const t = setInterval(() => {
@@ -247,29 +247,31 @@ window.addEventListener('load', async () => {
       }, 50);
     });
   }
-  // Initialize Clerk (publishable key comes from the data- attribute in the script tag)
-  await window.Clerk.load();
 
-  // Cache DOM
+  try {
+    await window.Clerk.load();
+  } catch (e) {
+    console.error('[Clerk] load() failed:', e);
+    // If load fails, the redirect flows below will still work (they don’t need the modal)
+  }
+
   const $ = (s) => document.querySelector(s);
-  const authWrap = document.querySelector('.auth-buttons');
-  const btnLogin = $('#btn-login');
-  const btnSignup = $('#btn-signup');
+  const authWrap   = document.querySelector('.auth-buttons');
+  const btnLogin   = $('#btn-login');
+  const btnSignup  = $('#btn-signup');
   const btnSignout = $('#btn-signout'); // optional
-  const userMount = $('#user-button');
+  const userMount  = $('#user-button');
 
   function render() {
-    const user = window.Clerk.user;
-    const session = window.Clerk.session;
+    const user = window.Clerk?.user;
+    const session = window.Clerk?.session;
     const signedIn = !!(user && session);
 
-    // Toggle header controls
-    if (authWrap) authWrap.style.display = signedIn ? 'none' : '';
+    if (authWrap)  authWrap.style.display  = signedIn ? 'none' : '';
     if (btnSignout) btnSignout.style.display = signedIn ? '' : 'none';
 
-    // Mount/unmount the User Button
     if (signedIn) {
-      if (userMount && !userMount.hasChildNodes()) {
+      if (userMount && !userMount.hasChildNodes() && window.Clerk?.mountUserButton) {
         window.Clerk.mountUserButton(userMount);
       }
       document.body.classList.add('authed');
@@ -279,23 +281,47 @@ window.addEventListener('load', async () => {
     }
   }
 
-  window.Clerk.addListener(render);
+  // Re-render on Clerk state changes
+  if (window.Clerk?.addListener) window.Clerk.addListener(render);
   render();
 
-  // Button handlers
-  if (btnLogin) btnLogin.onclick = () => window.Clerk.openSignIn();
-  if (btnSignup) btnSignup.onclick = () => window.Clerk.openSignUp();
-  if (btnSignout) btnSignout.onclick = () => window.Clerk.signOut();
+  // Helpers: prefer modal, fall back to redirect (hosted pages)
+  const goSignIn = () => {
+    if (window.Clerk?.openSignIn) {
+      window.Clerk.openSignIn({ afterSignInUrl: window.location.href });
+    } else if (window.Clerk?.redirectToSignIn) {
+      window.Clerk.redirectToSignIn({ returnBackUrl: window.location.href });
+    } else {
+      console.error('[Clerk] No sign-in methods available.');
+    }
+  };
 
-  // --- Dev-only helper: test the protected API from console ---
-  // In DevTools, run: await window.__pingProtected()
+  const goSignUp = () => {
+    if (window.Clerk?.openSignUp) {
+      window.Clerk.openSignUp({ afterSignUpUrl: window.location.href });
+    } else if (window.Clerk?.redirectToSignUp) {
+      window.Clerk.redirectToSignUp({ returnBackUrl: window.location.href });
+    } else {
+      console.error('[Clerk] No sign-up methods available.');
+    }
+  };
+
+  if (btnLogin)  btnLogin.onclick  = goSignIn;
+  if (btnSignup) btnSignup.onclick = goSignUp;
+  if (btnSignout) btnSignout.onclick = () => window.Clerk?.signOut?.();
+
+  // Dev helper: test the protected API
   window.__pingProtected = async function () {
-    const token = await window.Clerk.session?.getToken({ skipCache: true }).catch(() => null);
-    const res = await fetch('/api/protected', {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
-    const text = await res.text();
-    try { return { status: res.status, body: JSON.parse(text) }; }
-    catch { return { status: res.status, body: text }; }
+    try {
+      const token = await window.Clerk?.session?.getToken({ skipCache: true });
+      const res = await fetch('/api/protected', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      const text = await res.text();
+      try { return { status: res.status, body: JSON.parse(text) }; }
+      catch { return { status: res.status, body: text }; }
+    } catch (e) {
+      return { error: true, message: e?.message || String(e) };
+    }
   };
 })();
