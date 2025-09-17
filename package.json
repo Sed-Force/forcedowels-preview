@@ -1,0 +1,9 @@
+{
+  "name": "force-dowels-html",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "18.x" },
+  "dependencies": {
+    "@clerk/backend": "^1.7.5"
+  }
+}
