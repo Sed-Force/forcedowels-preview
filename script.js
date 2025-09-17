@@ -236,3 +236,66 @@ window.addEventListener('load', async () => {
     });
   }
 })();
+
+// === Clerk auth wiring (append to the bottom of script.js) ===
+(async function initClerkAuth() {
+  // Wait for the Clerk script tag to load
+  if (!window.Clerk) {
+    await new Promise((resolve) => {
+      const t = setInterval(() => {
+        if (window.Clerk) { clearInterval(t); resolve(); }
+      }, 50);
+    });
+  }
+  // Initialize Clerk (publishable key comes from the data- attribute in the script tag)
+  await window.Clerk.load();
+
+  // Cache DOM
+  const $ = (s) => document.querySelector(s);
+  const authWrap = document.querySelector('.auth-buttons');
+  const btnLogin = $('#btn-login');
+  const btnSignup = $('#btn-signup');
+  const btnSignout = $('#btn-signout'); // optional
+  const userMount = $('#user-button');
+
+  function render() {
+    const user = window.Clerk.user;
+    const session = window.Clerk.session;
+    const signedIn = !!(user && session);
+
+    // Toggle header controls
+    if (authWrap) authWrap.style.display = signedIn ? 'none' : '';
+    if (btnSignout) btnSignout.style.display = signedIn ? '' : 'none';
+
+    // Mount/unmount the User Button
+    if (signedIn) {
+      if (userMount && !userMount.hasChildNodes()) {
+        window.Clerk.mountUserButton(userMount);
+      }
+      document.body.classList.add('authed');
+    } else {
+      if (userMount) userMount.replaceChildren();
+      document.body.classList.remove('authed');
+    }
+  }
+
+  window.Clerk.addListener(render);
+  render();
+
+  // Button handlers
+  if (btnLogin) btnLogin.onclick = () => window.Clerk.openSignIn();
+  if (btnSignup) btnSignup.onclick = () => window.Clerk.openSignUp();
+  if (btnSignout) btnSignout.onclick = () => window.Clerk.signOut();
+
+  // --- Dev-only helper: test the protected API from console ---
+  // In DevTools, run: await window.__pingProtected()
+  window.__pingProtected = async function () {
+    const token = await window.Clerk.session?.getToken({ skipCache: true }).catch(() => null);
+    const res = await fetch('/api/protected', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    const text = await res.text();
+    try { return { status: res.status, body: JSON.parse(text) }; }
+    catch { return { status: res.status, body: text }; }
+  };
+})();
