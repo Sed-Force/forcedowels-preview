@@ -1,4 +1,4 @@
-// /api/contact.js — MASTER (brand header + LARGE pill logo on right + BCC + preview switches)
+// /api/contact.js — MASTER (small header + pill logo ~48px, BCC, preview switches)
 import { json, applyCORS, verifyAuth } from './_lib/auth.js';
 import { Resend } from 'resend';
 
@@ -8,9 +8,10 @@ const SEND_MODE  = (process.env.EMAIL_SEND_MODE || 'send').toLowerCase(); // "se
 const PREFIX     = process.env.EMAIL_TAG_PREFIX || (IS_PREVIEW ? '[PREVIEW] ' : '');
 
 // Branding (override via env for easy tweaks)
-const BRAND_BLUE = process.env.EMAIL_PRIMARY_COLOR || '#1C4A99';
-const SITE_BASE  = (process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels.com').replace(/\/$/, '');
-const LOGO_URL   = process.env.EMAIL_LOGO_URL || `${SITE_BASE}/images/force-dowel-logo.jpg`;
+const BRAND_BLUE   = process.env.EMAIL_PRIMARY_COLOR || '#1C4A99';
+const SITE_BASE    = (process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels.com').replace(/\/$/, '');
+const LOGO_URL     = process.env.EMAIL_LOGO_URL || `${SITE_BASE}/images/force-dowel-logo.jpg`;
+const LOGO_HEIGHT  = Number(process.env.EMAIL_LOGO_HEIGHT || 48); // ← adjust via env if needed
 
 // Helpers for comma lists (CONTACT_INBOX, EMAIL_WHITELIST)
 const parseList = (v) => String(v || '')
@@ -79,7 +80,7 @@ export default async function handler(req, res) {
     name, email, phone, message, inquiryType,
     identityEmail: identity?.email || null,
     identityId: identity?.userId || null,
-    BRAND_BLUE, LOGO_URL
+    BRAND_BLUE, LOGO_URL, LOGO_HEIGHT
   });
 
   const text = [
@@ -131,31 +132,30 @@ function escapeHtml(s = '') {
     .replace(/'/g, '&#039;');
 }
 
-function buildEmailHtml({ name, email, phone, message, inquiryType, identityEmail, identityId, BRAND_BLUE, LOGO_URL }) {
+function buildEmailHtml({ name, email, phone, message, inquiryType, identityEmail, identityId, BRAND_BLUE, LOGO_URL, LOGO_HEIGHT }) {
   const esc = escapeHtml;
   const msgHtml = esc(message || '').replace(/\n/g, '<br/>');
 
-  // Large pill logo: 120px high image inside a white pill with border.
-  // Using nested table + inline styles for max email-client compatibility.
+  // Restored compact header (like earlier), with a small pill logo on right (~48px by default).
   return `
   <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#f7f7f7; padding:24px;">
     <div style="max-width:640px; margin:0 auto; background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
 
-      <!-- Header bar with brand blue + LARGE pill logo on right -->
+      <!-- Header bar with brand blue + SMALL pill logo on right -->
       <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
         <tr>
-          <td style="padding:20px; background:${BRAND_BLUE}; color:#ffffff; font-size:20px; font-weight:700; line-height:1;">
+          <td style="padding:16px 20px; background:${BRAND_BLUE}; color:#ffffff; font-size:18px; font-weight:700; line-height:1;">
             New Contact${inquiryType ? ` — ${esc(inquiryType)}` : ''}
           </td>
-          <td align="right" style="padding:12px 20px; background:${BRAND_BLUE};">
+          <td align="right" style="padding:10px 20px; background:${BRAND_BLUE};">
             <!-- pill container for logo -->
             <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
               <tr>
-                <td style="background:#ffffff; border:1px solid #e5e7eb; border-radius:9999px; padding:10px;">
+                <td style="background:#ffffff; border:1px solid #e5e7eb; border-radius:9999px; padding:6px;">
                   <img src="${LOGO_URL}"
-                       height="120"
+                       height="${LOGO_HEIGHT}"
                        alt="Force Dowels"
-                       style="display:block; border:0; outline:none; text-decoration:none; border-radius:9999px; height:120px; width:auto; line-height:1;">
+                       style="display:block; border:0; outline:none; text-decoration:none; border-radius:9999px; height:${LOGO_HEIGHT}px; width:auto; line-height:1;">
                 </td>
               </tr>
             </table>
@@ -166,7 +166,7 @@ function buildEmailHtml({ name, email, phone, message, inquiryType, identityEmai
       <div style="padding:16px 20px;">
         <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate; border-spacing:0; font-size:14px;">
           <tr>
-            <td style="width:185px; padding:10px 12px; border:1px solid #e5e7eb; background:#f0f4ff;"><strong>Name</strong></td>
+            <td style="width:170px; padding:10px 12px; border:1px solid #e5e7eb; background:#f0f4ff;"><strong>Name</strong></td>
             <td style="padding:10px 12px; border:1px solid #e5e7eb;">${esc(name || '')}</td>
           </tr>
           <tr>
