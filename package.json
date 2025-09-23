@@ -4,6 +4,7 @@
   "type": "module",
   "engines": { "node": "22.x" },
   "dependencies": {
-    "@clerk/backend": "^1.7.5"
+    "@clerk/backend": "^1.7.5",
+    "resend": "^3.2.0"
   }
 }
