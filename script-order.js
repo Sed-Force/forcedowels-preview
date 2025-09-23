@@ -57,7 +57,7 @@ async function checkoutTiered() {
     return;
   }
   if (!res.ok || !json?.url) {
-    alert(`Checkout error: ${json?.error || res.statusText}`);
+alert(`Checkout error: ${json?.error || res.statusText}${json?.detail ? ' — ' + json.detail : ''}`);
     return;
   }
   window.location = json.url;
