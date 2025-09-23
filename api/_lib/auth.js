@@ -1,44 +1,50 @@
-// /api/_lib/auth.js — MASTER
-import { verifyToken, createClerkClient } from '@clerk/backend';
+// /api/_lib/auth.js
+// Small helpers for JSON, CORS, and (optional) Clerk token verification.
 
-const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
+import { verifyToken } from '@clerk/backend';
 
-export async function verifyAuth(req) {
-  const authHeader = req.headers['authorization'] || req.headers['Authorization'];
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    const err = new Error('Missing or invalid Authorization header');
-    err.statusCode = 401;
-    throw err;
-  }
-  const token = authHeader.slice('Bearer '.length).trim();
-
-  const claims = await verifyToken(token, { secretKey: CLERK_SECRET_KEY });
-
-  const clerk = createClerkClient({ secretKey: CLERK_SECRET_KEY });
-  const user = await clerk.users.getUser(claims.sub);
-
-  return { userId: claims.sub, email: user?.primaryEmailAddress?.emailAddress || null };
+// Send JSON with status
+export function json(res, status = 200, data = {}) {
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.end(JSON.stringify(data));
 }
 
-export function json(res, status, body, extraHeaders = {}) {
-  const headers = { 'Content-Type': 'application/json; charset=utf-8', ...extraHeaders };
-  res.writeHead(status, headers);
-  res.end(JSON.stringify(body));
-}
-
+// Simple CORS (allow browser POSTs)
 export function applyCORS(req, res) {
-  const origin = req.headers.origin || '';
-  const allowedProd = process.env.NEXT_PUBLIC_BASE_URL;
-  const isPreview = /\.vercel\.app$/.test(origin);
-  const isProd = allowedProd && origin === allowedProd;
-
-  if (isProd || isPreview) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
-  }
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return true; }
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
+    res.end();
+    return true;
+  }
   return false;
+}
+
+// Verify Clerk JWT from Authorization: Bearer <token>
+// Returns { userId, email } or null if not available/invalid.
+export async function verifyAuth(req) {
+  try {
+    const hdr = req.headers.authorization || '';
+    const m = hdr.match(/^Bearer\s+(.+)$/i);
+    if (!m) return null;
+    const token = m[1];
+    const secretKey = process.env.CLERK_SECRET_KEY;
+    if (!secretKey) return null;
+
+    const payload = await verifyToken(token, { secretKey });
+    // Common fields: sub (user id), email (string or array), email_address
+    const userId = payload?.sub || null;
+    const email =
+      payload?.email_address ||
+      (Array.isArray(payload?.email) ? payload.email[0] : payload?.email) ||
+      null;
+
+    return (userId || email) ? { userId, email } : null;
+  } catch {
+    return null;
+  }
 }
 
