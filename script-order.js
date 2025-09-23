@@ -1,16 +1,14 @@
-// /script-order.js — binds the calculator (tiered pricing) and calls /api/checkout
+// /script-order.js — ties the right-side calculator to /api/pricing + /api/checkout
 
-const STEP = 5000;
-const MIN_UNITS = 5000;
-const MAX_UNITS = 960000;
+const STEP = 5000, MIN_UNITS = 5000, MAX_UNITS = 960000;
 
-// ID hooks expected on your order page
-const elQty   = document.getElementById('qty-units');        // <input type="number">
-const elMinus = document.getElementById('qty-minus');        // <button id="qty-minus">−</button>
-const elPlus  = document.getElementById('qty-plus');         // <button id="qty-plus">+</button>
-const elUnit  = document.getElementById('price-per-unit');   // <span id="price-per-unit"></span>
-const elTotal = document.getElementById('price-total');      // <span id="price-total"></span>
-const elAdd   = document.getElementById('btn-add-to-cart');  // <button id="btn-add-to-cart">Add to Cart</button>
+// IDs from your order.html
+const elQty   = document.getElementById('qty-units') || document.getElementById('qty'); // support either id
+const elMinus = document.getElementById('qty-minus');
+const elPlus  = document.getElementById('qty-plus');
+const elUnit  = document.getElementById('price-per-unit') || document.getElementById('ppu');
+const elTotal = document.getElementById('price-total') || document.getElementById('total');
+const elAdd   = document.getElementById('btn-add-to-cart') || document.getElementById('add-bulk');
 
 function clampUnits(n) {
   n = Math.round(n / STEP) * STEP;
@@ -22,33 +20,24 @@ function clampUnits(n) {
 async function refresh() {
   const units = clampUnits(Number(elQty.value || MIN_UNITS));
   elQty.value = units;
-
   try {
     const r = await fetch(`/api/pricing?units=${units}`);
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || 'Pricing error');
-
-    // Display with proper formatting
-    const unit = j.unitUSD;            // may be fractional cents
-    const total = j.totalCents / 100;
-
-    if (elUnit)  elUnit.textContent  = `$${unit.toFixed(4)}`;
-    if (elTotal) elTotal.textContent = total.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-
-    // Enable/disable add button
+    if (elUnit)  elUnit.textContent  = `$${j.unitUSD.toFixed(4)}`;
+    if (elTotal) elTotal.textContent = (j.totalCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
     if (elAdd) elAdd.disabled = false;
-  } catch (e) {
+  } catch {
     if (elUnit)  elUnit.textContent  = '—';
     if (elTotal) elTotal.textContent = '—';
     if (elAdd) elAdd.disabled = true;
   }
 }
 
-async function startCheckout() {
+async function checkoutTiered() {
   const units = clampUnits(Number(elQty.value || MIN_UNITS));
-
-  // Try to pass Clerk session (optional)
   let headers = { 'Content-Type': 'application/json' };
+
   try {
     const token = await window.Clerk?.session?.getToken({ skipCache: true });
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -62,12 +51,9 @@ async function startCheckout() {
   const json = await res.json().catch(() => ({}));
 
   if (res.status === 401 && json?.error === 'auth_required') {
-    // Prompt sign-in (Clerk)
     try {
       await window.Clerk?.openSignIn({ redirectUrl: window.location.href });
-    } catch {
-      alert('Please sign in to order more than 20,000 units.');
-    }
+    } catch { alert('Please sign in to order more than 20,000 units.'); }
     return;
   }
   if (!res.ok || !json?.url) {
@@ -77,14 +63,12 @@ async function startCheckout() {
   window.location = json.url;
 }
 
-// Wire events
-window.addEventListener('load', async () => {
+window.addEventListener('load', () => {
   if (elMinus) elMinus.addEventListener('click', () => { elQty.value = clampUnits(Number(elQty.value || MIN_UNITS) - STEP); refresh(); });
   if (elPlus)  elPlus.addEventListener('click',  () => { elQty.value = clampUnits(Number(elQty.value || MIN_UNITS) + STEP); refresh(); });
   if (elQty)   elQty.addEventListener('change', refresh);
-  if (elAdd)   elAdd.addEventListener('click', startCheckout);
+  if (elAdd)   elAdd.addEventListener('click', checkoutTiered);
 
-  // Initial state
   if (elQty && !elQty.value) elQty.value = MIN_UNITS;
   refresh();
 });
