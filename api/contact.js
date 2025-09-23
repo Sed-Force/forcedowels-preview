@@ -1,4 +1,4 @@
-// /api/contact.js — MASTER (brand header + pill logo on right + BCC + preview switches)
+// /api/contact.js — MASTER (brand header + LARGE pill logo on right + BCC + preview switches)
 import { json, applyCORS, verifyAuth } from './_lib/auth.js';
 import { Resend } from 'resend';
 
@@ -135,25 +135,27 @@ function buildEmailHtml({ name, email, phone, message, inquiryType, identityEmai
   const esc = escapeHtml;
   const msgHtml = esc(message || '').replace(/\n/g, '<br/>');
 
+  // Large pill logo: 120px high image inside a white pill with border.
+  // Using nested table + inline styles for max email-client compatibility.
   return `
   <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#f7f7f7; padding:24px;">
     <div style="max-width:640px; margin:0 auto; background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
 
-      <!-- Header bar with brand blue + pill logo on right -->
+      <!-- Header bar with brand blue + LARGE pill logo on right -->
       <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
         <tr>
-          <td style="padding:16px 20px; background:${BRAND_BLUE}; color:#ffffff; font-size:18px; font-weight:700; line-height:1;">
+          <td style="padding:20px; background:${BRAND_BLUE}; color:#ffffff; font-size:20px; font-weight:700; line-height:1;">
             New Contact${inquiryType ? ` — ${esc(inquiryType)}` : ''}
           </td>
-          <td align="right" style="padding:10px 20px; background:${BRAND_BLUE};">
+          <td align="right" style="padding:12px 20px; background:${BRAND_BLUE};">
             <!-- pill container for logo -->
             <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
               <tr>
-                <td style="background:#ffffff; border:1px solid #e5e7eb; border-radius:9999px; padding:6px;">
+                <td style="background:#ffffff; border:1px solid #e5e7eb; border-radius:9999px; padding:10px;">
                   <img src="${LOGO_URL}"
-                       height="40"
+                       height="120"
                        alt="Force Dowels"
-                       style="display:block; border:0; outline:none; text-decoration:none; border-radius:9999px; line-height:1; height:40px; width:auto;">
+                       style="display:block; border:0; outline:none; text-decoration:none; border-radius:9999px; height:120px; width:auto; line-height:1;">
                 </td>
               </tr>
             </table>
@@ -164,7 +166,7 @@ function buildEmailHtml({ name, email, phone, message, inquiryType, identityEmai
       <div style="padding:16px 20px;">
         <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate; border-spacing:0; font-size:14px;">
           <tr>
-            <td style="width:170px; padding:10px 12px; border:1px solid #e5e7eb; background:#f0f4ff;"><strong>Name</strong></td>
+            <td style="width:185px; padding:10px 12px; border:1px solid #e5e7eb; background:#f0f4ff;"><strong>Name</strong></td>
             <td style="padding:10px 12px; border:1px solid #e5e7eb;">${esc(name || '')}</td>
           </tr>
           <tr>
