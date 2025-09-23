@@ -1,12 +1,18 @@
-// /api/contact.js  — MASTER (drop-in)  (~lines 1–220)
-import { json, applyCORS, verifyAuth } from './_lib/auth.js';   // (~line 2)
-import { Resend } from 'resend';                                 // (~line 3)
+// /api/contact.js — MASTER (brand header + logo + BCC + preview switches)
+import { json, applyCORS, verifyAuth } from './_lib/auth.js';
+import { Resend } from 'resend';
 
-// ---------- Env controls ----------  (~lines 6–28)
+// ---------- Env controls ----------
 const IS_PREVIEW = process.env.VERCEL_ENV === 'preview';
 const SEND_MODE  = (process.env.EMAIL_SEND_MODE || 'send').toLowerCase(); // "send" | "disabled"
 const PREFIX     = process.env.EMAIL_TAG_PREFIX || (IS_PREVIEW ? '[PREVIEW] ' : '');
 
+// Branding (override via env for easy tweaks)
+const BRAND_BLUE = process.env.EMAIL_PRIMARY_COLOR || '#1C4A99';
+const SITE_BASE  = (process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels.com').replace(/\/$/, '');
+const LOGO_URL   = process.env.EMAIL_LOGO_URL || `${SITE_BASE}/images/force-dowel-logo.jpg?v=8`;
+
+// Helpers for comma lists (CONTACT_INBOX, EMAIL_WHITELIST)
 const parseList = (v) => String(v || '')
   .split(',')
   .map(s => s.trim())
@@ -15,17 +21,16 @@ const parseList = (v) => String(v || '')
 const CONTACT_RECIPIENTS = parseList(process.env.CONTACT_INBOX).map(s => s.toLowerCase());
 const WHITELIST          = parseList(process.env.EMAIL_WHITELIST).map(s => s.toLowerCase());
 
+// Resend client
 const HAS_RESEND = !!process.env.RESEND_API_KEY;
 const resend = HAS_RESEND ? new Resend(process.env.RESEND_API_KEY) : null;
 
-// ---------- Handler ----------  (~lines 31–200)
+// ---------- Handler ----------
 export default async function handler(req, res) {
-  if (applyCORS(req, res)) return;                               // (~line 34)
-  if (req.method !== 'POST') {
-    return json(res, 405, { error: 'Method not allowed' });      // (~line 36)
-  }
+  if (applyCORS(req, res)) return;
+  if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
 
-  // Body parsing  (~lines 39–50)
+  // Body
   let body = {};
   try {
     const text = await readBody(req);
@@ -34,16 +39,16 @@ export default async function handler(req, res) {
     return json(res, 400, { error: 'Invalid JSON body' });
   }
 
-  const { name, email, phone, message } = body || {};
+  const { name, email, phone, message, inquiryType } = body || {};
   if (!name || !email || !message) {
     return json(res, 400, { error: 'Missing required fields: name, email, message' });
   }
 
-  // Optional identity (don’t require auth)  (~lines 52–58)
+  // Optional identity (do not require auth)
   let identity = null;
-  try { identity = await verifyAuth(req); } catch { /* not signed in is fine */ }
+  try { identity = await verifyAuth(req); } catch {}
 
-  // ---- Delivery switches / guards ----  (~lines 61–98)
+  // Sending switches / guards
   if (SEND_MODE === 'disabled') {
     return json(res, 200, { ok: true, mode: 'disabled', note: 'Email sending disabled in this environment.' });
   }
@@ -56,40 +61,48 @@ export default async function handler(req, res) {
   if (!process.env.EMAIL_FROM || CONTACT_RECIPIENTS.length === 0) {
     return json(res, 501, { error: 'Missing EMAIL_FROM or CONTACT_INBOX' });
   }
-  // Preview whitelist: only allow configured recipients  (~lines 90–98)
   if (IS_PREVIEW && WHITELIST.length) {
     const blocked = CONTACT_RECIPIENTS.filter(to => !WHITELIST.includes(to));
-    if (blocked.length) {
-      return json(res, 200, { ok: true, mode: 'skipped_by_whitelist', blocked });
-    }
+    if (blocked.length) return json(res, 200, { ok: true, mode: 'skipped_by_whitelist', blocked });
   }
 
-  // ---- Compose message (HTML + text) ----  (~lines 101–140)
-  const subject = `${PREFIX}New contact from ${name}${identity?.userId ? ` (user ${identity.userId})` : ''}`;
+  // Compose
+  const subjBits = [
+    PREFIX + 'New contact',
+    inquiryType ? `(${String(inquiryType)})` : null,
+    `from ${name}`,
+    identity?.userId ? `(user ${identity.userId})` : null
+  ].filter(Boolean);
+  const subject = subjBits.join(' ');
 
   const html = buildEmailHtml({
-    name, email, phone, message,
+    name, email, phone, message, inquiryType,
     identityEmail: identity?.email || null,
-    identityId: identity?.userId || null
+    identityId: identity?.userId || null,
+    BRAND_BLUE, LOGO_URL
   });
 
   const text = [
-    `New Contact`,
+    'New Contact',
+    inquiryType ? `Type: ${inquiryType}` : null,
     `Name: ${name}`,
     `Email: ${email}`,
     phone ? `Phone: ${phone}` : null,
     '',
-    `Message:`,
-    message
+    'Message:',
+    message,
+    '',
+    identity?.email ? `Signed-in email: ${identity.email}` : null,
+    identity?.userId ? `Signed-in id: ${identity.userId}` : null
   ].filter(Boolean).join('\n');
 
-  // ---- Send (primary + BCC to hide recipients) ----  (~lines 143–170)
+  // Send with BCC to hide recipients from each other
   const [primary, ...bccList] = CONTACT_RECIPIENTS;
   try {
     const sent = await resend.emails.send({
       from: process.env.EMAIL_FROM,
-      to: primary,                // first recipient only
-      bcc: bccList,               // others hidden
+      to: primary,
+      bcc: bccList,
       subject,
       html,
       text,
@@ -101,7 +114,7 @@ export default async function handler(req, res) {
   }
 }
 
-// ---------- Helpers ----------  (~lines 173–220)
+// ---------- Helpers ----------
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let data = '';
@@ -118,33 +131,43 @@ function escapeHtml(s = '') {
     .replace(/'/g, '&#039;');
 }
 
-function buildEmailHtml({ name, email, phone, message, identityEmail, identityId }) {
+function buildEmailHtml({ name, email, phone, message, inquiryType, identityEmail, identityId, BRAND_BLUE, LOGO_URL }) {
   const esc = escapeHtml;
   const msgHtml = esc(message || '').replace(/\n/g, '<br/>');
 
   return `
   <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#f7f7f7; padding:24px;">
     <div style="max-width:640px; margin:0 auto; background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
-      <div style="background:#111827; color:#ffffff; padding:16px 20px;">
-        <h1 style="font-size:18px; margin:0;">New Contact</h1>
-      </div>
+
+      <!-- Header bar with brand blue + right-aligned logo -->
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+        <tr>
+          <td style="padding:16px 20px; background:${BRAND_BLUE}; color:#ffffff; font-size:18px; font-weight:700; line-height:1;">
+            New Contact${inquiryType ? ` — ${esc(inquiryType)}` : ''}
+          </td>
+          <td align="right" style="padding:12px 20px; background:${BRAND_BLUE};">
+            <img src="${LOGO_URL}" width="120" alt="Force Dowels" style="display:block; border:0; outline:none; text-decoration:none; height:auto;">
+          </td>
+        </tr>
+      </table>
+
       <div style="padding:16px 20px;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate; border-spacing:0; font-size:14px;">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate; border-spacing:0; font-size:14px;">
           <tr>
-            <td style="width:160px; padding:10px 12px; border:1px solid #e5e7eb; background:#f9fafb;"><strong>Name</strong></td>
+            <td style="width:170px; padding:10px 12px; border:1px solid #e5e7eb; background:#f0f4ff;"><strong>Name</strong></td>
             <td style="padding:10px 12px; border:1px solid #e5e7eb;">${esc(name || '')}</td>
           </tr>
           <tr>
-            <td style="padding:10px 12px; border:1px solid #e5e7eb; background:#f9fafb;"><strong>Email</strong></td>
+            <td style="padding:10px 12px; border:1px solid #e5e7eb; background:#f0f4ff;"><strong>Email</strong></td>
             <td style="padding:10px 12px; border:1px solid #e5e7eb;">${esc(email || '')}</td>
           </tr>
           ${phone ? `
           <tr>
-            <td style="padding:10px 12px; border:1px solid #e5e7eb; background:#f9fafb;"><strong>Phone</strong></td>
+            <td style="padding:10px 12px; border:1px solid #e5e7eb; background:#f0f4ff;"><strong>Phone</strong></td>
             <td style="padding:10px 12px; border:1px solid #e5e7eb;">${esc(phone)}</td>
           </tr>` : ''}
           <tr>
-            <td style="vertical-align:top; padding:10px 12px; border:1px solid #e5e7eb; background:#f9fafb;"><strong>Message</strong></td>
+            <td style="vertical-align:top; padding:10px 12px; border:1px solid #e5e7eb; background:#f0f4ff;"><strong>Message</strong></td>
             <td style="padding:10px 12px; border:1px solid #e5e7eb;">${msgHtml}</td>
           </tr>
         </table>
@@ -157,6 +180,7 @@ function buildEmailHtml({ name, email, phone, message, identityEmail, identityId
             ${identityId ? `ID: ${esc(identityId)}` : ''}
           </div>
         </div>` : ''}
+
       </div>
       <div style="padding:12px 20px; color:#6b7280; font-size:12px; border-top:1px solid #e5e7eb;">
         Sent from ForceDowels.com
