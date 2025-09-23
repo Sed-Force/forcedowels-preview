@@ -3,21 +3,17 @@
   "trailingSlash": false,
 
   "functions": {
-    "api/**.js": { "runtime": "nodejs22.x" }
+    "api/**/*.js": { "runtime": "nodejs22.x" }
   },
 
   "headers": [
     {
       "source": "/api/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-store" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
     },
     {
       "source": "/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=300" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=300" }]
     }
   ]
 }
