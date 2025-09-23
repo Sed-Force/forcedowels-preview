@@ -10,6 +10,19 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css?v=32">
+
+  <!-- Clerk (Browser) -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_dmlhYmxlLWhhZGRvY2stMzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
+  </script>
+
+  <!-- Auth glue: mounts user button + unlocks tiers when signed in -->
+  <script defer src="/script-auth.js"></script>
+
+  <!-- Your general site JS (keep) -->
   <script defer src="/script.js?v=32"></script>
 </head>
 <body>
@@ -59,7 +72,7 @@
 </header>
 
 <main id="content" class="order-page">
-  <!-- Page header spacer -->
+  <!-- Spacer -->
   <section class="section">
     <div class="container"></div>
   </section>
@@ -68,7 +81,7 @@
   <section class="section">
     <div class="container order-grid">
 
-      <!-- LEFT: Tiers (unchanged) -->
+      <!-- LEFT: Tiers -->
       <div class="tiers">
         <h2>Pricing Tiers</h2>
 
@@ -78,11 +91,13 @@
           Larger orders require sign-in for business verification.
         </div>
 
+        <!-- Active tier -->
         <button class="tier active" data-min="5000" data-max="20000" data-price="0.072" type="button">
           <span class="tier-range">5,000–20,000</span>
           <span class="tier-price">$0.072/Unit</span>
         </button>
 
+        <!-- Locked tiers (unlock when signed in via script-auth.js) -->
         <button class="tier locked" data-min="20000" data-max="160000" data-price="0.0675" type="button" disabled>
           <span class="tier-range">&lt;20,000–160,000</span>
           <span class="tier-lock">Sign in required</span>
@@ -112,7 +127,7 @@
         <a class="btn btn--accent" href="/contact.html">Contact Sales</a>
       </div>
 
-      <!-- RIGHT: Calculator (replaced with IDs expected by script-order.js) -->
+      <!-- RIGHT: Calculator (IDs expected by /script-order.js) -->
       <aside class="calc">
         <h2>Calculate Your Price</h2>
 
@@ -143,14 +158,14 @@
           <strong id="price-total">$0.00</strong>
         </div>
 
-        <!-- Checkout -->
+        <!-- Checkout (goes straight to Stripe) -->
         <button id="btn-add-to-cart" class="btn btn--accent btn-wide" type="button">Add to Cart</button>
         <p class="viewcart"><a href="#cart">View Cart</a></p>
       </aside>
     </div>
   </section>
 
-  <!-- Cart drawer (kept for your existing JS/UI) -->
+  <!-- Cart drawer (optional legacy UI; keep if you use it elsewhere) -->
   <aside class="cart" id="cart" aria-hidden="true">
     <div class="cart-inner">
       <header class="cart-head">
@@ -241,7 +256,7 @@
 <!-- Tiered calculator logic (talks to /api/pricing + /api/checkout) -->
 <script defer src="/script-order.js"></script>
 
-<!-- Keep if you still use the drawer/cart UI elsewhere -->
+<!-- Optional: keep if you use the drawer/cart elsewhere -->
 <script defer src="/script-cart.js"></script>
 </body>
 </html>
