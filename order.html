@@ -10,11 +10,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css?v=32">
-<script defer src="/script.js?v=32"></script>
+  <script defer src="/script.js?v=32"></script>
 </head>
 <body>
 
-<!-- Header (same as home) -->
+<!-- Header -->
 <header class="site-header">
   <div class="container header-inner">
     <a class="brand" href="/" aria-label="Force Dowel Company">
@@ -27,16 +27,16 @@
       <a href="/videos.html">Videos</a>
       <a href="/faq.html">FAQ</a>
 
-     <div class="nav-dropdown">
-  <button class="nav-dropbtn active" type="button" aria-haspopup="true" aria-expanded="false">
-    <span class="nav-drop-label">Distributors</span>
-    <span class="nav-caret">▾</span>
-  </button>
-  <div class="nav-dropmenu" role="menu">
-    <a href="/distributors" role="menuitem">Find a Distributor</a>
-    <a href="/distributor-application" role="menuitem">Become a Distributor</a>
-  </div>
-</div>
+      <div class="nav-dropdown">
+        <button class="nav-dropbtn active" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="nav-drop-label">Distributors</span>
+          <span class="nav-caret">▾</span>
+        </button>
+        <div class="nav-dropmenu" role="menu">
+          <a href="/distributors" role="menuitem">Find a Distributor</a>
+          <a href="/distributor-application" role="menuitem">Become a Distributor</a>
+        </div>
+      </div>
 
       <a href="/contact.html" class="btn btn--accent">Contact</a>
     </nav>
@@ -59,32 +59,30 @@
 </header>
 
 <main id="content" class="order-page">
-  <!-- Page header -->
+  <!-- Page header spacer -->
   <section class="section">
-    <div class="container">
-      
-    </div>
+    <div class="container"></div>
   </section>
 
   <!-- Pricing + Calculator -->
   <section class="section">
     <div class="container order-grid">
-      <!-- LEFT: Tiers -->
+
+      <!-- LEFT: Tiers (unchanged) -->
       <div class="tiers">
         <h2>Pricing Tiers</h2>
 
         <div class="notice">
           <strong>Guest Checkout Available:</strong>
-          Orders of 5,000 dowels or less, and all kit purchases, can be completed without an account. Larger orders require sign-in for business verification.
+          Orders of 5,000–20,000 units and all kit purchases can be completed without an account.
+          Larger orders require sign-in for business verification.
         </div>
 
-        <!-- Active tier (ids/classes/data used by your JS) -->
         <button class="tier active" data-min="5000" data-max="20000" data-price="0.072" type="button">
           <span class="tier-range">5,000–20,000</span>
           <span class="tier-price">$0.072/Unit</span>
         </button>
 
-        <!-- Locked tiers (example prices; adjust as needed) -->
         <button class="tier locked" data-min="20000" data-max="160000" data-price="0.0675" type="button" disabled>
           <span class="tier-range">&lt;20,000–160,000</span>
           <span class="tier-lock">Sign in required</span>
@@ -114,41 +112,45 @@
         <a class="btn btn--accent" href="/contact.html">Contact Sales</a>
       </div>
 
-      <!-- RIGHT: Calculator -->
+      <!-- RIGHT: Calculator (replaced with IDs expected by script-order.js) -->
       <aside class="calc">
         <h2>Calculate Your Price</h2>
 
         <div class="calc-callout">
-          <strong>Ordering Requirements:</strong> Force Dowels are available in 5,000-unit increments only. Minimum order quantity is 5,000 units, maximum is 960,000 units.
+          <strong>Ordering Requirements:</strong> Force Dowels are available in 5,000-unit increments only.
+          Minimum order quantity is 5,000 units, maximum is 960,000 units.
         </div>
 
+        <!-- Quantity controls -->
         <div class="field">
-          <label for="qty">Quantity (units)</label>
+          <label for="qty-units">Quantity (units)</label>
           <div class="qtywrap">
-            <button class="step" data-delta="-5000" type="button" aria-label="decrease">–</button>
-            <input id="qty" type="number" step="5000" min="5000" max="960000" value="5000" inputmode="numeric" />
-            <button class="step" data-delta="5000" type="button" aria-label="increase">+</button>
+            <button id="qty-minus" class="step" type="button" aria-label="decrease">–</button>
+            <input id="qty-units" type="number" step="5000" min="5000" max="960000" value="5000" inputmode="numeric" />
+            <button id="qty-plus" class="step" type="button" aria-label="increase">+</button>
             <span class="units">units</span>
           </div>
         </div>
 
+        <!-- Price readouts -->
         <div class="row">
           <span>Price per unit:</span>
-          <strong id="ppu">$0.072</strong>
+          <strong id="price-per-unit">$0.0000</strong>
         </div>
 
         <div class="row">
           <span>Total price:</span>
-          <strong id="total">$360.00</strong>
+          <strong id="price-total">$0.00</strong>
         </div>
 
-        <button id="add-bulk" class="btn btn--accent btn-wide" type="button">Add to Cart</button>
+        <!-- Checkout -->
+        <button id="btn-add-to-cart" class="btn btn--accent btn-wide" type="button">Add to Cart</button>
         <p class="viewcart"><a href="#cart">View Cart</a></p>
       </aside>
     </div>
   </section>
 
-  <!-- Cart drawer (works with your existing script.js cart logic) -->
+  <!-- Cart drawer (kept for your existing JS/UI) -->
   <aside class="cart" id="cart" aria-hidden="true">
     <div class="cart-inner">
       <header class="cart-head">
@@ -172,10 +174,9 @@
   </aside>
 </main>
 
-<!-- Footer (same as home) -->
+<!-- Footer -->
 <footer class="site-footer">
   <div class="container footer-main">
-    <!-- 1) Brand + Tagline -->
     <section class="footer-sec footer-sec--brand">
       <a href="/" aria-label="Force Dowels home" class="footer-brand-wrap">
         <img src="/images/force-dowel-logo.jpg?v=4" alt="Force Dowels logo" class="footer-logo" />
@@ -186,7 +187,6 @@
       </p>
     </section>
 
-    <!-- 2) Quick Links -->
     <section class="footer-sec">
       <h4>Quick Links</h4>
       <ul class="footer-list">
@@ -198,7 +198,6 @@
       </ul>
     </section>
 
-    <!-- 3) Contact Us -->
     <section class="footer-sec">
       <h4>Contact Us</h4>
       <ul class="footer-list">
@@ -209,7 +208,6 @@
       </ul>
     </section>
 
-    <!-- 4) Stay Updated -->
     <section class="footer-sec">
       <h4>Stay Updated</h4>
       <p class="footer-note">Get the latest updates on our patent-pending technology and new product releases.</p>
@@ -239,6 +237,11 @@
 <script>
   (function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})();
 </script>
+
+<!-- Tiered calculator logic (talks to /api/pricing + /api/checkout) -->
+<script defer src="/script-order.js"></script>
+
+<!-- Keep if you still use the drawer/cart UI elsewhere -->
 <script defer src="/script-cart.js"></script>
 </body>
 </html>
