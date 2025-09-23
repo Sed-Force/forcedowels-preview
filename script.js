@@ -325,3 +325,42 @@ window.addEventListener('load', async () => {
     }
   };
 })();
+
+// /script.js — append at end (~EOF)
+(function wireContactForm() {
+  const form = document.getElementById('contact-form');
+  if (!form) return;
+
+  const note = document.createElement('p');
+  note.className = 'form-note';
+  note.style.marginTop = '8px';
+  form.appendChild(note);
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    note.textContent = 'Sending...';
+
+    const data = Object.fromEntries(new FormData(form).entries());
+
+    // Try to attach Clerk token if signed in
+    let headers = { 'Content-Type': 'application/json' };
+    try {
+      const token = await window.Clerk?.session?.getToken({ skipCache: true });
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    } catch {}
+
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data)
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || res.statusText);
+      note.textContent = 'Thanks! We’ll be in touch.';
+      form.reset();
+    } catch (err) {
+      note.textContent = `Error: ${err.message || err}`;
+    }
+  });
+})();
