@@ -326,23 +326,36 @@ window.addEventListener('load', async () => {
   };
 })();
 
-// /script.js — append at end (~EOF)
+// /script.js — contact form submit (REPLACE previous block)  (~EOF)
 (function wireContactForm() {
   const form = document.getElementById('contact-form');
   if (!form) return;
 
-  const note = document.createElement('p');
-  note.className = 'form-note';
-  note.style.marginTop = '8px';
-  form.appendChild(note);
+  // Reuse an existing .form-note if the page already has one (prevents double notes)
+  let note = form.querySelector('.form-note');
+  if (!note) {
+    note = document.createElement('p');
+    note.className = 'form-note';
+    form.appendChild(note);
+  }
+
+  const submitBtn = form.querySelector('button[type="submit"]');
+
+  const setNote = (msg, type = 'info') => {
+    note.textContent = msg;
+    note.style.display = 'block';
+    note.classList.remove('is-error', 'is-success', 'is-info');
+    note.classList.add(type === 'error' ? 'is-error' : type === 'success' ? 'is-success' : 'is-info');
+  };
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    note.textContent = 'Sending...';
+    setNote('Sending…', 'info');
+    submitBtn && (submitBtn.disabled = true);
 
     const data = Object.fromEntries(new FormData(form).entries());
 
-    // Try to attach Clerk token if signed in
+    // Attach Clerk token if signed in (optional)
     let headers = { 'Content-Type': 'application/json' };
     try {
       const token = await window.Clerk?.session?.getToken({ skipCache: true });
@@ -356,11 +369,17 @@ window.addEventListener('load', async () => {
         body: JSON.stringify(data)
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || res.statusText);
-      note.textContent = 'Thanks! We’ll be in touch.';
+
+      if (!res.ok || json.error) {
+        throw new Error(json.error || res.statusText || 'Failed to send');
+      }
+
+      setNote('Thanks! Your message was sent successfully.', 'success');
       form.reset();
     } catch (err) {
-      note.textContent = `Error: ${err.message || err}`;
+      setNote(`Something went wrong. Please email info@forcedowels.com. (${err.message || err})`, 'error');
+    } finally {
+      submitBtn && (submitBtn.disabled = false);
     }
   });
 })();
