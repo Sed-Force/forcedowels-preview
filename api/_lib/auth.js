@@ -1,3 +1,4 @@
+// /api/_lib/auth.js — MASTER
 import { verifyToken, createClerkClient } from '@clerk/backend';
 
 const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
@@ -11,10 +12,8 @@ export async function verifyAuth(req) {
   }
   const token = authHeader.slice('Bearer '.length).trim();
 
-  // Verify token with Clerk
   const claims = await verifyToken(token, { secretKey: CLERK_SECRET_KEY });
 
-  // Optionally fetch user to get email
   const clerk = createClerkClient({ secretKey: CLERK_SECRET_KEY });
   const user = await clerk.users.getUser(claims.sub);
 
@@ -29,7 +28,7 @@ export function json(res, status, body, extraHeaders = {}) {
 
 export function applyCORS(req, res) {
   const origin = req.headers.origin || '';
-  const allowedProd = process.env.NEXT_PUBLIC_BASE_URL; // set this in Vercel
+  const allowedProd = process.env.NEXT_PUBLIC_BASE_URL;
   const isPreview = /\.vercel\.app$/.test(origin);
   const isProd = allowedProd && origin === allowedProd;
 
@@ -39,11 +38,7 @@ export function applyCORS(req, res) {
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    res.statusCode = 204;
-    res.end();
-    return true;
-  }
+  if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return true; }
   return false;
 }
+
