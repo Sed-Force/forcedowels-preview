@@ -326,12 +326,16 @@ window.addEventListener('load', async () => {
   };
 })();
 
-// /script.js — contact form submit (REPLACE previous block)  (~EOF)
+// /script.js — CONTACT FORM MASTER BLOCK (drop-in, replace previous)
 (function wireContactForm() {
   const form = document.getElementById('contact-form');
   if (!form) return;
 
-  // Reuse an existing .form-note if the page already has one (prevents double notes)
+  // Avoid double-binding if scripts reload
+  if (form.dataset.fdBound === '1') return;
+  form.dataset.fdBound = '1';
+
+  // Reuse an existing .form-note if present
   let note = form.querySelector('.form-note');
   if (!note) {
     note = document.createElement('p');
@@ -348,14 +352,18 @@ window.addEventListener('load', async () => {
     note.classList.add(type === 'error' ? 'is-error' : type === 'success' ? 'is-success' : 'is-info');
   };
 
-  form.addEventListener('submit', async (e) => {
+  async function onSubmit(e) {
+    // Block any legacy handlers (including inline onsubmit) from running
     e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+
     setNote('Sending…', 'info');
     submitBtn && (submitBtn.disabled = true);
 
     const data = Object.fromEntries(new FormData(form).entries());
 
-    // Attach Clerk token if signed in (optional)
+    // Attach Clerk token when available (optional)
     let headers = { 'Content-Type': 'application/json' };
     try {
       const token = await window.Clerk?.session?.getToken({ skipCache: true });
@@ -381,5 +389,8 @@ window.addEventListener('load', async () => {
     } finally {
       submitBtn && (submitBtn.disabled = false);
     }
-  });
+  }
+
+  // Use capture so we can stop older target/bubble listeners from firing
+  form.addEventListener('submit', onSubmit, { capture: true });
 })();
