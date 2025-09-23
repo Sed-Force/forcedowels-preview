@@ -1,4 +1,4 @@
-// /api/contact.js — MASTER (brand header + logo + BCC + preview switches)
+// /api/contact.js — MASTER (brand header + right logo + BCC + preview switches)
 import { json, applyCORS, verifyAuth } from './_lib/auth.js';
 import { Resend } from 'resend';
 
@@ -10,7 +10,7 @@ const PREFIX     = process.env.EMAIL_TAG_PREFIX || (IS_PREVIEW ? '[PREVIEW] ' : 
 // Branding (override via env for easy tweaks)
 const BRAND_BLUE = process.env.EMAIL_PRIMARY_COLOR || '#1C4A99';
 const SITE_BASE  = (process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels.com').replace(/\/$/, '');
-const LOGO_URL   = process.env.EMAIL_LOGO_URL || `${SITE_BASE}/images/force-dowel-logo.jpg?v=8`;
+const LOGO_URL   = process.env.EMAIL_LOGO_URL || `${SITE_BASE}/images/force-dowel-logo.jpg`;
 
 // Helpers for comma lists (CONTACT_INBOX, EMAIL_WHITELIST)
 const parseList = (v) => String(v || '')
