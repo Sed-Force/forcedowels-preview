@@ -119,6 +119,12 @@ export default async function handler(req, res) {
       shipping_options: SHIPPING_RATES.map(id => ({ shipping_rate: id })),
       customer_email: identity?.email || undefined,
       client_reference_id: identity?.userId || undefined,
+      metadata: {
+  flow: 'tiered',
+  units: String(units),
+  unit_usd: String(tier.unitUSD),
+  tier_label: tier.label
+},
       success_url,
       cancel_url
     });
