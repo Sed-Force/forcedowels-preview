@@ -1,15 +1,12 @@
 // /api/stripe-webhook.js
-// Node 22 / Vercel Edge-Compatible serverless function
+// Minimal: on checkout.session.completed, send an email via Resend.
 
 import Stripe from 'stripe';
-// Uses your existing template + DB helpers if you added them earlier.
-// If you haven't, it's still safe because the kill-switch will return before they run.
-import { buildOrderConfirmationEmail } from './_lib/email/orderConfirmation.js';
-import { ensureCounterTable, nextCounter } from './_lib/db.js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2024-06-20',
+});
 
-// ---------- small helpers ----------
 function readRaw(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -18,165 +15,136 @@ function readRaw(req) {
     req.on('error', reject);
   });
 }
-function json(res, code, body) {
+function sendJSON(res, code, body) {
   res.statusCode = code;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.end(JSON.stringify(body));
 }
 
-// ---------- main handler ----------
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' });
+  if (req.method !== 'POST') return sendJSON(res, 405, { error: 'method_not_allowed' });
 
   // Verify Stripe signature
   let event;
   try {
     const raw = await readRaw(req);
     const sig = req.headers['stripe-signature'];
-    const whsec = process.env.STRIPE_WEBHOOK_SECRET || '';
-    event = whsec
-      ? stripe.webhooks.constructEvent(raw, sig, whsec)
-      : JSON.parse(raw.toString('utf8')); // local/testing fallback
+    const wh = process.env.STRIPE_WEBHOOK_SECRET || '';
+    event = wh ? stripe.webhooks.constructEvent(raw, sig, wh) : JSON.parse(raw.toString('utf8'));
   } catch (e) {
-    console.error('webhook signature/parse error:', e);
-    return json(res, 400, { error: 'invalid_webhook', detail: String(e.message || e) });
+    console.error('Invalid webhook:', e);
+    return sendJSON(res, 400, { error: 'invalid_webhook' });
   }
 
   if (event.type !== 'checkout.session.completed') {
-    // Acknowledge other events quietly
-    return json(res, 200, { received: true, ignored: event.type });
+    // Ack everything else quietly so Stripe doesn’t retry
+    return sendJSON(res, 200, { received: true, ignored: event.type });
   }
 
-  const session = event.data.object;
-
-  // ============================================
-  // STEP 2 — KILL-SWITCH (approx line ~85)
-  // ============================================
-  if (process.env.ORDER_EMAILS_DISABLED === '1') {
-    console.log('[webhook] order emails disabled via env; acknowledging only', {
-      session_id: session.id,
-      livemode: session.livemode
-    });
-    return json(res, 200, { received: true, email_sent: false, reason: 'disabled_by_env' });
-  }
-  // ============================================
-
-  // ---------- normal path (runs only when kill-switch is OFF) ----------
   try {
-    // (A) pull line items (optional; helps compute units)
-    let lineItems = null;
-    try {
-      lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 50 });
-    } catch (e) {
-      console.warn('listLineItems failed:', e.message);
-    }
+    const session = event.data.object;
 
-    // (B) compute units (metadata first, else parse "…, 5,000 units" from description)
-    let units = Number(session?.metadata?.units || 0);
-    if (!units && lineItems?.data?.[0]?.description) {
-      const m = lineItems.data[0].description.match(/(\d[\d,]*)\s*units/i);
-      if (m) units = Number(m[1].replace(/,/g, ''));
-    }
+    // Who to email
+    const toEmail = session?.customer_details?.email || process.env.CONTACT_FALLBACK_TO || 'info@forcedowels.com';
+    const name = session?.customer_details?.name || 'Customer';
 
-    // (C) human order number using your Neon helper (safe if helper exists)
-    await ensureCounterTable();
-    const key = process.env.KV_ORDER_COUNTER_KEY || 'order_seq_preview';
-    const seq = await nextCounter(key);
-    const pad = Math.max(1, Number(process.env.KV_ORDER_PAD || 2)); // 2 -> 01, 4 -> 0001
-    const prefix = (process.env.ORDER_PREFIX || '').trim();        // e.g., "FD-"
-    const humanOrderNo = seq ? `${prefix}${String(seq).padStart(pad, '0')}` : session.id;
-
-    // (D) totals & address
+    // Totals (USD)
     const total = Number(session.amount_total || 0) / 100;
     const subtotal = Number(session.amount_subtotal || 0) / 100;
     const shipping = Number(session.shipping_cost?.amount_total || 0) / 100;
-    const tax = Number(
-      session.total_details?.amount_tax || (total - subtotal - shipping)
-    ) / 100;
-    const unitUSD = units ? total / units : 0;
+    const tax = Number(session.total_details?.amount_tax || (total - subtotal - shipping)) / 100;
 
-    const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/$/, '');
-    const toEmail = session?.customer_details?.email || '';
-    const name = session?.customer_details?.name || 'Customer';
+    // Simple email content
+    const subject = 'Your Force Dowels order is confirmed';
+    const text =
+`Hi ${name},
 
-    // (E) build email payload for your existing template
-    const payload = {
-      customer_name: name,
-      order_number: humanOrderNo,
-      order_date: new Date().toLocaleDateString(),
-      units,
-      unit_usd: unitUSD.toFixed(4),
-      tier_label: session?.metadata?.tier_label || '',
-      line_total: total.toFixed(2),
-      subtotal: subtotal.toFixed(2),
-      shipping: shipping.toFixed(2),
-      tax: tax.toFixed(2),
-      total: total.toFixed(2),
-      ship_name: name,
-      ship_address1: session?.customer_details?.address?.line1 || '',
-      ship_address2: session?.customer_details?.address?.line2 || '',
-      ship_city: session?.customer_details?.address?.city || '',
-      ship_state: session?.customer_details?.address?.state || '',
-      ship_postal: session?.customer_details?.address?.postal_code || '',
-      ship_country: session?.customer_details?.address?.country || '',
-      order_url: baseUrl
-        ? `${baseUrl}/order-success.html?session_id=${encodeURIComponent(session.id)}`
-        : '',
-      is_test: !session.livemode,
-      absolute_logo_url: baseUrl ? `${baseUrl}/images/force-dowel-logo.jpg?v=8` : undefined
-    };
+Thanks for your purchase! Your payment was received and your order is confirmed.
 
-    const { subject, text, html } = buildOrderConfirmationEmail(payload);
+Summary:
+Subtotal: $${subtotal.toFixed(2)}
+Shipping: $${shipping.toFixed(2)}
+Tax: $${tax.toFixed(2)}
+Total: $${total.toFixed(2)}
 
-    // (F) send via Resend
-    const sent = await sendWithResend({
-      to: toEmail || process.env.CONTACT_FALLBACK_TO || 'info@forcedowels.com',
+We’ll email you tracking details when your order ships.
+If you have questions, email info@forcedowels.com.
+
+— Force Dowels`;
+
+    const html = `
+  <div style="font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#0b1220;color:#e5e7eb;border-radius:12px">
+    <table width="100%" style="border-collapse:collapse">
+      <tr>
+        <td style="text-align:left;font-weight:700;font-size:18px">Order confirmed</td>
+        <td style="text-align:right">
+          <img src="${(process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/$/,'')}/images/force-dowel-logo.jpg?v=8"
+               alt="Force Dowels" width="140" style="border-radius:999px;display:block">
+        </td>
+      </tr>
+    </table>
+    <p style="margin:16px 0 0">Hi ${escapeHtml(name)},</p>
+    <p style="margin:8px 0 16px">Thanks for your purchase! Your payment was received and your order is confirmed.</p>
+    <div style="background:#111827;border:1px solid #1f2937;border-radius:10px;padding:16px">
+      <div style="display:flex;justify-content:space-between;margin:4px 0">
+        <span>Subtotal</span><strong>$${subtotal.toFixed(2)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin:4px 0">
+        <span>Shipping</span><strong>$${shipping.toFixed(2)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin:4px 0">
+        <span>Tax</span><strong>$${tax.toFixed(2)}</strong>
+      </div>
+      <div style="height:1px;background:#1f2937;margin:8px 0"></div>
+      <div style="display:flex;justify-content:space-between;margin:4px 0;font-size:16px">
+        <span>Total</span><strong>$${total.toFixed(2)}</strong>
+      </div>
+    </div>
+    <p style="margin:16px 0 0">We’ll email you tracking details when your order ships.</p>
+    <p style="margin:8px 0 16px">Questions? Email <a href="mailto:info@forcedowels.com" style="color:#60a5fa">info@forcedowels.com</a>.</p>
+    <p style="font-size:12px;color:#9ca3af">If this was a test payment, this message confirms your test checkout completed.</p>
+  </div>`;
+
+    // Send via Resend
+    const ok = await sendWithResend({
+      to: toEmail,
       subject,
       text,
-      html,
-      headers: { 'X-Order-No': humanOrderNo, 'X-Stripe-Session': session.id }
+      html
     });
 
-    console.log('[webhook] email result', { sent, to: toEmail, order_no: humanOrderNo });
-    return json(res, 200, { received: true, email_sent: !!sent, order_no: humanOrderNo });
+    console.log('order email sent:', ok, 'to:', toEmail);
+    return sendJSON(res, 200, { received: true, email_sent: !!ok });
   } catch (e) {
-    console.error('[webhook] handler error:', e);
-    // Acknowledge to stop retries; inspect logs if needed
-    return json(res, 200, { received: true, error: String(e) });
+    console.error('handler error:', e);
+    // Ack so Stripe doesn’t retry forever
+    return sendJSON(res, 200, { received: true, email_sent: false, error: String(e) });
   }
 }
 
-// ---------- resend helper ----------
-async function sendWithResend({ to, subject, text, html, headers }) {
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function sendWithResend({ to, subject, text, html }) {
   try {
     const apiKey = process.env.RESEND_API_KEY || '';
     if (!apiKey) { console.error('Missing RESEND_API_KEY'); return false; }
-
-    // Use the same from you verified in Resend (contact form sender is fine too)
     const from = process.env.CONFIRMATION_FROM_EMAIL || 'Force Dowels <orders@forcedowels.com>';
 
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from,
-        to: [to],
-        subject,
-        text,
-        html,
-        reply_to: 'info@forcedowels.com',
-        headers
-      })
+      body: JSON.stringify({ from, to: [to], subject, text, html, reply_to: 'info@forcedowels.com' })
     });
-
     if (!r.ok) {
-      const body = await r.text().catch(() => '');
+      const body = await r.text().catch(()=>'');
       console.error('Resend failed', r.status, body);
       return false;
     }
     return true;
   } catch (e) {
-    console.error('Resend error', e);
+    console.error('Resend error:', e);
     return false;
   }
 }
