@@ -1,11 +1,8 @@
 // /api/stripe-webhook.js
-// Minimal: on checkout.session.completed, send email via Resend with a larger top-right logo.
+// Sends order confirmation via Resend with a larger, right-corner logo.
 
 import Stripe from 'stripe';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-06-20',
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' });
 
 function readRaw(req) {
   return new Promise((resolve, reject) => {
@@ -43,21 +40,19 @@ export default async function handler(req, res) {
   try {
     const session = event.data.object;
 
-    // --- Absolute logo URL (top-right) ---
+    // Absolute logo URL & size
     const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/$/, '');
     const logoUrl =
       process.env.NEXT_PUBLIC_LOGO_URL
       || (baseUrl ? `${baseUrl}/images/force-dowel-logo.jpg` : '')
       || 'https://forcedowels.com/images/force-dowel-logo.jpg';
 
-    // Optional: control size via env (default 160)
-    const logoW = Number(process.env.EMAIL_LOGO_WIDTH || 160);
+    // 2x bigger (default 240px). Override with EMAIL_LOGO_WIDTH env if needed.
+    const logoW = Number(process.env.EMAIL_LOGO_WIDTH || 240);
 
-    // Who to email
+    // Recipient & totals
     const toEmail = session?.customer_details?.email || process.env.CONTACT_FALLBACK_TO || 'info@forcedowels.com';
     const name = session?.customer_details?.name || 'Customer';
-
-    // Totals (USD)
     const total = Number(session.amount_total || 0) / 100;
     const subtotal = Number(session.amount_subtotal || 0) / 100;
     const shipping = Number(session.shipping_cost?.amount_total || 0) / 100;
@@ -76,11 +71,11 @@ Tax: $${tax.toFixed(2)}
 Total: $${total.toFixed(2)}
 
 We’ll email you tracking details when your order ships.
-If you have questions, email info@forcedowels.com.
+Questions? Email info@forcedowels.com.
 
 — Force Dowels`;
 
-    // Header: logo larger & tucked into the corner
+    // Header: big logo, tight to top-right (negative right margin cancels 24px card padding)
     const html = `
   <div style="font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#0b1220;color:#e5e7eb;border-radius:12px">
     <table width="100%" style="border-collapse:collapse">
@@ -91,7 +86,7 @@ If you have questions, email info@forcedowels.com.
             src="${logoUrl}"
             alt="Force Dowels"
             width="${logoW}"
-            style="display:block;width:${logoW}px;height:auto;border-radius:999px;margin:-6px -8px 0 0"
+            style="display:block;width:${logoW}px;height:auto;border-radius:999px;margin:-10px -24px 0 0"
           >
         </td>
       </tr>
