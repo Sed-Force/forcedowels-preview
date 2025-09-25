@@ -1,5 +1,5 @@
 // /api/stripe-webhook.js
-// Sends order confirmation via Resend with a larger, right-corner logo.
+// Sends order confirmation via Resend with a big logo aligned to the top-right corner (email-safe tables).
 
 import Stripe from 'stripe';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' });
@@ -40,14 +40,14 @@ export default async function handler(req, res) {
   try {
     const session = event.data.object;
 
-    // Absolute logo URL & size
+    // Absolute logo URL
     const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/$/, '');
     const logoUrl =
       process.env.NEXT_PUBLIC_LOGO_URL
       || (baseUrl ? `${baseUrl}/images/force-dowel-logo.jpg` : '')
       || 'https://forcedowels.com/images/force-dowel-logo.jpg';
 
-    // 2x bigger (default 240px). Override with EMAIL_LOGO_WIDTH env if needed.
+    // 2x size (adjust via EMAIL_LOGO_WIDTH env if needed)
     const logoW = Number(process.env.EMAIL_LOGO_WIDTH || 240);
 
     // Recipient & totals
@@ -75,24 +75,34 @@ Questions? Email info@forcedowels.com.
 
 — Force Dowels`;
 
-    // Header: big logo, tight to top-right (negative right margin cancels 24px card padding)
+    // EMAIL-SAFE HEADER: left text + right-aligned logo with fixed cell width.
     const html = `
   <div style="font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#0b1220;color:#e5e7eb;border-radius:12px">
-    <table width="100%" style="border-collapse:collapse">
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse">
       <tr>
-        <td style="text-align:left;font-weight:700;font-size:18px;padding:0 0 6px 0">Order confirmed</td>
-        <td style="text-align:right;padding:0">
-          <img
-            src="${logoUrl}"
-            alt="Force Dowels"
-            width="${logoW}"
-            style="display:block;width:${logoW}px;height:auto;border-radius:999px;margin:-10px -24px 0 0"
-          >
+        <td style="font-weight:700;font-size:18px;padding:0 0 6px 0;text-align:left;">
+          Order confirmed
+        </td>
+        <td width="${logoW}" align="right" valign="top" style="padding:0;">
+          <table cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
+            <tr>
+              <td style="padding:0;">
+                <img
+                  src="${logoUrl}"
+                  alt="Force Dowels"
+                  width="${logoW}"
+                  style="display:block;border:0;outline:none;text-decoration:none;height:auto;border-radius:999px;"
+                >
+              </td>
+            </tr>
+          </table>
         </td>
       </tr>
     </table>
+
     <p style="margin:16px 0 0">Hi ${escapeHtml(name)},</p>
     <p style="margin:8px 0 16px">Thanks for your purchase! Your payment was received and your order is confirmed.</p>
+
     <div style="background:#111827;border:1px solid #1f2937;border-radius:10px;padding:16px">
       <div style="display:flex;justify-content:space-between;margin:4px 0"><span>Subtotal</span><strong>$${subtotal.toFixed(2)}</strong></div>
       <div style="display:flex;justify-content:space-between;margin:4px 0"><span>Shipping</span><strong>$${shipping.toFixed(2)}</strong></div>
@@ -100,6 +110,7 @@ Questions? Email info@forcedowels.com.
       <div style="height:1px;background:#1f2937;margin:8px 0"></div>
       <div style="display:flex;justify-content:space-between;margin:4px 0;font-size:16px"><span>Total</span><strong>$${total.toFixed(2)}</strong></div>
     </div>
+
     <p style="margin:16px 0 0">We’ll email you tracking details when your order ships.</p>
     <p style="margin:8px 0 16px">Questions? Email <a href="mailto:info@forcedowels.com" style="color:#60a5fa">info@forcedowels.com</a>.</p>
     <p style="font-size:12px;color:#9ca3af">If this was a test payment, this message confirms your test checkout completed.</p>
@@ -136,7 +147,7 @@ async function sendWithResend({ to, subject, text, html }) {
     }
     return true;
   } catch (e) {
-    console.error('Resend error', e);
+    console.error('Resend error:', e);
     return false;
   }
 }
