@@ -1,5 +1,5 @@
 // /api/stripe-webhook.js
-// Minimal: on checkout.session.completed, send an email via Resend with top-right logo.
+// Minimal: on checkout.session.completed, send email via Resend with top-right logo.
 
 import Stripe from 'stripe';
 
@@ -43,15 +43,12 @@ export default async function handler(req, res) {
   try {
     const session = event.data.object;
 
-    // === Build absolute logo URL (top-right header image) ===
-    // IMPORTANT: set NEXT_PUBLIC_BASE_URL in Vercel (Preview) to your preview domain, no trailing slash.
-    // Example: https://forcedowels-preview.vercel.app
+    // --- Absolute logo URL (top-right) ---
     const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/$/, '');
     const logoUrl =
-      baseUrl
-        ? `${baseUrl}/images/force-dowel-logo.jpg?v=8`
-        // safe fallback to live asset if preview base URL isn't set:
-        : 'https://forcedowels.com/images/force-dowel-logo.jpg?v=8';
+      process.env.NEXT_PUBLIC_LOGO_URL
+      || (baseUrl ? `${baseUrl}/images/force-dowel-logo.jpg` : '')
+      || 'https://forcedowels.com/images/force-dowel-logo.jpg';
 
     // Who to email
     const toEmail = session?.customer_details?.email || process.env.CONTACT_FALLBACK_TO || 'info@forcedowels.com';
@@ -80,7 +77,7 @@ If you have questions, email info@forcedowels.com.
 
 — Force Dowels`;
 
-    // TOP-RIGHT LOGO: right-aligned cell with inline-styled <img>
+    // HTML with top-right logo
     const html = `
   <div style="font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#0b1220;color:#e5e7eb;border-radius:12px">
     <table width="100%" style="border-collapse:collapse">
@@ -106,13 +103,7 @@ If you have questions, email info@forcedowels.com.
     <p style="font-size:12px;color:#9ca3af">If this was a test payment, this message confirms your test checkout completed.</p>
   </div>`;
 
-    const ok = await sendWithResend({
-      to: toEmail,
-      subject,
-      text,
-      html
-    });
-
+    const ok = await sendWithResend({ to: toEmail, subject, text, html });
     console.log('order email sent:', ok, 'to:', toEmail);
     return sendJSON(res, 200, { received: true, email_sent: !!ok });
   } catch (e) {
@@ -143,7 +134,7 @@ async function sendWithResend({ to, subject, text, html }) {
     }
     return true;
   } catch (e) {
-    console.error('Resend error:', e);
+    console.error('Resend error', e);
     return false;
   }
 }
