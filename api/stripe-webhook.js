@@ -1,5 +1,5 @@
 // /api/stripe-webhook.js
-// Minimal: on checkout.session.completed, send email via Resend with top-right logo.
+// Minimal: on checkout.session.completed, send email via Resend with a larger top-right logo.
 
 import Stripe from 'stripe';
 
@@ -50,6 +50,9 @@ export default async function handler(req, res) {
       || (baseUrl ? `${baseUrl}/images/force-dowel-logo.jpg` : '')
       || 'https://forcedowels.com/images/force-dowel-logo.jpg';
 
+    // Optional: control size via env (default 160)
+    const logoW = Number(process.env.EMAIL_LOGO_WIDTH || 160);
+
     // Who to email
     const toEmail = session?.customer_details?.email || process.env.CONTACT_FALLBACK_TO || 'info@forcedowels.com';
     const name = session?.customer_details?.name || 'Customer';
@@ -77,15 +80,19 @@ If you have questions, email info@forcedowels.com.
 
 — Force Dowels`;
 
-    // HTML with top-right logo
+    // Header: logo larger & tucked into the corner
     const html = `
   <div style="font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#0b1220;color:#e5e7eb;border-radius:12px">
     <table width="100%" style="border-collapse:collapse">
       <tr>
         <td style="text-align:left;font-weight:700;font-size:18px;padding:0 0 6px 0">Order confirmed</td>
-        <td style="text-align:right;padding:0 0 6px 0">
-          <img src="${logoUrl}" alt="Force Dowels" width="120"
-               style="display:block;border-radius:999px;max-width:140px;height:auto">
+        <td style="text-align:right;padding:0">
+          <img
+            src="${logoUrl}"
+            alt="Force Dowels"
+            width="${logoW}"
+            style="display:block;width:${logoW}px;height:auto;border-radius:999px;margin:-6px -8px 0 0"
+          >
         </td>
       </tr>
     </table>
