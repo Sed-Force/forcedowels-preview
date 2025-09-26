@@ -1694,3 +1694,21 @@ a { color: inherit; text-decoration: none; }
 .form-note.is-success { background:#f0fff4; border:1px solid #c6f6d5; color:#155724; }
 .form-note.is-error   { background:#fff5f5; border:1px solid #fed7d7; color:#742a2a; }
 .form-note.is-info    { background:#f7fafc; border:1px solid #e2e8f0; color:#2d3748; }
+
+/* Make primary actions feel clickable */
+button,
+.btn,
+#add-bulk,
+#add-bulk * {
+  cursor: pointer;
+}
+
+/* Optional: nicer disabled state, if you ever disable it */
+.btn[disabled],
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Prevent inner SVGs from eating hover/click events */
+#add-bulk svg { pointer-events: none; }
