@@ -4,22 +4,44 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Order Confirmed — Force Dowels™</title>
-  <meta name="description" content="Thank you for your order. A confirmation email has been sent.">
+  <meta name="description" content="Your Force Dowels order has been confirmed.">
   <link rel="icon" href="/favicon.ico" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=success1">
+  <link rel="stylesheet" href="/styles.css?v=success-3">
+  <style>
+    /* Small page-local tweaks for the summary layout */
+    .success-wrap { padding: 32px 0; }
+    .summary-card {
+      background: #0B1C2A; color: #fff; border-radius: 16px;
+      padding: 24px; display: grid; gap: 24px;
+    }
+    .summary-head { display:flex; align-items:center; justify-content:space-between; }
+    .summary-head h1 { margin:0; font-size: clamp(20px, 2.2vw, 28px); }
+    .kv { list-style:none; padding:0; margin:0; display:grid; gap:10px; }
+    .kv li { display:flex; gap:10px; align-items:baseline; }
+    .kv .k { font-weight:700; min-width:110px; }
+    .kv .k::after { content: ": "; }  /* <- adds colon + space after each label */
+    .kv .v { font-weight:600; opacity: 0.95; }
+    .items-card {
+      background: #081521; border-radius: 14px; padding: 18px; display:grid; gap: 8px;
+    }
+    .item-line { display:flex; justify-content:space-between; gap:16px; }
+    .item-main { display:grid; gap:4px; }
+    .item-title { font-weight:700; }
+    .item-note { font-size:14px; opacity:0.85; }
+    .continue-cta { display:flex; gap:12px; flex-wrap:wrap; }
+  </style>
 </head>
 <body>
 
-<!-- Header (same pattern as other pages; cart goes to /cart.html) -->
+<!-- Simple header (keeps your site look consistent) -->
 <header class="site-header">
   <div class="container header-inner">
     <a class="brand" href="/" aria-label="Force Dowel Company">
       <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" />
     </a>
-
     <nav class="nav" aria-label="Primary">
       <a href="/">Home</a>
       <a href="/order.html">Order</a>
@@ -31,13 +53,12 @@
           <span class="nav-caret">▾</span>
         </button>
         <div class="nav-dropmenu" role="menu">
-          <a href="/distributors" role="menuitem">Find a Distributor</a>
-          <a href="/distributor-application" role="menuitem">Become a Distributor</a>
+          <a href="/distributors.html" role="menuitem">Find a Distributor</a>
+          <a href="/distributor-application.html" role="menuitem">Become a Distributor</a>
         </div>
       </div>
       <a href="/contact.html" class="btn btn--accent">Contact</a>
     </nav>
-
     <div class="header-actions">
       <a href="/cart.html"
          class="btn btn--ghost btn--invert"
@@ -55,40 +76,36 @@
 </header>
 
 <main id="content">
-  <section class="section">
-    <div class="container" style="max-width:860px;">
-      <div class="card" style="padding:24px 22px;">
-        <header class="row row-between">
-          <div>
-            <h1>Order Confirmed</h1>
-            <p class="muted" id="order-line">Thanks for your purchase! We’re processing your order.</p>
-          </div>
-          <img src="/images/force-dowel-logo.jpg" alt="Force Dowels" style="height:46px;border-radius:999px;object-fit:cover;">
-        </header>
+  <section class="section success-wrap">
+    <div class="container">
+      <div class="summary-card">
+        <div class="summary-head">
+          <h1>Order Confirmed</h1>
+          <img src="/images/force-dowel-logo.jpg" alt="Force Dowels" style="height:34px;border-radius:999px;">
+        </div>
 
-        <hr style="margin:18px 0">
+        <!-- Key values -->
+        <ul class="kv">
+          <li><span class="k">Order</span><span class="v" id="s-order">—</span></li>
+          <li><span class="k">Status</span><span class="v" id="s-status">—</span></li>
+          <li><span class="k">Amount</span><span class="v" id="s-amount">—</span></li>
+          <li><span class="k">Email</span><span class="v" id="s-email">—</span></li>
+        </ul>
 
-        <div id="summary" class="grid-2" style="gap:16px;">
-          <div>
-            <h3>Order Details</h3>
-            <div class="tableish">
-              <div class="tr"><span>Order #</span><strong id="order-id">—</strong></div>
-              <div class="tr"><span>Status</span><strong id="status">—</strong></div>
-              <div class="tr"><span>Amount</span><strong id="amount">—</strong></div>
-              <div class="tr"><span>Email</span><strong id="email">—</strong></div>
+        <!-- Items (no trailing $ on the row as requested) -->
+        <div class="items-card">
+          <div class="item-line">
+            <div class="item-main">
+              <div class="item-title">Items</div>
+              <div class="item-note" id="s-items">
+                <!-- filled by script-success.js: titles/notes only, no $ on this row -->
+              </div>
             </div>
-          </div>
-
-          <div>
-            <h3>Items</h3>
-            <div id="items"></div>
           </div>
         </div>
 
-        <div id="error" class="notice error" style="display:none;margin-top:12px;"></div>
-
-        <div class="actions" style="margin-top:22px;display:flex;gap:12px;flex-wrap:wrap;">
-          <a class="btn btn--accent" href="/order.html">Continue Shopping</a>
+        <div class="continue-cta">
+          <a class="btn btn--accent" href="/order.html">Order More</a>
           <a class="btn btn--ghost" href="/">Back to Home</a>
         </div>
       </div>
@@ -101,53 +118,14 @@
     <div class="footer-bottom-left">
       <p>© <span id="year"></span> Force Dowels. All rights reserved.</p>
     </div>
+    <nav class="footer-bottom-right">
+      <a href="/privacy.html">Privacy Policy</a>
+      <a href="/terms.html">Terms of Service</a>
+    </nav>
   </div>
 </footer>
 
-<script>
-  (function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})();
-
-  async function loadSummary() {
-    const params = new URLSearchParams(location.search);
-    const sid = params.get('session_id');
-
-    if (!sid) {
-      document.getElementById('order-line').textContent = 'Payment completed.';
-      document.getElementById('error').style.display = 'block';
-      document.getElementById('error').textContent = 'No session_id in URL. If you reached this page from a bookmark, your details may not be available.';
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/order-summary?session_id=${encodeURIComponent(sid)}`);
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error || 'Failed to load order.');
-
-      // Basic fields
-      document.getElementById('order-id').textContent = data.short_id || data.id || '—';
-      document.getElementById('status').textContent   = (data.payment_status || 'paid').toUpperCase();
-      document.getElementById('amount').textContent   = data.amount_formatted || '—';
-      document.getElementById('email').textContent    = data.customer_email || '—';
-
-      // Items
-      const wrap = document.getElementById('items');
-      wrap.innerHTML = '';
-      (data.items || []).forEach(it => {
-        const row = document.createElement('div');
-        row.className = 'tr';
-        row.innerHTML = `<span>${it.name}${it.desc ? ` — <small>${it.desc}</small>` : ''}</span><strong>${it.total}</strong>`;
-        wrap.appendChild(row);
-      });
-
-    } catch (e) {
-      const err = document.getElementById('error');
-      err.style.display = 'block';
-      err.textContent = 'Could not load your order details. Your payment may still be completed.';
-    }
-  }
-
-  loadSummary();
-</script>
+<script> (function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear(); })(); </script>
+<script defer src="/script-success.js?v=4"></script>
 </body>
 </html>
