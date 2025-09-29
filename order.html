@@ -1,4 +1,4 @@
-<!doctype html><!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=32">
+  <link rel="stylesheet" href="/styles.css?v=cart-ui-1">
 
   <!-- Clerk (Browser) -->
   <script
@@ -19,15 +19,13 @@
     src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
   </script>
 
-  <!-- Auth glue: mounts user button + unlocks tiers when signed in -->
+  <!-- Auth glue -->
   <script defer src="/script-auth.js"></script>
-
-  <!-- General site JS -->
-  <script defer src="/script.js?v=32"></script>
+  <!-- General site JS (keep if you use it) -->
+  <script defer src="/script.js"></script>
 </head>
 <body>
 
-<!-- Header -->
 <header class="site-header">
   <div class="container header-inner">
     <a class="brand" href="/" aria-label="Force Dowel Company">
@@ -55,12 +53,7 @@
     </nav>
 
     <div class="header-actions">
-      <!-- Force this to the real cart page -->
-      <a href="/cart.html"
-         class="btn btn--ghost btn--invert"
-         id="btn-cart"
-         aria-label="Shopping cart"
-         onclick="window.location='/cart.html'; return false;">
+      <a href="/cart.html" class="btn btn--ghost btn--invert" id="btn-cart" aria-label="Shopping cart">
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
           <path fill="currentColor" d="M7 18a2 2 0 1 0 0 4a2 2 0 0 0 0-4m10 0a2 2 0 1 0 0 4a2 2 0 0 0 0-4M6.2 6l.3 2h12.3a1 1 0 0 1 1 1l-1.2 6a2 2 0 0 1-2 1.6H8.7a2 2 0 0 1-2-1.7L5.3 5H3V3h3a1 1 0 0 1 1 .9L7.2 6Z"/>
         </svg>
@@ -78,15 +71,12 @@
 </header>
 
 <main id="content" class="order-page">
-  <!-- Spacer -->
   <section class="section">
     <div class="container"></div>
   </section>
 
-  <!-- Pricing + Calculator -->
   <section class="section">
     <div class="container order-grid">
-
       <!-- LEFT: Tiers -->
       <div class="tiers">
         <h2>Pricing Tiers</h2>
@@ -97,20 +87,19 @@
           Larger orders require sign-in for business verification.
         </div>
 
-        <!-- Active tier -->
+        <!-- Tiers (clickable; calculator jumps to that tier’s minimum) -->
         <button class="tier active" data-min="5000" data-max="20000" data-price="0.072" type="button">
           <span class="tier-range">5,000–20,000</span>
           <span class="tier-price">$0.072/Unit</span>
         </button>
 
-        <!-- Locked tiers (unlock when signed in via script-auth.js) -->
-        <button class="tier locked" data-min="20000" data-max="160000" data-price="0.0675" type="button" disabled>
+        <button class="tier locked" data-locked="1" data-min="20000" data-max="160000" data-price="0.0675" type="button">
           <span class="tier-range">&lt;20,000–160,000</span>
           <span class="tier-lock">Sign in required</span>
           <span class="tier-price">$0.0675/Unit</span>
         </button>
 
-        <button class="tier locked" data-min="160000" data-max="960000" data-price="0.063" type="button" disabled>
+        <button class="tier locked" data-locked="1" data-min="160000" data-max="960000" data-price="0.063" type="button">
           <span class="tier-range">&lt;160,000–960,000</span>
           <span class="tier-lock">Sign in required</span>
           <span class="tier-price">$0.063/Unit</span>
@@ -154,46 +143,21 @@
 
         <div class="row">
           <span>Price per unit:</span>
-          <strong id="price-per-unit">$0.0000</strong>
+          <strong id="price-per-unit">$0.072</strong>
         </div>
 
         <div class="row">
           <span>Total price:</span>
-          <strong id="price-total">$0.00</strong>
+          <strong id="price-total">$360.00</strong>
         </div>
 
-        <!-- Add-only on this page -->
         <button id="btn-add-to-cart" class="btn btn--accent btn-wide" type="button">Add to Cart</button>
-        <p class="viewcart"><a id="link-view-cart" href="/cart.html">View Cart</a></p>
+        <p class="viewcart"><a href="/cart.html">View Cart</a></p>
       </aside>
     </div>
   </section>
-
-  <!-- Optional legacy drawer (kept if used elsewhere) -->
-  <aside class="cart" id="cart" aria-hidden="true">
-    <div class="cart-inner">
-      <header class="cart-head">
-        <h3>Your Cart</h3>
-        <button class="cart-close" aria-label="Close" type="button">✕</button>
-      </header>
-      <div class="cart-items" id="cart-items"></div>
-      <footer class="cart-foot">
-        <div class="cart-row">
-          <span>Subtotal</span>
-          <strong id="cart-subtotal">$0.00</strong>
-        </div>
-        <p class="cart-note muted">Shipping & taxes calculated at checkout.</p>
-        <div class="cart-actions">
-          <a href="/contact.html" class="btn btn--ghost">Request a Quote</a>
-          <a href="/checkout.html" class="btn btn--accent">Proceed to Checkout</a>
-        </div>
-      </footer>
-    </div>
-    <button class="cart-backdrop" aria-label="Close"></button>
-  </aside>
 </main>
 
-<!-- Footer -->
 <footer class="site-footer">
   <div class="container footer-main">
     <section class="footer-sec footer-sec--brand">
@@ -253,15 +217,11 @@
   </div>
 </footer>
 
-<script>
-  (function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})();
-</script>
+<script>(function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})();</script>
 
-<!-- Tier calculator (your existing logic) -->
-<script defer src="/script-order.js"></script>
-
-<!-- NEW: add-only behavior (no Stripe here) -->
-<script defer src="/script-order-addonly.js?v=1"></script>
-  <script defer src="/script-cart.js?v=42"></script>
+<!-- Tiered calculator + kit add -->
+<script defer src="/script-order.js?v=cart-ui-1"></script>
+<script defer src="/script-order-cart.js?v=cart-ui-1"></script>
 </body>
 </html>
+
