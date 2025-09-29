@@ -4,28 +4,26 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Your Cart — Force Dowels™</title>
-  <meta name="description" content="Review your Force Dowels cart and checkout securely." />
+  <meta name="description" content="Review your cart and proceed to secure checkout." />
   <link rel="icon" href="/favicon.ico" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=cart4">
+  <link rel="stylesheet" href="/styles.css?v=cart1">
 </head>
 <body class="cart-page">
 
-<!-- Header (same pattern as other pages, with the FORCED link to /cart.html) -->
+<!-- Header (same pattern as other pages) -->
 <header class="site-header">
   <div class="container header-inner">
     <a class="brand" href="/" aria-label="Force Dowel Company">
       <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" />
     </a>
-
     <nav class="nav" aria-label="Primary">
       <a href="/">Home</a>
       <a href="/order.html">Order</a>
       <a href="/videos.html">Videos</a>
       <a href="/faq.html">FAQ</a>
-
       <div class="nav-dropdown">
         <button class="nav-dropbtn" type="button" aria-haspopup="true" aria-expanded="false">
           <span class="nav-drop-label">Distributors</span>
@@ -36,16 +34,12 @@
           <a href="/distributor-application.html" role="menuitem">Become a Distributor</a>
         </div>
       </div>
-
       <a href="/contact.html" class="btn btn--accent">Contact</a>
     </nav>
 
     <div class="header-actions">
-      <!-- This forces navigation even if an old script tries to intercept -->
-      <a href="/cart.html"
-         class="btn btn--ghost btn--invert"
-         id="btn-cart"
-         aria-label="Shopping cart"
+      <!-- Force navigation to this page if clicked -->
+      <a href="/cart.html" class="btn btn--ghost btn--invert" id="btn-cart" aria-label="Shopping cart"
          onclick="window.location='/cart.html'; return false;">
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
           <path fill="currentColor" d="M7 18a2 2 0 1 0 0 4a2 2 0 0 0 0-4m10 0a2 2 0 1 0 0 4a2 2 0 0 0 0-4M6.2 6l.3 2h12.3a1 1 0 0 1 1 1l-1.2 6a2 2 0 0 1-2 1.6H8.7a2 2 0 0 1-2-1.7L5.3 5H3V3h3a1 1 0 0 1 1 .9L7.2 6Z"/>
@@ -61,109 +55,33 @@
   <section class="section">
     <div class="container">
       <h1>Your Cart</h1>
-      <p class="muted">Adjust quantities below. Tiered pricing updates automatically.</p>
-    </div>
-  </section>
+      <p class="muted" id="cart-note">Prices automatically adjust to the correct tier based on units.</p>
 
-  <section class="section pt-0">
-    <div class="container">
       <div class="cart-shell">
-        <!-- LEFT: Items -->
-        <div class="cart-items-panel">
-          <!-- Bulk line -->
-          <article class="cart-card" id="line-bulk" style="display:none;">
-            <div class="cart-card-head">
-              <div>
-                <h3>Force Dowels — Bulk</h3>
-                <div class="muted">5,000–960,000 units • Tiered pricing</div>
-              </div>
-              <button class="link danger" id="remove-bulk" type="button">Remove</button>
-            </div>
-
-            <div class="cart-grid">
-              <div class="cart-field">
-                <label for="bulk-qty">Quantity (units)</label>
-                <div class="qtywrap">
-                  <button class="step" id="bulk-minus" type="button" aria-label="decrease">–</button>
-                  <input id="bulk-qty" type="number" step="5000" min="5000" max="960000" inputmode="numeric">
-                  <button class="step" id="bulk-plus" type="button" aria-label="increase">+</button>
-                  <span class="units">units</span>
-                </div>
-                <small class="muted">Increments of 5,000</small>
-              </div>
-
-              <div class="cart-field">
-                <label>Tiered price</label>
-                <div class="price-strong" id="bulk-price">$0.0000</div>
-                <small class="muted" id="bulk-tier-label"></small>
-              </div>
-
-              <div class="cart-field">
-                <label>Line total</label>
-                <div class="price-strong" id="bulk-total">$0.00</div>
-              </div>
-            </div>
-          </article>
-
-          <!-- Kit line -->
-          <article class="cart-card" id="line-kit" style="display:none;">
-            <div class="cart-card-head">
-              <div>
-                <h3>Force Dowels Kit — 300 units</h3>
-                <div class="muted">$36.00 each</div>
-              </div>
-              <button class="link danger" id="remove-kit" type="button">Remove</button>
-            </div>
-
-            <div class="cart-grid">
-              <div class="cart-field">
-                <label for="kit-qty">Quantity (kits)</label>
-                <div class="qtywrap">
-                  <button class="step" id="kit-minus" type="button" aria-label="decrease">–</button>
-                  <input id="kit-qty" type="number" step="1" min="1" max="999" inputmode="numeric">
-                  <button class="step" id="kit-plus" type="button" aria-label="increase">+</button>
-                  <span class="units">kits</span>
-                </div>
-              </div>
-
-              <div class="cart-field">
-                <label>Price each</label>
-                <div class="price-strong" id="kit-price">$36.00</div>
-              </div>
-
-              <div class="cart-field">
-                <label>Line total</label>
-                <div class="price-strong" id="kit-total">$0.00</div>
-              </div>
-            </div>
-          </article>
-
-          <div id="cart-empty" class="empty-card">
-            Your cart is empty. <a href="/order.html">Start an order</a>.
+        <!-- Left: line items -->
+        <div class="cart-lines">
+          <div id="cart-empty" class="cart-empty" hidden>
+            <p>Your cart is empty.</p>
+            <a class="btn btn--accent" href="/order.html">Add Products</a>
           </div>
+
+          <div id="cart-items" class="cart-items"></div>
         </div>
 
-        <!-- RIGHT: Summary -->
+        <!-- Right: summary -->
         <aside class="cart-summary">
-          <h3>Summary</h3>
-
-          <div class="row">
-            <span>Subtotal</span>
-            <strong id="summary-subtotal">$0.00</strong>
-          </div>
-          <div class="row muted small">
-            <span>Shipping & taxes</span>
-            <span>Calculated at checkout</span>
-          </div>
-
+          <h2>Summary</h2>
+          <div class="row"><span>Subtotal</span><strong id="sum-subtotal">$0.00</strong></div>
+          <p class="muted">Shipping &amp; taxes calculated at checkout.</p>
           <button id="btn-checkout" class="btn btn--accent btn-wide" type="button">Proceed to Checkout</button>
-          <p class="muted small" style="margin-top:10px;">Secure payment via Stripe</p>
+          <button id="btn-clear" class="btn btn--ghost btn-wide" type="button">Clear Cart</button>
         </aside>
       </div>
     </div>
   </section>
 </main>
 
+<!-- Footer -->
 <footer class="site-footer">
   <div class="container footer-main">
     <section class="footer-sec footer-sec--brand">
@@ -175,7 +93,6 @@
         Experience the next generation of cabinet construction.
       </p>
     </section>
-
     <section class="footer-sec">
       <h4>Quick Links</h4>
       <ul class="footer-list">
@@ -186,20 +103,17 @@
         <li><a href="/distributor-application.html">Become a Distributor</a></li>
       </ul>
     </section>
-
     <section class="footer-sec">
       <h4>Contact Us</h4>
       <ul class="footer-list">
         <li>(480)-581-7145</li>
         <li>Hours: Mon–Thurs 7:30AM–4:30PM; Friday 7:30AM–11:30AM</li>
         <li><a href="mailto:info@forcedowels.com">info@forcedowels.com</a></li>
-        <li>4455 E Nunneley Rd, Ste 103, Gilbert, AZ 85296</li>
+        <li>4455 E Nunneley Rd, Ste 103<br>Gilbert, AZ 85296</li>
       </ul>
     </section>
-
     <section class="footer-sec">
       <h4>Stay Updated</h4>
-      <p class="footer-note">Get the latest updates on our patent-pending technology and new product releases.</p>
       <form class="footer-form" onsubmit="return false;">
         <label class="sr-only" for="newsletter-email">Enter your email</label>
         <input id="newsletter-email" type="email" placeholder="Enter your email" required>
@@ -208,9 +122,7 @@
       <p class="footer-privacy-note">We respect your privacy. Unsubscribe at any time.</p>
     </section>
   </div>
-
   <div class="footer-separator"></div>
-
   <div class="container footer-bottom">
     <div class="footer-bottom-left">
       <p>© <span id="year"></span> Force Dowels. All rights reserved.</p>
@@ -223,11 +135,7 @@
   </div>
 </footer>
 
-<script>
-  (function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})();
-</script>
-<!-- IMPORTANT: one script file handles order page + cart page -->
-<script defer src="/script-cart.js?v=42"></script>
+<script> (function(){var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})(); </script>
+<script defer src="/script-cart.js?v=43"></script>
 </body>
 </html>
-
