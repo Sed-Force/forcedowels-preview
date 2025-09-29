@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Order Confirmed — Force Dowels™</title>
+  <meta name="description" content="Thank you for your order. A confirmation email has been sent.">
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=success1">
+</head>
+<body>
+
+<!-- Header (same pattern as other pages; cart goes to /cart.html) -->
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="/" aria-label="Force Dowel Company">
+      <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" />
+    </a>
+
+    <nav class="nav" aria-label="Primary">
+      <a href="/">Home</a>
+      <a href="/order.html">Order</a>
+      <a href="/videos.html">Videos</a>
+      <a href="/faq.html">FAQ</a>
+      <div class="nav-dropdown">
+        <button class="nav-dropbtn" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="nav-drop-label">Distributors</span>
+          <span class="nav-caret">▾</span>
+        </button>
+        <div class="nav-dropmenu" role="menu">
+          <a href="/distributors" role="menuitem">Find a Distributor</a>
+          <a href="/distributor-application" role="menuitem">Become a Distributor</a>
+        </div>
+      </div>
+      <a href="/contact.html" class="btn btn--accent">Contact</a>
+    </nav>
+
+    <div class="header-actions">
+      <a href="/cart.html"
+         class="btn btn--ghost btn--invert"
+         id="btn-cart"
+         aria-label="Shopping cart"
+         onclick="window.location='/cart.html'; return false;">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M7 18a2 2 0 1 0 0 4a2 2 0 0 0 0-4m10 0a2 2 0 1 0 0 4a2 2 0 0 0 0-4M6.2 6l.3 2h12.3a1 1 0 0 1 1 1l-1.2 6a2 2 0 0 1-2 1.6H8.7a2 2 0 0 1-2-1.7L5.3 5H3V3h3a1 1 0 0 1 1 .9L7.2 6Z"/>
+        </svg>
+        <span class="hide-sm">Cart</span>
+        <span id="cart-count" class="badge"></span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main id="content">
+  <section class="section">
+    <div class="container" style="max-width:860px;">
+      <div class="card" style="padding:24px 22px;">
+        <header class="row row-between">
+          <div>
+            <h1>Order Confirmed</h1>
+            <p class="muted" id="order-line">Thanks for your purchase! We’re processing your order.</p>
+          </div>
+          <img src="/images/force-dowel-logo.jpg" alt="Force Dowels" style="height:46px;border-radius:999px;object-fit:cover;">
+        </header>
+
+        <hr style="margin:18px 0">
+
+        <div id="summary" class="grid-2" style="gap:16px;">
+          <div>
+            <h3>Order Details</h3>
+            <div class="tableish">
+              <div class="tr"><span>Order #</span><strong id="order-id">—</strong></div>
+              <div class="tr"><span>Status</span><strong id="status">—</strong></div>
+              <div class="tr"><span>Amount</span><strong id="amount">—</strong></div>
+              <div class="tr"><span>Email</span><strong id="email">—</strong></div>
+            </div>
+          </div>
+
+          <div>
+            <h3>Items</h3>
+            <div id="items"></div>
+          </div>
+        </div>
+
+        <div id="error" class="notice error" style="display:none;margin-top:12px;"></div>
+
+        <div class="actions" style="margin-top:22px;display:flex;gap:12px;flex-wrap:wrap;">
+          <a class="btn btn--accent" href="/order.html">Continue Shopping</a>
+          <a class="btn btn--ghost" href="/">Back to Home</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-bottom">
+    <div class="footer-bottom-left">
+      <p>© <span id="year"></span> Force Dowels. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})();
+
+  async function loadSummary() {
+    const params = new URLSearchParams(location.search);
+    const sid = params.get('session_id');
+
+    if (!sid) {
+      document.getElementById('order-line').textContent = 'Payment completed.';
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('error').textContent = 'No session_id in URL. If you reached this page from a bookmark, your details may not be available.';
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/order-summary?session_id=${encodeURIComponent(sid)}`);
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Failed to load order.');
+
+      // Basic fields
+      document.getElementById('order-id').textContent = data.short_id || data.id || '—';
+      document.getElementById('status').textContent   = (data.payment_status || 'paid').toUpperCase();
+      document.getElementById('amount').textContent   = data.amount_formatted || '—';
+      document.getElementById('email').textContent    = data.customer_email || '—';
+
+      // Items
+      const wrap = document.getElementById('items');
+      wrap.innerHTML = '';
+      (data.items || []).forEach(it => {
+        const row = document.createElement('div');
+        row.className = 'tr';
+        row.innerHTML = `<span>${it.name}${it.desc ? ` — <small>${it.desc}</small>` : ''}</span><strong>${it.total}</strong>`;
+        wrap.appendChild(row);
+      });
+
+    } catch (e) {
+      const err = document.getElementById('error');
+      err.style.display = 'block';
+      err.textContent = 'Could not load your order details. Your payment may still be completed.';
+    }
+  }
+
+  loadSummary();
+</script>
+</body>
+</html>
