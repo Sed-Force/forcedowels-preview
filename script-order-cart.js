@@ -1,5 +1,4 @@
-// /script-order-cart.js (master)
-// Single source of truth for adding kit/bulk from the order page and updating header badge.
+// /script-order-cart.js (starter kit: add only; no redirect)
 
 (() => {
   const CART_KEY = 'fd_cart';
@@ -40,8 +39,10 @@
     setCart(cart);
   }
 
+  // Expose for other scripts
   window.FD_CART = { addBulk, addKit, updateBadge };
 
+  // Bind the Kit button (add only; no navigation)
   const kitBtn = document.getElementById('starter-kit');
   if (kitBtn && !kitBtn.dataset.bound) {
     kitBtn.dataset.bound = '1';
@@ -49,7 +50,8 @@
       e.preventDefault();
       e.stopPropagation();
       addKit();
-      window.location.href = '/cart.html';
+      // No redirect — stays on page
+      // (Optional: show a small toast here if you want)
     });
   }
 
