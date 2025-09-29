@@ -1,102 +1,106 @@
-// /script-order.js  v20
+// /script-order.js  (master)
+// Drives tier selector, quantity controls (+/- 5,000), and price display.
+// Also adds bulk units to cart then navigates to /cart.html.
+
 (() => {
+  const $ = (sel, ctx = document) => ctx.querySelector(sel);
+  const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
+  const money = (n) => (n ?? 0).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+
   const TIERS = [
-    { min: 5000,   max: 20000,  ppu: 0.072,  requiresAuth: false },
-    { min: 20000,  max: 160000, ppu: 0.0675, requiresAuth: true  },
-    { min: 160000, max: 960000, ppu: 0.063,  requiresAuth: true  },
+    { min: 5000,   max: 20000,  ppu: 0.072  },
+    { min: 20000,  max: 160000, ppu: 0.0675 },
+    { min: 160000, max: 960000, ppu: 0.063  },
   ];
-  const KIT_UNIT_CENTS = 3600;
 
-  const $qtyMinus = document.getElementById('qty-minus');
-  const $qtyPlus  = document.getElementById('qty-plus');
-  const $qtyInput = document.getElementById('qty-units');
-  const $ppu      = document.getElementById('price-per-unit');
-  const $total    = document.getElementById('price-total');
-  const $add      = document.getElementById('btn-add-to-cart');
-  const $kitBtn   = document.getElementById('starter-kit');
-  const $badge    = document.getElementById('cart-count');
+  const qtyInput = $('#qty-units') || $('#qty');
+  const btnMinus = $('#qty-minus');
+  const btnPlus  = $('#qty-plus');
+  const pricePerUnitEl = $('#price-per-unit') || $('#ppu');
+  const totalEl = $('#price-total') || $('#total');
+  const addBtn  = $('#btn-add-to-cart');
 
-  function money(n) {
-    return (Number(n) || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-  }
-  function ppuForUnits(units) {
-    const u = Number(units) || 0;
-    return (TIERS.find(t => u >= t.min && u <= t.max)?.ppu) ?? 0;
-  }
+  let currentTier = TIERS[0];
 
-  function loadCart() {
-    try { return JSON.parse(localStorage.getItem('fd_cart') || '[]'); }
-    catch { return []; }
-  }
-  function saveCart(cart) {
-    localStorage.setItem('fd_cart', JSON.stringify(cart));
-    updateBadge(cart);
-  }
-  function updateBadge(cart = loadCart()) {
-    const count = cart.reduce((n, it) => {
-      if (it.type === 'kit') return n + (Number(it.qty) || 0);
-      if (it.type === 'bulk') return n + 1;
-      return n;
-    }, 0);
-    if ($badge) $badge.textContent = count > 0 ? String(count) : '';
-  }
+  const snapQty = (q) => {
+    const STEP = 5000, MIN = 5000, MAX = 960000;
+    if (isNaN(q)) q = MIN;
+    q = Math.round(q / STEP) * STEP;
+    if (q < MIN) q = MIN;
+    if (q > MAX) q = MAX;
+    return q;
+  };
 
-  function normalizeUnits(v) {
-    let u = Number(v) || 5000;
-    u = Math.round(u / 5000) * 5000;
-    if (u < 5000) u = 5000;
-    if (u > 960000) u = 960000;
-    return u;
+  const tierForQty = (q) => {
+    for (const t of TIERS) if (q >= t.min && q <= t.max) return t;
+    return TIERS[TIERS.length - 1];
+  };
+
+  function setActiveTierByMin(min) {
+    $$('.tier').forEach(b => b.classList.remove('active'));
+    const btn = $(`.tier[data-min="${min}"]`);
+    if (btn) btn.classList.add('active');
+
+    let q = parseInt(qtyInput.value, 10);
+    if (isNaN(q) || q < min) q = min;
+    qtyInput.value = snapQty(q);
+    currentTier = tierForQty(q);
+    render();
   }
 
-  function recalc() {
-    const units = normalizeUnits($qtyInput.value);
-    $qtyInput.value = units;
-    const unitPrice = ppuForUnits(units);
-    $ppu.textContent = money(unitPrice);
-    $total.textContent = money((units * unitPrice));
+  function render() {
+    const q = snapQty(parseInt(qtyInput.value, 10));
+    qtyInput.value = q;
+
+    currentTier = tierForQty(q);
+    $$('.tier').forEach(b => {
+      const min = parseInt(b.dataset.min, 10);
+      const max = parseInt(b.dataset.max, 10);
+      b.classList.toggle('active', q >= min && q <= max);
+    });
+
+    pricePerUnitEl.textContent = money(currentTier.ppu).replace('.00', '');
+    totalEl.textContent = money(q * currentTier.ppu);
   }
 
-  function addBulkToCart() {
-    const units = normalizeUnits($qtyInput.value);
-    const cart = loadCart();
-
-    // One bulk line – merge into existing if present
-    const ix = cart.findIndex(it => it.type === 'bulk');
-    if (ix >= 0) {
-      cart[ix].units = units;
-    } else {
-      cart.push({ type: 'bulk', units });
-    }
-
-    saveCart(cart);
-    // Scroll to cart link (or redirect if you prefer)
-    window.location.href = '/cart.html';
-  }
-
-  function addKitToCart() {
-    const cart = loadCart();
-    const ix = cart.findIndex(it => it.type === 'kit');
-    if (ix >= 0) {
-      cart[ix].qty = (Number(cart[ix].qty) || 0) + 1;
-    } else {
-      cart.push({ type: 'kit', qty: 1, unitCents: KIT_UNIT_CENTS });
-    }
-    saveCart(cart);
-    window.location.href = '/cart.html';
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    updateBadge();
-    if ($qtyMinus) $qtyMinus.addEventListener('click', () => { $qtyInput.value = normalizeUnits(($qtyInput.value || 5000) - 5000); recalc(); });
-    if ($qtyPlus)  $qtyPlus.addEventListener('click',  () => { $qtyInput.value = normalizeUnits(($qtyInput.value || 5000) + 5000); recalc(); });
-    if ($qtyInput) $qtyInput.addEventListener('change', recalc);
-    recalc();
-
-    if ($add)    $add.addEventListener('click', addBulkToCart);
-    if ($kitBtn) $kitBtn.addEventListener('click', addKitToCart);
-
-    // Any "View Cart" anchor should go to the page:
-    document.querySelectorAll('a[href="#cart"]').forEach(a => a.setAttribute('href', '/cart.html'));
+  $$('.tier').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const min = parseInt(btn.dataset.min, 10);
+      setActiveTierByMin(min);
+    }, { passive: true });
   });
+
+  btnMinus?.addEventListener('click', () => {
+    const cur = snapQty(parseInt(qtyInput.value, 10));
+    qtyInput.value = snapQty(cur - 5000);
+    render();
+  });
+  btnPlus?.addEventListener('click', () => {
+    const cur = snapQty(parseInt(qtyInput.value, 10));
+    qtyInput.value = snapQty(cur + 5000);
+    render();
+  });
+
+  qtyInput?.addEventListener('input', render);
+  qtyInput?.addEventListener('blur', render);
+
+  // Add bulk to cart and go to /cart.html
+  addBtn?.addEventListener('click', () => {
+    const units = snapQty(parseInt(qtyInput.value, 10));
+    if (window.FD_CART?.addBulk) {
+      window.FD_CART.addBulk(units);
+    } else {
+      const key = 'fd_cart';
+      const cart = JSON.parse(localStorage.getItem(key) || '[]');
+      const existing = cart.find(i => i.type === 'bulk');
+      if (existing) existing.units = Math.min(960000, (existing.units || 0) + units);
+      else cart.push({ type: 'bulk', sku: 'force-bulk', units });
+      localStorage.setItem(key, JSON.stringify(cart));
+    }
+    window.location.href = '/cart.html';
+  });
+
+  if (qtyInput && !qtyInput.value) qtyInput.value = 5000;
+  render();
 })();
+
