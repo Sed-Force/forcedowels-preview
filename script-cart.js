@@ -1,266 +1,213 @@
-// /script-cart.js  v43
+// /script-cart.js (master)
+// Renders cart, enforces tier pricing on BULK, handles qty changes and checkout.
+
 (() => {
+  const CART_KEY = 'fd_cart';
+  const $ = (s, c=document) => c.querySelector(s);
+  const $$ = (s, c=document) => Array.from(c.querySelectorAll(s));
+  const money = (n) => (n ?? 0).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+
   const TIERS = [
-    { min: 5000,   max: 20000,  ppu: 0.072,  requiresAuth: false },
-    { min: 20000,  max: 160000, ppu: 0.0675, requiresAuth: true  },
-    { min: 160000, max: 960000, ppu: 0.063,  requiresAuth: true  },
+    { min: 5000,   max: 20000,  ppu: 0.072  },
+    { min: 20000,  max: 160000, ppu: 0.0675 },
+    { min: 160000, max: 960000, ppu: 0.063  },
   ];
-  const KIT_UNIT_CENTS = 3600; // $36.00
 
-  const $items = document.getElementById('cart-items');
-  const $empty = document.getElementById('cart-empty');
-  const $subtotal = document.getElementById('sum-subtotal');
-  const $badge = document.getElementById('cart-count');
-  const $btnCheckout = document.getElementById('btn-checkout');
-  const $btnClear = document.getElementById('btn-clear');
+  const clampUnits = (u) => Math.max(5000, Math.min(960000, Math.round(u/5000)*5000));
+  const ppuForUnits = (u) => {
+    for (const t of TIERS) if (u >= t.min && u <= t.max) return t.ppu;
+    return TIERS[TIERS.length-1].ppu;
+  };
 
-  // ---------- storage helpers ----------
-  function loadCart() {
-    try {
-      return JSON.parse(localStorage.getItem('fd_cart') || '[]');
-    } catch { return []; }
+  function getCart() {
+    try { return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); }
+    catch { return []; }
   }
-  function saveCart(cart) {
-    localStorage.setItem('fd_cart', JSON.stringify(cart));
-    updateBadge(cart);
+  function setCart(arr) {
+    localStorage.setItem(CART_KEY, JSON.stringify(arr));
+    updateBadge();
   }
-  function updateBadge(cart = loadCart()) {
-    const count = cart.reduce((n, it) => {
-      if (it.type === 'kit') return n + (Number(it.qty) || 0);
-      if (it.type === 'bulk') return n + 1; // bulk counts as one line
-      return n;
-    }, 0);
-    if ($badge) $badge.textContent = count > 0 ? String(count) : '';
-  }
-
-  // ---------- pricing ----------
-  function ppuForUnits(units) {
-    const u = Number(units) || 0;
-    return (TIERS.find(t => u >= t.min && u <= t.max)?.ppu) ?? 0;
-  }
-  function money(n) {
-    return (Number(n) || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  function updateBadge() {
+    const badge = $('#cart-count');
+    if (!badge) return;
+    const items = getCart();
+    let count = 0;
+    for (const it of items) {
+      if (it.type === 'bulk') count += Math.max(1, Math.round((it.units || 0) / 5000));
+      if (it.type === 'kit') count += it.qty || 0;
+    }
+    badge.textContent = count ? String(count) : '';
   }
 
-  // ---------- render ----------
-  function render() {
-    const cart = loadCart();
-    updateBadge(cart);
+  function mergeBulk(cart) {
+    const bulkItems = cart.filter(i => i.type === 'bulk');
+    if (bulkItems.length <= 1) return cart;
+    const totalUnits = bulkItems.reduce((s, i) => s + (i.units || 0), 0);
+    const others = cart.filter(i => i.type !== 'bulk');
+    return [...others, { type: 'bulk', sku:'force-bulk', units: totalUnits }];
+  }
+
+  function recalcAndRender() {
+    let cart = mergeBulk(getCart());
+    const body = $('#cart-body');
+    const empty = $('#cart-empty');
+    const summary = $('#cart-summary');
+    const subtotalEl = $('#cart-subtotal');
+    const errorEl = $('#cart-error');
+
+    body.innerHTML = '';
+    errorEl.hidden = true;
 
     if (!cart.length) {
-      $empty.hidden = false;
-      $items.innerHTML = '';
-      $subtotal.textContent = '$0.00';
+      empty.hidden = false;
+      summary.hidden = true;
+      setCart([]); // also clears badge
       return;
     }
-    $empty.hidden = true;
+    empty.hidden = true;
+    summary.hidden = false;
 
-    let html = '';
-    let subtotalCents = 0;
+    // Compute tier ppu for bulk (based on total bulk units)
+    const bulk = cart.find(i => i.type === 'bulk');
+    const bulkUnits = bulk?.units || 0;
+    const bulkPpu = bulkUnits ? ppuForUnits(bulkUnits) : 0;
 
-    for (let i = 0; i < cart.length; i++) {
-      const it = cart[i];
+    // Build rows
+    let subtotal = 0;
 
-      if (it.type === 'bulk') {
-        // enforce step & bounds
-        let units = Number(it.units) || 5000;
-        if (units < 5000) units = 5000;
-        if (units > 960000) units = 960000;
-        // snap to 5k
-        units = Math.round(units / 5000) * 5000;
+    if (bulk) {
+      const lineTotal = bulkUnits * bulkPpu;
+      subtotal += lineTotal;
 
-        const ppu = ppuForUnits(units);
-        const totalCents = Math.round(units * ppu * 100);
-        subtotalCents += totalCents;
-
-        html += `
-          <div class="cart-line" data-index="${i}" data-type="bulk">
-            <div class="line-left">
-              <div class="line-title">Force Dowels — Bulk</div>
-              <div class="line-meta">
-                <span>Price Tier: ${money(ppu)}/unit</span>
-              </div>
-            </div>
-            <div class="line-qty">
-              <button class="qty-minus" type="button" aria-label="decrease">–</button>
-              <input class="qty-input" type="number" step="5000" min="5000" max="960000" value="${units}">
-              <span class="units">units</span>
-              <button class="qty-plus" type="button" aria-label="increase">+</button>
-            </div>
-            <div class="line-total">${money(totalCents / 100)}</div>
-            <button class="line-remove" type="button" aria-label="Remove">✕</button>
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="td-item">
+          <div class="item-title"><strong>Force Dowels — Bulk</strong></div>
+          <div class="muted">${bulkUnits.toLocaleString()} units @ ${money(bulkPpu).replace('.00','')}/unit</div>
+        </td>
+        <td class="td-qty">
+          <div class="qtywrap">
+            <button class="step step-bulk" data-delta="-5000" type="button" aria-label="decrease">–</button>
+            <input class="qty-input qty-bulk" type="number" min="5000" max="960000" step="5000" value="${bulkUnits}">
+            <button class="step step-bulk" data-delta="5000" type="button" aria-label="increase">+</button>
           </div>
-        `;
-      }
-
-      if (it.type === 'kit') {
-        const qty = Math.max(0, Number(it.qty) || 0);
-        const unitCents = Number(it.unitCents ?? KIT_UNIT_CENTS);
-        const lineCents = unitCents * qty;
-        subtotalCents += lineCents;
-
-        html += `
-          <div class="cart-line" data-index="${i}" data-type="kit">
-            <div class="line-left">
-              <div class="line-title">Force Dowels Kit — 300 units</div>
-              <div class="line-meta"><span>${money(unitCents/100)} each</span></div>
-            </div>
-            <div class="line-qty">
-              <button class="qty-minus" type="button" aria-label="decrease">–</button>
-              <input class="qty-input" type="number" step="1" min="0" value="${qty}">
-              <button class="qty-plus" type="button" aria-label="increase">+</button>
-            </div>
-            <div class="line-total">${money(lineCents / 100)}</div>
-            <button class="line-remove" type="button" aria-label="Remove">✕</button>
-          </div>
-        `;
-      }
+        </td>
+        <td class="td-price">${money(bulkPpu).replace('.00','')}</td>
+        <td class="td-total">${money(lineTotal)}</td>
+        <td class="td-act"><button class="link danger" id="remove-bulk" type="button">Remove</button></td>
+      `;
+      body.appendChild(tr);
     }
 
-    $items.innerHTML = html;
-    $subtotal.textContent = money(subtotalCents / 100);
+    cart.filter(i => i.type === 'kit').forEach(kit => {
+      const qty = kit.qty || 1;
+      const unitPrice = 36.00;
+      const lineTotal = qty * unitPrice;
+      subtotal += lineTotal;
 
-    bindLineEvents();
-  }
-
-  function bindLineEvents() {
-    $items.querySelectorAll('.cart-line').forEach(line => {
-      const idx = Number(line.dataset.index);
-      const type = line.dataset.type;
-      const $minus = line.querySelector('.qty-minus');
-      const $plus = line.querySelector('.qty-plus');
-      const $input = line.querySelector('.qty-input');
-      const $remove = line.querySelector('.line-remove');
-
-      if ($minus) $minus.addEventListener('click', () => adjust(idx, type, -1));
-      if ($plus)  $plus.addEventListener('click', () => adjust(idx, type, +1));
-      if ($input) $input.addEventListener('change', (e) => directSet(idx, type, e.target.value));
-      if ($remove) $remove.addEventListener('click', () => removeLine(idx));
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="td-item">
+          <div class="item-title"><strong>Force Dowels Kit — 300 units</strong></div>
+          <div class="muted">SKU ${kit.sku}</div>
+        </td>
+        <td class="td-qty">
+          <div class="qtywrap">
+            <button class="step step-kit" data-sku="${kit.sku}" data-delta="-1" type="button" aria-label="decrease">–</button>
+            <input class="qty-input qty-kit" data-sku="${kit.sku}" type="number" min="1" step="1" value="${qty}">
+            <button class="step step-kit" data-sku="${kit.sku}" data-delta="1" type="button" aria-label="increase">+</button>
+          </div>
+        </td>
+        <td class="td-price">${money(unitPrice)}</td>
+        <td class="td-total">${money(lineTotal)}</td>
+        <td class="td-act"><button class="link danger remove-kit" data-sku="${kit.sku}" type="button">Remove</button></td>
+      `;
+      body.appendChild(tr);
     });
-  }
 
-  function adjust(index, type, delta) {
-    const cart = loadCart();
-    const it = cart[index];
-    if (!it) return;
+    subtotalEl.textContent = money(subtotal);
 
-    if (type === 'bulk') {
-      let units = Number(it.units) || 5000;
-      units += (delta * 5000);
-      if (units < 5000) units = 5000;
-      if (units > 960000) units = 960000;
-      it.units = units;
-    } else if (type === 'kit') {
-      let qty = Number(it.qty) || 0;
-      qty += delta;
-      if (qty < 0) qty = 0;
-      it.qty = qty;
-    }
-
-    saveCart(cart);
-    render();
-  }
-
-  function directSet(index, type, val) {
-    const cart = loadCart();
-    const it = cart[index];
-    if (!it) return;
-
-    if (type === 'bulk') {
-      let units = Number(val) || 5000;
-      // snap to 5k
-      units = Math.round(units / 5000) * 5000;
-      if (units < 5000) units = 5000;
-      if (units > 960000) units = 960000;
-      it.units = units;
-    } else if (type === 'kit') {
-      let qty = Math.max(0, Number(val) || 0);
-      it.qty = qty;
-    }
-
-    saveCart(cart);
-    render();
-  }
-
-  function removeLine(index) {
-    const cart = loadCart();
-    cart.splice(index, 1);
-    saveCart(cart);
-    render();
-  }
-
-  // ---------- checkout ----------
-  async function checkout() {
-    try {
-      $btnCheckout.disabled = true;
-
-      const cart = loadCart();
-      if (!cart.length) {
-        alert('Your cart is empty.');
-        return;
-      }
-
-      // Build payload to match /api/checkout
-      let bulkUnits = 0;
-      let kitQty = 0;
-
-      cart.forEach(it => {
-        if (it.type === 'bulk') bulkUnits += Number(it.units) || 0;
-        if (it.type === 'kit') kitQty += Number(it.qty) || 0;
+    // Bind events
+    $$('.step-bulk').forEach(btn => {
+      btn.addEventListener('click', () => {
+        let cartNow = getCart();
+        const b = cartNow.find(i => i.type === 'bulk');
+        if (!b) return;
+        b.units = clampUnits((b.units || 5000) + parseInt(btn.dataset.delta, 10));
+        setCart(mergeBulk(cartNow));
+        recalcAndRender();
       });
+    });
+    const bulkInput = $('.qty-bulk');
+    bulkInput?.addEventListener('change', () => {
+      let cartNow = getCart();
+      const b = cartNow.find(i => i.type === 'bulk');
+      if (!b) return;
+      b.units = clampUnits(parseInt(bulkInput.value, 10));
+      setCart(mergeBulk(cartNow));
+      recalcAndRender();
+    });
+    $('#remove-bulk')?.addEventListener('click', () => {
+      setCart(getCart().filter(i => i.type !== 'bulk'));
+      recalcAndRender();
+    });
 
-      let bulkCents = 0;
-      let bulkUnitPrice = 0;
-      if (bulkUnits > 0) {
-        bulkUnitPrice = ppuForUnits(bulkUnits);
-        bulkCents = Math.round(bulkUnits * bulkUnitPrice * 100);
-      }
-
-      const payload = {
-        bulk: bulkUnits > 0 ? {
-          units: bulkUnits,
-          unitPrice: bulkUnitPrice,
-          amountCents: bulkCents
-        } : null,
-        kit: kitQty > 0 ? {
-          qty: kitQty,
-          unitCents: KIT_UNIT_CENTS,
-          amountCents: KIT_UNIT_CENTS * kitQty
-        } : null
-      };
-
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+    $$('.step-kit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sku = btn.dataset.sku;
+        let cartNow = getCart();
+        const k = cartNow.find(i => i.type === 'kit' && i.sku === sku);
+        if (!k) return;
+        k.qty = Math.max(1, (k.qty || 1) + parseInt(btn.dataset.delta, 10));
+        setCart(cartNow);
+        recalcAndRender();
       });
+    });
+    $$('.qty-kit').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const sku = inp.dataset.sku;
+        let cartNow = getCart();
+        const k = cartNow.find(i => i.type === 'kit' && i.sku === sku);
+        if (!k) return;
+        k.qty = Math.max(1, parseInt(inp.value, 10) || 1);
+        setCart(cartNow);
+        recalcAndRender();
+      });
+    });
+    $$('.remove-kit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sku = btn.dataset.sku;
+        setCart(getCart().filter(i => !(i.type === 'kit' && i.sku === sku)));
+        recalcAndRender();
+      });
+    });
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.url) {
-        const msg = data?.error || 'A server error has occurred';
-        throw new Error(msg);
+    $('#btn-checkout').onclick = async () => {
+      const payload = getCart();
+      if (!payload.length) return;
+      $('#btn-checkout').disabled = true;
+      try {
+        const res = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: payload })
+        });
+        if (!res.ok) throw new Error('Checkout failed');
+        const data = await res.json();
+        if (data.url) window.location.href = data.url;
+        else throw new Error('No URL from server');
+      } catch (e) {
+        const err = $('#cart-error');
+        err.textContent = 'A server error has occurred. Please try again.';
+        err.hidden = false;
+      } finally {
+        $('#btn-checkout').disabled = false;
       }
-
-      window.location = data.url;
-    } catch (err) {
-      console.error(err);
-      alert(`${err.message || err}`);
-    } finally {
-      $btnCheckout.disabled = false;
-    }
+    };
   }
 
-  // ---------- clear ----------
-  function clearCart() {
-    localStorage.removeItem('fd_cart');
-    updateBadge([]);
-    render();
-  }
-
-  // ---------- init ----------
-  document.addEventListener('DOMContentLoaded', () => {
-    render();
-    if ($btnCheckout) $btnCheckout.addEventListener('click', checkout);
-    if ($btnClear) $btnClear.addEventListener('click', clearCart);
-  });
+  // init
+  updateBadge();
+  recalcAndRender();
 })();
+
