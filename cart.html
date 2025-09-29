@@ -4,106 +4,166 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Your Cart — Force Dowels™</title>
+  <meta name="description" content="Review your Force Dowels cart and proceed to checkout." />
   <link rel="icon" href="/favicon.ico" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=34">
-  <script defer src="/script.js?v=34"></script>
-  <script defer src="/script-cart.js?v=34"></script>
-
-  <style>
-    /* page-specific (kept small; uses your existing theme) */
-    .cart-grid{display:grid;grid-template-columns:1fr 360px;gap:24px}
-    .card{background:#0f1629;border:1px solid #1f2937;border-radius:12px}
-    .card .inner{padding:16px}
-    .card h2{margin:0 0 12px}
-    .cart-row{display:flex;align-items:center;gap:14px;justify-content:space-between;padding:14px 16px;border:1px solid #1f2937;border-radius:10px;background:#0b1220}
-    .cart-row+.cart-row{margin-top:10px}
-    .line-left{display:flex;gap:16px;align-items:center}
-    .muted{color:#9CA3AF;font-size:12px}
-    .qtywrap{display:flex;align-items:center;gap:4px}
-    .qtywrap button{width:28px;height:28px;border-radius:8px;border:1px solid #334155;background:#111827;color:#E5E7EB}
-    .qtywrap input{width:70px;height:32px;text-align:center;background:#0b1220;border:1px solid #334155;border-radius:8px;color:#E5E7EB}
-    .price{font-weight:700}
-    .trash{cursor:pointer;opacity:.8}
-    .trash:hover{opacity:1}
-    .card-right .row{display:flex;justify-content:space-between;margin:8px 0}
-    .btn-wide{width:100%}
-    @media (max-width:980px){.cart-grid{grid-template-columns:1fr}}
-  </style>
+  <link rel="stylesheet" href="/styles.css?v=32">
+  <script defer src="/script.js?v=32"></script>
 </head>
-<body>
+<body class="cart-page">
 
+<!-- Header (with hard link to /cart.html + count badge) -->
 <header class="site-header">
   <div class="container header-inner">
     <a class="brand" href="/" aria-label="Force Dowel Company">
       <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" />
     </a>
+
     <nav class="nav" aria-label="Primary">
       <a href="/">Home</a>
       <a href="/order.html">Order</a>
       <a href="/videos.html">Videos</a>
       <a href="/faq.html">FAQ</a>
+
       <div class="nav-dropdown">
         <button class="nav-dropbtn" type="button" aria-haspopup="true" aria-expanded="false">
-          <span class="nav-drop-label">Distributors</span><span class="nav-caret">▾</span>
+          <span class="nav-drop-label">Distributors</span>
+          <span class="nav-caret">▾</span>
         </button>
         <div class="nav-dropmenu" role="menu">
           <a href="/distributors" role="menuitem">Find a Distributor</a>
           <a href="/distributor-application" role="menuitem">Become a Distributor</a>
         </div>
       </div>
+
       <a href="/contact.html" class="btn btn--accent">Contact</a>
     </nav>
 
     <div class="header-actions">
-    <a href="/cart.html" class="btn btn--ghost btn--invert" id="btn-cart" aria-label="Shopping cart">
-  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-    <path fill="currentColor" d="M7 18a2 2 0 1 0 0 4a2 2 0 0 0 0-4m10 0a2 2 0 1 0 0 4a2 2 0 0 0 0-4M6.2 6l.3 2h12.3a1 1 0 0 1 1 1l-1.2 6a2 2 0 0 1-2 1.6H8.7a2 2 0 0 1-2-1.7L5.3 5H3V3h3a1 1 0 0 1 1 .9L7.2 6Z"/>
-  </svg>
-  <span class="hide-sm">Cart</span>
-  <span id="cart-count" class="badge"></span>
-</a>
+      <a href="/cart.html" class="btn btn--ghost btn--invert" id="btn-cart" aria-label="Shopping cart"
+         onclick="window.location='/cart.html'; return false;">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M7 18a2 2 0 1 0 0 4a2 2 0 0 0 0-4m10 0a2 2 0 1 0 0 4a2 2 0 0 0 0-4M6.2 6l.3 2h12.3a1 1 0 0 1 1 1l-1.2 6a2 2 0 0 1-2 1.6H8.7a2 2 0 0 1-2-1.7L5.3 5H3V3h3a1 1 0 0 1 1 .9L7.2 6Z"/>
+        </svg>
+        <span class="hide-sm">Cart</span>
+        <span id="cart-count" class="badge"></span>
+      </a>
+      <div class="auth-buttons">
+        <button class="btn btn--ghost btn--invert" type="button">Login</button>
+        <button class="btn btn--accent" type="button">Sign Up</button>
+      </div>
     </div>
   </div>
 </header>
 
-<main class="section">
-  <div class="container">
-    <a class="muted" href="/order.html">← Back to Order</a>
-    <h1 style="margin:8px 0 20px;">Your Cart</h1>
+<main id="content">
+  <section class="section">
+    <div class="container">
+      <a href="/order.html" class="muted" style="display:inline-block;margin-bottom:12px;">← Back to Order</a>
+      <h1>Your Cart</h1>
+    </div>
+  </section>
 
-    <div class="cart-grid">
-      <!-- LEFT -->
-      <div class="card">
-        <div class="inner">
-          <h2>Cart Items</h2>
-          <div id="cart-list" aria-live="polite"></div>
-          <div style="display:flex;gap:10px;margin-top:12px;">
-            <button id="btn-clear" class="btn btn--ghost" type="button">Clear Cart</button>
-            <button id="btn-merge" class="btn btn--ghost" type="button">Consolidate Items</button>
-            <a class="btn btn--accent" href="/order.html">Add More Items</a>
-          </div>
+  <section class="section pt-0">
+    <div class="container cart-grid">
+      <!-- Left: cart items -->
+      <div class="card cart-list">
+        <h3 class="card-title">Cart Items</h3>
+        <div id="cart-items" class="cart-items"></div>
+
+        <div class="cart-actions-row">
+          <button id="btn-clear" class="btn btn--ghost" type="button">Clear Cart</button>
+          <button id="btn-consolidate" class="btn btn--ghost" type="button">Consolidate Items</button>
+          <a class="btn" href="/order.html">Add More Items</a>
         </div>
       </div>
 
-      <!-- RIGHT -->
-      <aside class="card card-right">
-        <div class="inner">
-          <h2>Order Summary</h2>
-          <div class="row"><span>Subtotal:</span> <strong id="sum-subtotal">$0.00</strong></div>
-          <div class="row"><span>Total:</span>    <strong id="sum-total">$0.00</strong></div>
-          <button id="btn-checkout" class="btn btn--accent btn-wide" type="button" style="margin-top:12px;">Proceed to Checkout</button>
+      <!-- Right: summary -->
+      <aside class="card cart-summary">
+        <h3 class="card-title">Order Summary</h3>
+
+        <div class="row">
+          <span>Subtotal:</span>
+          <strong id="summary-subtotal">$0.00</strong>
+        </div>
+        <p class="muted" style="margin-top:6px;">Shipping &amp; taxes calculated at checkout.</p>
+
+        <button id="btn-checkout" class="btn btn--accent btn-wide" type="button" disabled>Proceed to Checkout</button>
+
+        <!-- Tier info -->
+        <div class="tier-note">
+          <p class="muted" id="tier-note">
+            Bulk pricing is based on total bulk units in cart. 5,000–20,000: $0.072 • 20,000–160,000: $0.0675 • 160,000–960,000: $0.063
+          </p>
         </div>
       </aside>
     </div>
-  </div>
+  </section>
 </main>
 
+<!-- Footer -->
 <footer class="site-footer">
-  <!-- keep your existing footer here -->
+  <div class="container footer-main">
+    <section class="footer-sec footer-sec--brand">
+      <a href="/" aria-label="Force Dowels home" class="footer-brand-wrap">
+        <img src="/images/force-dowel-logo.jpg?v=4" alt="Force Dowels logo" class="footer-logo" />
+      </a>
+      <p class="footer-tagline">
+        Revolutionary cabinetry fasteners that deliver faster assembly, stronger connections, and flawless finishes.
+        Experience the next generation of cabinet construction.
+      </p>
+    </section>
+
+    <section class="footer-sec">
+      <h4>Quick Links</h4>
+      <ul class="footer-list">
+        <li><a href="/">Home</a></li>
+        <li><a href="/order.html">Order Now</a></li>
+        <li><a href="/videos.html">Product Videos</a></li>
+        <li><a href="/distribution.html">Find a Distributor</a></li>
+        <li><a href="/distribution.html#become">Become a Distributor</a></li>
+      </ul>
+    </section>
+
+    <section class="footer-sec">
+      <h4>Contact Us</h4>
+      <ul class="footer-list">
+        <li>(480)-581-7145</li>
+        <li>Hours: Mon–Thurs 7:30AM–4:30PM; Friday 7:30AM–11:30AM</li>
+        <li><a href="mailto:info@forcedowels.com">info@forcedowels.com</a></li>
+        <li>4455 E Nunneley Rd, Ste 103<br>Gilbert, AZ 85296</li>
+      </ul>
+    </section>
+
+    <section class="footer-sec">
+      <h4>Stay Updated</h4>
+      <p class="footer-note">Get the latest updates on our patent-pending technology and new product releases.</p>
+      <form class="footer-form" onsubmit="return false;">
+        <label class="sr-only" for="newsletter-email">Enter your email</label>
+        <input id="newsletter-email" type="email" placeholder="Enter your email" required>
+        <button type="submit" class="btn btn--accent">Subscribe</button>
+      </form>
+      <p class="footer-privacy-note">We respect your privacy. Unsubscribe at any time.</p>
+    </section>
+  </div>
+
+  <div class="footer-separator"></div>
+
+  <div class="container footer-bottom">
+    <div class="footer-bottom-left">
+      <p>© <span id="year"></span> Force Dowels. All rights reserved.</p>
+      <p class="footer-patent">Patent Pending Technology - Revolutionary Cabinetry Fasteners</p>
+    </div>
+    <nav class="footer-bottom-right">
+      <a href="/privacy.html">Privacy Policy</a>
+      <a href="/terms.html">Terms of Service</a>
+    </nav>
+  </div>
 </footer>
 
+<script> (function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})(); </script>
+<script defer src="/script-cart-page.js?v=1"></script>
 </body>
 </html>
