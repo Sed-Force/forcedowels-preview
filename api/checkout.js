@@ -1,22 +1,20 @@
 // /api/checkout.js
-// Vercel Node runtime, Web API-compatible handler
+// Vercel Node runtime (supported values: "edge", "experimental-edge", "nodejs")
+export const config = { runtime: 'nodejs' };
 
-export const config = { runtime: 'nodejs' }; // <= supported value
-
+// ---- Tier logic ----
 function unitPriceFor(units) {
   if (!units || units <= 0) return 0;
-  if (units <= 20000) return 0.072;
-  if (units <= 160000) return 0.0675;
-  return 0.063; // up to 960k
+  if (units <= 20000) return 0.072;    // 5,000–20,000
+  if (units <= 160000) return 0.0675;  // >20,000–160,000
+  return 0.063;                        // >160,000–960,000
 }
 
-// Parse body for both Web API Request and Node req
+// ---- Cross-runtime JSON body reader ----
 async function readBody(req) {
-  // Web API request has .json()
   if (typeof req?.json === 'function') {
     try { return await req.json(); } catch { return {}; }
   }
-  // Node IncomingMessage (Vercel serverless classic)
   return await new Promise((resolve) => {
     try {
       let data = '';
@@ -32,80 +30,75 @@ async function readBody(req) {
 
 export default async function handler(req) {
   try {
-    const method = req?.method || 'POST';
-    if (method !== 'POST') {
+    if ((req?.method || 'POST') !== 'POST') {
       return new Response('Method Not Allowed', { status: 405 });
     }
 
     const { cart } = await readBody(req);
 
-    // ---- Aggregate cart into bulkUnits + kits ----
-    let bulkUnits = 0;
-    let kits = 0;
+    // ---- Aggregate cart into "bulkUnits" + "kits" ----
+    let bulkUnits = 0;   // number of individual units
+    let kits = 0;        // number of 300-unit kits
 
     if (Array.isArray(cart)) {
       for (const it of cart) {
-        const sku = String(it?.sku || '').toLowerCase();
+        const name = String(it?.name || '');
+        const sku  = String(it?.sku  || '').toLowerCase();
+        const qty  = Number(it?.qty ?? it?.quantity ?? 1);
 
-        // Kits
-        if (sku === 'fd-kit-300' || it?.kind === 'kit' || /kit/i.test(it?.name || '')) {
-          const q = Number(it?.qty ?? it?.quantity ?? 1);
-          if (Number.isFinite(q) && q > 0) kits += q;
+        // Starter kit identification
+        if (sku === 'fd-kit-300' || /kit/i.test(name) || it?.kind === 'kit') {
+          if (Number.isFinite(qty) && qty > 0) kits += qty;
           continue;
         }
 
-        // Bulk by units
-        if (Number.isFinite(it?.units)) {
-          bulkUnits += Math.max(0, Number(it.units));
+        // Bulk "units" entry
+        if (Number.isFinite(it?.units) && it.units > 0) {
+          bulkUnits += Number(it.units);
           continue;
         }
 
-        // Legacy SKUs that represent bundles of units
+        // Legacy bundle SKUs that represent units
         if (sku === 'force-100') {
-          const q = Number(it?.qty ?? it?.quantity ?? 1);
-          bulkUnits += 5000 * (Number.isFinite(q) ? q : 1);
+          bulkUnits += 5000 * (Number.isFinite(qty) ? qty : 1);
           continue;
         }
         if (sku === 'force-500') {
-          const q = Number(it?.qty ?? it?.quantity ?? 1);
-          bulkUnits += 25000 * (Number.isFinite(q) ? q : 1);
+          bulkUnits += 25000 * (Number.isFinite(qty) ? qty : 1);
           continue;
         }
       }
     }
 
-    // Enforce your rules
+    // Enforce business rules
     if (bulkUnits < 0) bulkUnits = 0;
     if (bulkUnits > 960000) bulkUnits = 960000;
-    // (Optional) enforce 5,000-unit steps:
+    // Optional hard step to 5,000s:
     // if (bulkUnits % 5000 !== 0) bulkUnits = Math.floor(bulkUnits / 5000) * 5000;
 
     const line_items = [];
 
-    // Bulk line
+    // Bulk line (priced per unit using tier)
     if (bulkUnits > 0) {
       const ppu = unitPriceFor(bulkUnits);
       const unit_amount = Math.round(ppu * 100); // cents
+
       line_items.push({
         price_data: {
           currency: 'usd',
-          product_data: {
-            name: 'Force Dowels — Bulk',
-          },
-          unit_amount,
+          product_data: { name: 'Force Dowels — Bulk' },
+          unit_amount, // cents per unit
         },
-        quantity: bulkUnits, // quantity = number of units
+        quantity: bulkUnits, // total units
       });
     }
 
-    // Kit line(s)
+    // Kit line(s) – flat $36.00 each
     if (kits > 0) {
       line_items.push({
         price_data: {
           currency: 'usd',
-          product_data: {
-            name: 'Force Dowels Kit — 300 units',
-          },
+          product_data: { name: 'Force Dowels Kit — 300 units' },
           unit_amount: 3600, // $36.00
         },
         quantity: kits,
@@ -119,18 +112,17 @@ export default async function handler(req) {
       });
     }
 
-    // Env checks
     const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
     const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL; // e.g. https://forcedowels-preview.vercel.app
+
     if (!STRIPE_SECRET_KEY || !BASE_URL) {
-      console.error('Missing env: STRIPE_SECRET_KEY or NEXT_PUBLIC_BASE_URL');
+      console.error('Missing env', { hasSecret: !!STRIPE_SECRET_KEY, hasBase: !!BASE_URL });
       return new Response(JSON.stringify({ error: 'Server not configured' }), {
         status: 500,
         headers: { 'content-type': 'application/json' },
       });
     }
 
-    // Lazy import Stripe works in both ESM/CJS contexts on Vercel
     const { default: Stripe } = await import('stripe');
     const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' });
 
