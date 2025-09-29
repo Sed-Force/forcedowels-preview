@@ -1,144 +1,84 @@
-// /api/checkout.js — creates Stripe Checkout sessions for tiered OR fixed SKU flow
-import { json, applyCORS, verifyAuth } from './_lib/auth.js';
-import Stripe from 'stripe';
-
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
-const stripe = STRIPE_SECRET_KEY
-  ? new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' })
-  : null;
-
-// Fixed SKU allowlist (optional legacy packs)
-const ALLOWLIST = [
-  process.env.STRIPE_PRICE_FORCE_100, // $360 / 5,000 units
-  process.env.STRIPE_PRICE_FORCE_500  // $1,687.50 / 25,000 units
-].filter(Boolean);
-
-// Map SKUs -> Price IDs (server-side)
-const PRICE_BY_SKU = {
-  'force-100': process.env.STRIPE_PRICE_FORCE_100,
-  'force-500': process.env.STRIPE_PRICE_FORCE_500
+// api/checkout.js
+export const config = {
+  runtime: 'nodejs18.x' // or omit; your project "engines" is Node 22, Vercel will map
 };
 
-// Shipping rates (shr_..., optional)
-const SHIPPING_RATES = String(process.env.STRIPE_SHIPPING_RATE_IDS || '')
-  .split(',').map(s => s.trim()).filter(Boolean);
+import Stripe from 'stripe';
 
-// Tier config (mirror /api/pricing.js)
-const STEP = 5000, MIN_UNITS = 5000, MAX_UNITS = 960000;
-const TIERS = [
-  { max: 20000,   unitUSD: 0.072,  requiresAuth: false, label: '5,000–20,000' },
-  { max: 160000,  unitUSD: 0.0675, requiresAuth: true,  label: '20,000–160,000' },
-  { max: 960000,  unitUSD: 0.063,  requiresAuth: true,  label: '160,000–960,000' }
-];
-const toCents = (usd) => Math.round(usd * 100);
-function pickTier(units) { for (const t of TIERS) if (units <= t.max) return t; return null; }
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2024-06-20',
+});
+
+function dollars(n) { return `$${n.toFixed(2)}`; }
 
 export default async function handler(req, res) {
-  if (applyCORS(req, res)) return;
-  if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
-  if (!stripe) return json(res, 501, { error: 'Stripe not configured (set STRIPE_SECRET_KEY)' });
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
 
-  // Parse body
-  let body = {};
   try {
-    const raw = await readBody(req);
-    body = raw ? JSON.parse(raw) : {};
-  } catch { return json(res, 400, { error: 'Invalid JSON body' }); }
+    const { bulk, kit } = req.body || {};
+    const line_items = [];
 
-  // Optional identity
-  let identity = null;
-  try { identity = await verifyAuth(req); } catch {}
-
-  const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || `https://${req.headers.host || ''}`).replace(/\/$/, '');
-  const success_url = `${baseUrl}/order-success.html?session_id={CHECKOUT_SESSION_ID}`;
-  const cancel_url = `${baseUrl}/order.html#cart`;
-
-  // ---------- Path A: tiered checkout ----------
-  if (typeof body.units === 'number') {
-    const units = Number(body.units || 0);
-    if (!Number.isFinite(units) || units < MIN_UNITS || units > MAX_UNITS || units % STEP !== 0) {
-      return json(res, 400, { error: `Quantity must be between ${MIN_UNITS} and ${MAX_UNITS} in ${STEP}-unit increments.` });
-    }
-    const tier = pickTier(units);
-    if (!tier) return json(res, 400, { error: 'No tier matches quantity.' });
-    if (tier.requiresAuth && !identity?.userId) {
-      return json(res, 401, { error: 'auth_required', message: 'Please sign in to order more than 20,000 units.' });
-    }
-
-    const totalCents = toCents(units * tier.unitUSD);
-    try {
-      const session = await stripe.checkout.sessions.create({
-        mode: 'payment',
-        line_items: [{
-          quantity: 1,
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `Force Dowels — ${units.toLocaleString()} units`,
-              description: `${tier.label} @ $${tier.unitUSD.toFixed(4)}/unit`
-            },
-            unit_amount: totalCents
-          }
-        }],
-        allow_promotion_codes: true,
-        automatic_tax: { enabled: true },
-        shipping_address_collection: { allowed_countries: ['US', 'CA'] },
-        shipping_options: SHIPPING_RATES.map(id => ({ shipping_rate: id })),
-        customer_email: identity?.email || undefined,
-        client_reference_id: identity?.userId || undefined,
-        success_url,
-        cancel_url
+    // Bulk line as a single computed-amount item (quantity = 1)
+    if (bulk && bulk.amountCents > 0) {
+      line_items.push({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: 'Force Dowels — Bulk',
+            description: `Units: ${bulk.units.toLocaleString()} @ ${dollars(bulk.unitPrice)}/unit`,
+            metadata: {
+              units: String(bulk.units),
+              unit_price: String(bulk.unitPrice),
+            }
+          },
+          unit_amount: bulk.amountCents, // integer cents
+        },
+        quantity: 1,
       });
-      return json(res, 200, { ok: true, url: session.url });
-    } catch (err) {
-      return json(res, 502, { error: 'Stripe session failed', detail: err?.message || String(err) });
     }
-  }
 
-  // ---------- Path B: fixed SKUs (legacy packs) ----------
-  const items = Array.isArray(body.items) ? body.items : [];
-  if (!items.length) return json(res, 400, { error: 'Cart is empty' });
+    // Kit line (300 units per kit, $36 each)
+    if (kit && kit.amountCents > 0 && kit.qty > 0) {
+      line_items.push({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: 'Force Dowels Kit — 300 units',
+          },
+          unit_amount: kit.unitCents || 3600,
+        },
+        quantity: kit.qty,
+      });
+    }
 
-  const line_items = [];
-  for (const it of items) {
-    const qty = Math.max(1, Number(it.quantity || 1));
-    const priceFromSku = it.sku ? PRICE_BY_SKU[it.sku] : null;
-    const price = String(it.priceId || priceFromSku || '');
-    if (!price) return json(res, 400, { error: `Missing price for item (sku=${it.sku || 'n/a'})` });
-    if (!ALLOWLIST.includes(price)) return json(res, 400, { error: `Disallowed priceId: ${price}` });
-    line_items.push({ price, quantity: qty });
-  }
+    if (!line_items.length) {
+      res.status(400).json({ error: 'Cart is empty' });
+      return;
+    }
 
-  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
+      payment_method_types: ['card'],
       line_items,
       allow_promotion_codes: true,
-      automatic_tax: { enabled: true },
-      shipping_address_collection: { allowed_countries: ['US', 'CA'] },
-      shipping_options: SHIPPING_RATES.map(id => ({ shipping_rate: id })),
-      customer_email: identity?.email || undefined,
-      client_reference_id: identity?.userId || undefined,
+      billing_address_collection: 'required',
+      shipping_address_collection: {
+        allowed_countries: ['US', 'CA'], // adjust if needed
+      },
+      success_url: `${baseUrl}/success.html?cs={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/cart.html`,
       metadata: {
-  flow: 'tiered',
-  units: String(units),
-  unit_usd: String(tier.unitUSD),
-  tier_label: tier.label
-},
-      success_url,
-      cancel_url
+        source: 'forcedowels-cart',
+      }
     });
-    return json(res, 200, { ok: true, url: session.url });
-  } catch (err) {
-    return json(res, 502, { error: 'Stripe session failed', detail: err?.message || String(err) });
-  }
-}
 
-function readBody(req) {
-  return new Promise((resolve, reject) => {
-    let data = '';
-    req.on('data', c => (data += c));
-    req.on('end', () => resolve(data));
-    req.on('error', reject);
-  });
+    res.status(200).json({ url: session.url });
+  } catch (err) {
+    console.error('checkout error', err);
+    res.status(500).send(err?.message || 'Checkout error');
+  }
 }
