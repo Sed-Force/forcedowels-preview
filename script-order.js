@@ -1,16 +1,15 @@
-// /script-order.js  (master)
-// Drives tier selector, quantity controls (+/- 5,000), and price display.
-// Also adds bulk units to cart then navigates to /cart.html.
+// /script-order.js  (non-overlapping tiers; single active; +/– steps 5,000)
 
 (() => {
   const $ = (sel, ctx = document) => ctx.querySelector(sel);
   const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
   const money = (n) => (n ?? 0).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
 
+  // Tier boundaries: [5,000 .. <20,000], [20,000 .. <160,000], [160,000 .. 960,000]
   const TIERS = [
-    { min: 5000,   max: 20000,  ppu: 0.072  },
-    { min: 20000,  max: 160000, ppu: 0.0675 },
-    { min: 160000, max: 960000, ppu: 0.063  },
+    { min:  5000, ceiling: 20000,  ppu: 0.072  },
+    { min: 20000, ceiling: 160000, ppu: 0.0675 },
+    { min:160000, ceiling: 960000, ppu: 0.063  },
   ];
 
   const qtyInput = $('#qty-units') || $('#qty');
@@ -20,10 +19,9 @@
   const totalEl = $('#price-total') || $('#total');
   const addBtn  = $('#btn-add-to-cart');
 
-  let currentTier = TIERS[0];
+  const STEP = 5000, MIN = 5000, MAX = 960000;
 
   const snapQty = (q) => {
-    const STEP = 5000, MIN = 5000, MAX = 960000;
     if (isNaN(q)) q = MIN;
     q = Math.round(q / STEP) * STEP;
     if (q < MIN) q = MIN;
@@ -31,38 +29,39 @@
     return q;
   };
 
-  const tierForQty = (q) => {
-    for (const t of TIERS) if (q >= t.min && q <= t.max) return t;
-    return TIERS[TIERS.length - 1];
+  const tierIndexForQty = (q) => {
+    if (q < TIERS[0].ceiling) return 0;        // 5k.. <20k
+    if (q < TIERS[1].ceiling) return 1;        // 20k.. <160k
+    return 2;                                   // 160k.. 960k
   };
 
-  function setActiveTierByMin(min) {
-    $$('.tier').forEach(b => b.classList.remove('active'));
-    const btn = $(`.tier[data-min="${min}"]`);
-    if (btn) btn.classList.add('active');
+  const tierForQty = (q) => TIERS[tierIndexForQty(q)];
 
-    let q = parseInt(qtyInput.value, 10);
+  function setActiveTierByMin(min) {
+    // Jump qty to at least this tier's min
+    let q = snapQty(parseInt(qtyInput.value, 10));
     if (isNaN(q) || q < min) q = min;
     qtyInput.value = snapQty(q);
-    currentTier = tierForQty(q);
-    render();
+
+    render(); // will set exactly one .active based on qty
   }
 
   function render() {
     const q = snapQty(parseInt(qtyInput.value, 10));
     qtyInput.value = q;
 
-    currentTier = tierForQty(q);
-    $$('.tier').forEach(b => {
-      const min = parseInt(b.dataset.min, 10);
-      const max = parseInt(b.dataset.max, 10);
-      b.classList.toggle('active', q >= min && q <= max);
-    });
+    const idx = tierIndexForQty(q);
+    const tier = TIERS[idx];
 
-    pricePerUnitEl.textContent = money(currentTier.ppu).replace('.00', '');
-    totalEl.textContent = money(q * currentTier.ppu);
+    // Ensure exactly one is active
+    $$('.tier').forEach((btn, i) => btn.classList.toggle('active', i === idx));
+
+    // Update prices
+    pricePerUnitEl.textContent = money(tier.ppu).replace('.00', '');
+    totalEl.textContent = money(q * tier.ppu);
   }
 
+  // Tier clicks -> set to that tier's minimum and re-render
   $$('.tier').forEach(btn => {
     btn.addEventListener('click', () => {
       const min = parseInt(btn.dataset.min, 10);
@@ -70,17 +69,17 @@
     }, { passive: true });
   });
 
+  // Quantity controls
   btnMinus?.addEventListener('click', () => {
     const cur = snapQty(parseInt(qtyInput.value, 10));
-    qtyInput.value = snapQty(cur - 5000);
+    qtyInput.value = snapQty(cur - STEP);
     render();
   });
   btnPlus?.addEventListener('click', () => {
     const cur = snapQty(parseInt(qtyInput.value, 10));
-    qtyInput.value = snapQty(cur + 5000);
+    qtyInput.value = snapQty(cur + STEP);
     render();
   });
-
   qtyInput?.addEventListener('input', render);
   qtyInput?.addEventListener('blur', render);
 
@@ -93,14 +92,14 @@
       const key = 'fd_cart';
       const cart = JSON.parse(localStorage.getItem(key) || '[]');
       const existing = cart.find(i => i.type === 'bulk');
-      if (existing) existing.units = Math.min(960000, (existing.units || 0) + units);
+      if (existing) existing.units = Math.min(MAX, (existing.units || 0) + units);
       else cart.push({ type: 'bulk', sku: 'force-bulk', units });
       localStorage.setItem(key, JSON.stringify(cart));
     }
     window.location.href = '/cart.html';
   });
 
+  // Init
   if (qtyInput && !qtyInput.value) qtyInput.value = 5000;
   render();
 })();
-
