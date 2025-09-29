@@ -3,15 +3,17 @@ export const config = { runtime: 'nodejs' };
 
 import Stripe from 'stripe';
 
-function fmtUSD(cents) {
-  return (cents ?? 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+// Format Stripe "amount in cents" to currency string
+function fmtAmount(cents = 0, currency = 'usd') {
+  return (cents / 100).toLocaleString('en-US', {
+    style: 'currency',
+    currency: currency.toUpperCase()
+  });
 }
 
-// Create a short, human-friendly ID (not guaranteed unique across all time,
-// but good enough for display) – you can swap this for your Neon/Upstash sequence later.
 function shortId(sessionId = '') {
   const base = sessionId.replace('cs_test_', '').replace('cs_live_', '').replace(/[^a-zA-Z0-9]/g, '');
-  return base.slice(-8).toUpperCase(); // last 8 chars
+  return base.slice(-8).toUpperCase();
 }
 
 export default async function handler(req, res) {
@@ -33,16 +35,19 @@ export default async function handler(req, res) {
       expand: ['line_items.data.price.product']
     });
 
-    const total = session.amount_total ?? 0;
+    const currency = session.currency || 'usd';
+    const totalCents = session.amount_total ?? 0;
+
     const items = (session.line_items?.data || []).map(li => {
       const name = li.description || li.price?.product?.name || li.price?.nickname || 'Item';
       const desc = li.price?.product?.description || '';
-      const lineTotalCents = (li.amount_total ?? (li.amount_subtotal ?? 0));
+      const lineTotalCents = li.amount_total ?? li.amount_subtotal ?? 0;
+
       return {
         name,
         desc,
         qty: li.quantity || 1,
-        total: fmtUSD(lineTotalCents)
+        total: fmtAmount(lineTotalCents, currency)
       };
     });
 
@@ -50,7 +55,7 @@ export default async function handler(req, res) {
       id: session.id,
       short_id: shortId(session.id),
       payment_status: session.payment_status,
-      amount_formatted: fmtUSD(total),
+      amount_formatted: fmtAmount(totalCents, currency),
       customer_email: session.customer_details?.email || session.customer_email || '',
       items
     });
