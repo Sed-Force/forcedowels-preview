@@ -1,77 +1,57 @@
-// /script-order-cart.js
-// Add-to-cart logic for the Order page (bulk tiers + starter kit).
-// Uses the same localStorage cart schema as /script-cart.js
+// /script-order-cart.js (master)
+// Single source of truth for adding kit/bulk from the order page and updating header badge.
 
-(function () {
+(() => {
   const CART_KEY = 'fd_cart';
 
-  function getCart() {
+  const getCart = () => {
     try { return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); }
     catch { return []; }
-  }
-  function setCart(items) {
-    localStorage.setItem(CART_KEY, JSON.stringify(items));
-    updateMiniCount(items);
-  }
-  function addItem(item) {
-    const c = getCart();
-    c.push(item);
-    setCart(c);
-  }
-  function updateMiniCount(items = getCart()) {
-    const el = document.getElementById('cart-count');
-    if (!el) return;
-    const qty = items.reduce((s,i)=>s+Number(i.qty||0),0);
-    el.textContent = qty > 0 ? qty : '';
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    updateMiniCount();
-
-    // BULK add (5,000-unit packs -> one "force-100" pack per 5k)
-    const addBulkBtn = document.getElementById('add-bulk');
-    const qtyInput   = document.getElementById('qty');   // numeric, step 5000
-    const ppuLabel   = document.getElementById('ppu');   // text like "$0.072"
-
-    if (addBulkBtn && qtyInput && ppuLabel) {
-      addBulkBtn.addEventListener('click', () => {
-        const units = Math.max(5000, parseInt(qtyInput.value || '5000', 10));
-        const perUnit = parseFloat(String(ppuLabel.textContent || '').replace(/[^0-9.]/g, '')) || 0;
-
-        // Convert total units into number of 5k "packs"
-        const packCount = Math.max(1, Math.round(units / 5000));
-
-        addItem({
-          sku: 'force-100',                // maps to STRIPE_PRICE_FORCE_100
-          name: 'Force Dowels — Bulk',
-          qty: packCount,
-          unitPrice: perUnit * 5000,       // used only for on-site subtotal displays
-          meta: `Tier: 5,000–20,000 • ${units.toLocaleString()} units @ $${perUnit.toFixed(3)}/unit`
-        });
-
-        // Optional quick confirmation
-        try { alert('Added to cart.'); } catch {}
-      });
+  };
+  const setCart = (arr) => {
+    localStorage.setItem(CART_KEY, JSON.stringify(arr));
+    updateBadge();
+  };
+  const updateBadge = () => {
+    const badge = document.getElementById('cart-count');
+    if (!badge) return;
+    const items = getCart();
+    let count = 0;
+    for (const it of items) {
+      if (it.type === 'bulk') count += Math.max(1, Math.round((it.units || 0) / 5000));
+      if (it.type === 'kit') count += it.qty || 0;
     }
+    badge.textContent = count ? String(count) : '';
+  };
 
-    // STARTER KIT add (optional)
-    const kitBtn = document.getElementById('starter-kit');
-    if (kitBtn) {
-      kitBtn.addEventListener('click', () => {
-        const sku   = kitBtn.dataset.sku  || 'FD-KIT-300';
-        const name  = kitBtn.dataset.name || 'Force Dowels Kit — 300 units';
-        const price = parseFloat(kitBtn.dataset.price || '36.00');
+  function addBulk(units) {
+    const cart = getCart();
+    const existing = cart.find(i => i.type === 'bulk');
+    if (existing) existing.units = Math.min(960000, (existing.units || 0) + units);
+    else cart.push({ type: 'bulk', sku: 'force-bulk', units });
+    setCart(cart);
+  }
 
-        addItem({
-          sku,
-          name,
-          qty: 1,
-          unitPrice: price,
-          meta: 'Starter kit'
-        });
+  function addKit() {
+    const cart = getCart();
+    const existing = cart.find(i => i.type === 'kit' && i.sku === 'FD-KIT-300');
+    if (existing) existing.qty = (existing.qty || 1) + 1;
+    else cart.push({ type: 'kit', sku: 'FD-KIT-300', name: 'Force Dowels Kit — 300 units', qty: 1, unitCount: 300, price: 36.00 });
+    setCart(cart);
+  }
 
-        try { alert('Added to cart.'); } catch {}
-      });
-    }
-  });
+  window.FD_CART = { addBulk, addKit, updateBadge };
+
+  const kitBtn = document.getElementById('starter-kit');
+  if (kitBtn && !kitBtn.dataset.bound) {
+    kitBtn.dataset.bound = '1';
+    kitBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      addKit();
+      window.location.href = '/cart.html';
+    });
+  }
+
+  updateBadge();
 })();
