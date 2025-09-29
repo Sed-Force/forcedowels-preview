@@ -1,74 +1,102 @@
-// /script-order.js — ties the right-side calculator to /api/pricing + /api/checkout
+// /script-order.js  v20
+(() => {
+  const TIERS = [
+    { min: 5000,   max: 20000,  ppu: 0.072,  requiresAuth: false },
+    { min: 20000,  max: 160000, ppu: 0.0675, requiresAuth: true  },
+    { min: 160000, max: 960000, ppu: 0.063,  requiresAuth: true  },
+  ];
+  const KIT_UNIT_CENTS = 3600;
 
-const STEP = 5000, MIN_UNITS = 5000, MAX_UNITS = 960000;
+  const $qtyMinus = document.getElementById('qty-minus');
+  const $qtyPlus  = document.getElementById('qty-plus');
+  const $qtyInput = document.getElementById('qty-units');
+  const $ppu      = document.getElementById('price-per-unit');
+  const $total    = document.getElementById('price-total');
+  const $add      = document.getElementById('btn-add-to-cart');
+  const $kitBtn   = document.getElementById('starter-kit');
+  const $badge    = document.getElementById('cart-count');
 
-// IDs from your order.html
-const elQty   = document.getElementById('qty-units') || document.getElementById('qty'); // support either id
-const elMinus = document.getElementById('qty-minus');
-const elPlus  = document.getElementById('qty-plus');
-const elUnit  = document.getElementById('price-per-unit') || document.getElementById('ppu');
-const elTotal = document.getElementById('price-total') || document.getElementById('total');
-const elAdd   = document.getElementById('btn-add-to-cart') || document.getElementById('add-bulk');
-
-function clampUnits(n) {
-  n = Math.round(n / STEP) * STEP;
-  if (n < MIN_UNITS) n = MIN_UNITS;
-  if (n > MAX_UNITS) n = MAX_UNITS;
-  return n;
-}
-
-async function refresh() {
-  const units = clampUnits(Number(elQty.value || MIN_UNITS));
-  elQty.value = units;
-  try {
-    const r = await fetch(`/api/pricing?units=${units}`);
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'Pricing error');
-    if (elUnit)  elUnit.textContent  = `$${j.unitUSD.toFixed(4)}`;
-    if (elTotal) elTotal.textContent = (j.totalCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-    if (elAdd) elAdd.disabled = false;
-  } catch {
-    if (elUnit)  elUnit.textContent  = '—';
-    if (elTotal) elTotal.textContent = '—';
-    if (elAdd) elAdd.disabled = true;
+  function money(n) {
+    return (Number(n) || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
   }
-}
+  function ppuForUnits(units) {
+    const u = Number(units) || 0;
+    return (TIERS.find(t => u >= t.min && u <= t.max)?.ppu) ?? 0;
+  }
 
-async function checkoutTiered() {
-  const units = clampUnits(Number(elQty.value || MIN_UNITS));
-  let headers = { 'Content-Type': 'application/json' };
+  function loadCart() {
+    try { return JSON.parse(localStorage.getItem('fd_cart') || '[]'); }
+    catch { return []; }
+  }
+  function saveCart(cart) {
+    localStorage.setItem('fd_cart', JSON.stringify(cart));
+    updateBadge(cart);
+  }
+  function updateBadge(cart = loadCart()) {
+    const count = cart.reduce((n, it) => {
+      if (it.type === 'kit') return n + (Number(it.qty) || 0);
+      if (it.type === 'bulk') return n + 1;
+      return n;
+    }, 0);
+    if ($badge) $badge.textContent = count > 0 ? String(count) : '';
+  }
 
-  try {
-    const token = await window.Clerk?.session?.getToken({ skipCache: true });
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-  } catch {}
+  function normalizeUnits(v) {
+    let u = Number(v) || 5000;
+    u = Math.round(u / 5000) * 5000;
+    if (u < 5000) u = 5000;
+    if (u > 960000) u = 960000;
+    return u;
+  }
 
-  const res = await fetch('/api/checkout', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ units })
+  function recalc() {
+    const units = normalizeUnits($qtyInput.value);
+    $qtyInput.value = units;
+    const unitPrice = ppuForUnits(units);
+    $ppu.textContent = money(unitPrice);
+    $total.textContent = money((units * unitPrice));
+  }
+
+  function addBulkToCart() {
+    const units = normalizeUnits($qtyInput.value);
+    const cart = loadCart();
+
+    // One bulk line – merge into existing if present
+    const ix = cart.findIndex(it => it.type === 'bulk');
+    if (ix >= 0) {
+      cart[ix].units = units;
+    } else {
+      cart.push({ type: 'bulk', units });
+    }
+
+    saveCart(cart);
+    // Scroll to cart link (or redirect if you prefer)
+    window.location.href = '/cart.html';
+  }
+
+  function addKitToCart() {
+    const cart = loadCart();
+    const ix = cart.findIndex(it => it.type === 'kit');
+    if (ix >= 0) {
+      cart[ix].qty = (Number(cart[ix].qty) || 0) + 1;
+    } else {
+      cart.push({ type: 'kit', qty: 1, unitCents: KIT_UNIT_CENTS });
+    }
+    saveCart(cart);
+    window.location.href = '/cart.html';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    updateBadge();
+    if ($qtyMinus) $qtyMinus.addEventListener('click', () => { $qtyInput.value = normalizeUnits(($qtyInput.value || 5000) - 5000); recalc(); });
+    if ($qtyPlus)  $qtyPlus.addEventListener('click',  () => { $qtyInput.value = normalizeUnits(($qtyInput.value || 5000) + 5000); recalc(); });
+    if ($qtyInput) $qtyInput.addEventListener('change', recalc);
+    recalc();
+
+    if ($add)    $add.addEventListener('click', addBulkToCart);
+    if ($kitBtn) $kitBtn.addEventListener('click', addKitToCart);
+
+    // Any "View Cart" anchor should go to the page:
+    document.querySelectorAll('a[href="#cart"]').forEach(a => a.setAttribute('href', '/cart.html'));
   });
-  const json = await res.json().catch(() => ({}));
-
-  if (res.status === 401 && json?.error === 'auth_required') {
-    try {
-      await window.Clerk?.openSignIn({ redirectUrl: window.location.href });
-    } catch { alert('Please sign in to order more than 20,000 units.'); }
-    return;
-  }
-  if (!res.ok || !json?.url) {
-alert(`Checkout error: ${json?.error || res.statusText}${json?.detail ? ' — ' + json.detail : ''}`);
-    return;
-  }
-  window.location = json.url;
-}
-
-window.addEventListener('load', () => {
-  if (elMinus) elMinus.addEventListener('click', () => { elQty.value = clampUnits(Number(elQty.value || MIN_UNITS) - STEP); refresh(); });
-  if (elPlus)  elPlus.addEventListener('click',  () => { elQty.value = clampUnits(Number(elQty.value || MIN_UNITS) + STEP); refresh(); });
-  if (elQty)   elQty.addEventListener('change', refresh);
-  if (elAdd)   elAdd.addEventListener('click', checkoutTiered);
-
-  if (elQty && !elQty.value) elQty.value = MIN_UNITS;
-  refresh();
-});
+})();
