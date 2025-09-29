@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css?v=32">
+  <script defer src="/script.js?v=32"></script>
 </head>
 <body>
 
@@ -26,26 +27,32 @@
       <a href="/videos.html">Videos</a>
       <a href="/faq.html">FAQ</a>
 
-     <div class="nav-dropdown">
-  <button class="nav-dropbtn active" type="button" aria-haspopup="true" aria-expanded="false">
-    <span class="nav-drop-label">Distributors</span>
-    <span class="nav-caret">▾</span>
-  </button>
-  <div class="nav-dropmenu" role="menu">
-    <a href="/distributors" role="menuitem">Find a Distributor</a>
-    <a href="/distributor-application" role="menuitem">Become a Distributor</a>
-  </div>
-</div>
+      <div class="nav-dropdown">
+        <button class="nav-dropbtn active" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="nav-drop-label">Distributors</span>
+          <span class="nav-caret">▾</span>
+        </button>
+        <div class="nav-dropmenu" role="menu">
+          <a href="/distributors.html" role="menuitem">Find a Distributor</a>
+          <a href="/distributor-application.html" role="menuitem">Become a Distributor</a>
+        </div>
+      </div>
 
-<a href="/index.html#contact" class="btn btn--accent">Contact</a>
+      <a href="/contact.html" class="btn btn--accent">Contact</a>
     </nav>
 
     <div class="header-actions">
-      <a href="/order.html#cart" class="btn btn--ghost btn--invert" aria-label="Shopping cart">
+      <!-- FORCED CART LINK + BADGE -->
+      <a href="/cart.html"
+         class="btn btn--ghost btn--invert"
+         id="btn-cart"
+         aria-label="Shopping cart"
+         onclick="window.location='/cart.html'; return false;">
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
           <path fill="currentColor" d="M7 18a2 2 0 1 0 0 4a2 2 0 0 0 0-4m10 0a2 2 0 1 0 0 4a2 2 0 0 0 0-4M6.2 6l.3 2h12.3a1 1 0 0 1 1 1l-1.2 6a2 2 0 0 1-2 1.6H8.7a2 2 0 0 1-2-1.7L5.3 5H3V3h3a1 1 0 0 1 1 .9L7.2 6Z"/>
         </svg>
         <span class="hide-sm">Cart</span>
+        <span id="cart-count" class="badge"></span>
       </a>
       <div class="auth-buttons">
         <button class="btn btn--ghost btn--invert" type="button">Login</button>
@@ -68,7 +75,7 @@
   <section class="section pt-0">
     <div class="container">
       <form class="dist-form" method="post" action="https://formspree.io/f/REPLACE_ME" enctype="multipart/form-data">
-        <!-- Company & Contact (now a group so it matches background) -->
+        <!-- Company & Contact -->
         <fieldset class="group">
           <legend>Company &amp; Contact</legend>
           <div class="form-grid">
@@ -164,7 +171,7 @@
               <input name="resale_tax_id" type="text">
             </label>
 
-            <!-- Make file upload a full-width field so it aligns inside margins -->
+            <!-- Full-width upload -->
             <label class="field field--full">
               <span>Upload Resale Certificate (PDF or image)</span>
               <input name="resale_certificate" type="file" accept=".pdf,.png,.jpg,.jpeg">
