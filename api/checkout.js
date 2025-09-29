@@ -1,17 +1,14 @@
-// api/checkout.js
-export const config = {
-  runtime: 'nodejs18.x' // or omit; your project "engines" is Node 22, Vercel will map
-};
-
-import Stripe from 'stripe';
+// api/checkout.js  — CommonJS version (works without ESM config)
+const Stripe = require('stripe');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-06-20',
 });
 
+// helper
 function dollars(n) { return `$${n.toFixed(2)}`; }
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
@@ -21,18 +18,18 @@ export default async function handler(req, res) {
     const { bulk, kit } = req.body || {};
     const line_items = [];
 
-    // Bulk line as a single computed-amount item (quantity = 1)
+    // Bulk line (computed price, quantity=1)
     if (bulk && bulk.amountCents > 0) {
       line_items.push({
         price_data: {
           currency: 'usd',
           product_data: {
             name: 'Force Dowels — Bulk',
-            description: `Units: ${bulk.units.toLocaleString()} @ ${dollars(bulk.unitPrice)}/unit`,
+            description: `Units: ${Number(bulk.units).toLocaleString()} @ ${dollars(bulk.unitPrice)}/unit`,
             metadata: {
               units: String(bulk.units),
               unit_price: String(bulk.unitPrice),
-            }
+            },
           },
           unit_amount: bulk.amountCents, // integer cents
         },
@@ -40,14 +37,12 @@ export default async function handler(req, res) {
       });
     }
 
-    // Kit line (300 units per kit, $36 each)
+    // Kit line ($36 each)
     if (kit && kit.amountCents > 0 && kit.qty > 0) {
       line_items.push({
         price_data: {
           currency: 'usd',
-          product_data: {
-            name: 'Force Dowels Kit — 300 units',
-          },
+          product_data: { name: 'Force Dowels Kit — 300 units' },
           unit_amount: kit.unitCents || 3600,
         },
         quantity: kit.qty,
@@ -60,6 +55,7 @@ export default async function handler(req, res) {
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
@@ -71,9 +67,7 @@ export default async function handler(req, res) {
       },
       success_url: `${baseUrl}/success.html?cs={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/cart.html`,
-      metadata: {
-        source: 'forcedowels-cart',
-      }
+      metadata: { source: 'forcedowels-cart' },
     });
 
     res.status(200).json({ url: session.url });
@@ -81,4 +75,5 @@ export default async function handler(req, res) {
     console.error('checkout error', err);
     res.status(500).send(err?.message || 'Checkout error');
   }
-}
+};
+
