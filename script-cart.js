@@ -1,4 +1,4 @@
-/* v47 – Cart page: render, qty edits, subtotal, checkout */
+/* v48 – Cart page: render, qty edits, subtotal, checkout (Remove btn polished) */
 (function () {
   'use strict';
 
@@ -22,35 +22,34 @@
   }
 
   function loadCart() {
-    try {
-      const raw = localStorage.getItem(FD_CART_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+    try { const raw = localStorage.getItem(FD_CART_KEY); return raw ? JSON.parse(raw) : []; }
+    catch { return []; }
   }
   function saveCart(items) {
     localStorage.setItem(FD_CART_KEY, JSON.stringify(items));
     updateHeaderBadge(items);
   }
-
   function updateHeaderBadge(items = loadCart()) {
-    const units =
-      items.reduce((sum, it) => {
-        if (it.type === 'bulk') return sum + (it.qty || 0);
-        if (it.type === 'kit')  return sum + (it.qty || 0) * 300;
-        return sum;
-      }, 0) || 0;
-    const badge = $('#cart-count');
-    if (!badge) return;
+    const units = items.reduce((sum, it) =>
+      sum + (it.type === 'bulk' ? (it.qty||0) : (it.qty||0)*300), 0);
+    const badge = $('#cart-count'); if (!badge) return;
     badge.textContent = units > 0 ? units.toLocaleString() : '';
   }
 
-  const itemsRoot = $('#cart-items');
-  const subtotalEl = $('#cart-subtotal');
-  const clearBtn = $('#btn-clear');
-  const mergeBtn = $('#btn-merge');
+  const itemsRoot   = $('#cart-items');
+  const subtotalEl  = $('#cart-subtotal');
+  const clearBtn    = $('#btn-clear');
+  const mergeBtn    = $('#btn-merge');
   const checkoutBtn = $('#btn-checkout');
+
+  function removeBtnHTML(){
+    return `
+      <button class="remove-btn" type="button" aria-label="Remove item">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor"
+          d="M9 3h6a1 1 0 0 1 1 1v1h4v2h-1v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7H4V5h4V4a1 1 0 0 1 1-1Zm1 4v10h2V7h-2Zm4 0v10h2V7h-2Z"/></svg>
+        <span>Remove</span>
+      </button>`;
+  }
 
   function render() {
     const cart = loadCart();
@@ -88,10 +87,10 @@
           <div class="col price-col">$${ppu.toFixed(4)}</div>
           <div class="col total-col">
             <div>$${line.toFixed(2)}</div>
-            <button class="link remove" type="button">Remove</button>
+            ${removeBtnHTML()}
           </div>
         </div>`;
-      } else { // kit
+      } else {
         const q = Number(it.qty) || 1;
         const unit = Number(it.price || 36);
         const line = unit * q;
@@ -112,7 +111,7 @@
           <div class="col price-col">$${unit.toFixed(2)}</div>
           <div class="col total-col">
             <div>$${line.toFixed(2)}</div>
-            <button class="link remove" type="button">Remove</button>
+            ${removeBtnHTML()}
           </div>
         </div>`;
       }
@@ -127,14 +126,14 @@
     }, 0);
     subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
 
-    // Wire row listeners
+    // events
     itemsRoot.querySelectorAll('.cart-item').forEach(row => {
       const i = Number(row.dataset.index);
       const type = row.dataset.type;
       const minus = row.querySelector('.minus');
       const plus  = row.querySelector('.plus');
       const input = row.querySelector('.qty-input');
-      const remove = row.querySelector('.remove');
+      const remove = row.querySelector('.remove-btn');
 
       function apply(newVal) {
         let cart = loadCart();
@@ -173,11 +172,8 @@
 
   mergeBtn?.addEventListener('click', () => {
     let cart = loadCart();
-    // merge all bulk into one + all kits into one
-    const bulkTotal = cart.filter(i => i.type === 'bulk')
-                          .reduce((s, i) => s + (i.qty || 0), 0);
-    const kitTotal = cart.filter(i => i.type === 'kit')
-                         .reduce((s, i) => s + (i.qty || 0), 0);
+    const bulkTotal = cart.filter(i => i.type === 'bulk').reduce((s, i) => s + (i.qty || 0), 0);
+    const kitTotal  = cart.filter(i => i.type === 'kit' ).reduce((s, i) => s + (i.qty || 0), 0);
     const merged = [];
     if (bulkTotal > 0) merged.push({ type: 'bulk', qty: clampToStep(bulkTotal) });
     if (kitTotal  > 0) merged.push({ type: 'kit', qty: kitTotal, price: 36, title: 'Force Dowels — Starter Kit (300)' });
@@ -186,13 +182,10 @@
   });
 
   checkoutBtn?.addEventListener('click', async () => {
-    const cart = loadCart();
-    if (!cart.length) return;
-
+    const cart = loadCart(); if (!cart.length) return;
     checkoutBtn.disabled = true;
     const original = checkoutBtn.textContent;
     checkoutBtn.textContent = 'Starting…';
-
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
@@ -201,11 +194,8 @@
       });
       if (!res.ok) throw new Error('Checkout failed');
       const data = await res.json();
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error('Missing checkout URL');
-      }
+      if (data?.url) window.location.href = data.url;
+      else throw new Error('Missing checkout URL');
     } catch (err) {
       alert('A server error occurred starting checkout. Please try again.');
       console.error(err);
@@ -214,7 +204,5 @@
     }
   });
 
-  // initial paint
   render();
 })();
-
