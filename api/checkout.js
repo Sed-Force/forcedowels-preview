@@ -1,138 +1,146 @@
-// /api/checkout.js
-// Vercel Node.js Serverless Function (CommonJS)
+// Force Dowels — Stripe Checkout (Vercel Node function)
+// Accepts items like:
+//   { type: 'bulk', units: 5000 }
+//   { type: 'kit',  qty: 1 }
 
-const Stripe = require('stripe');
+const stripe = require('stripe')(
+  process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SK
+);
 
-// ---- helpers --------------------------------------------------
+// Pin Vercel runtime (avoid "nodejs18.x" error)
+module.exports.config = { runtime: 'nodejs' };
 
-function getBaseUrl(req) {
-  // prefer explicit env, else infer from request
-  const envUrl = process.env.PUBLIC_BASE_URL;
-  if (envUrl) return envUrl.replace(/\/$/, '');
-  const proto =
-    (req.headers['x-forwarded-proto'] || '').split(',')[0] ||
-    (req.connection && req.connection.encrypted ? 'https' : 'http');
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  return `${proto}://${host}`;
+// ---- Pricing / guards ----
+const BULK_MIN = 5000;
+const BULK_MAX = 960000;
+const BULK_STEP = 5000;
+
+function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
+function snapToStep(n, step) { return Math.round(n / step) * step; }
+
+// Returns USD per-unit price as a JS number (e.g. 0.072)
+function pricePerUnitUSD(units) {
+  if (units >= 160000) return 0.063;
+  if (units >= 20000)  return 0.0675;
+  return 0.072;
 }
 
-// TIERED PRICING (cents)
-function unitPriceCentsFor(units) {
-  if (units >= 160000) return Math.round(0.063 * 100);   // $0.063
-  if (units >= 20000)  return Math.round(0.0675 * 100);  // $0.0675
-  return Math.round(0.072 * 100);                        // $0.072
+// Stripe supports fractional cents via `unit_amount_decimal` (string, in *cents*).
+// For $0.072 -> 7.2 cents, so "7.2"
+function toUnitAmountDecimalString(usd) {
+  const cents = usd * 100;                // e.g. 0.0675 * 100 = 6.75
+  // keep up to 4 decimals to be safe
+  return Number(cents.toFixed(4)).toString();
 }
 
-// be lenient about parsing to avoid hanging on req.json()
-async function parseJsonBody(req) {
+function parseBody(req) {
+  if (!req || typeof req !== 'object') return {};
+  if (req.body == null) return {};
+  if (typeof req.body === 'string') {
+    try { return JSON.parse(req.body); } catch { return {}; }
+  }
+  // vercel often gives parsed object already
+  return req.body;
+}
+
+function baseUrlFrom(req) {
+  const origin =
+    process.env.SITE_URL ||
+    (req.headers && (req.headers['x-forwarded-proto'] && req.headers['x-forwarded-host']
+      ? `${req.headers['x-forwarded-proto']}://${req.headers['x-forwarded-host']}`
+      : (req.headers.origin || (req.headers.host ? `https://${req.headers.host}` : 'https://forcedowels.com'))));
+
+  return origin.replace(/\/+$/, '');
+}
+
+module.exports = async (req, res) => {
   try {
-    // If a body parser already ran:
-    if (req.body && typeof req.body === 'object') return req.body;
-
-    // Read raw stream and try JSON
-    const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
-    const txt = Buffer.concat(chunks).toString('utf8');
-    return txt ? JSON.parse(txt) : {};
-  } catch {
-    return {};
-  }
-}
-
-// ---- handler --------------------------------------------------
-
-module.exports = async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'method_not_allowed' });
-  }
-
-  const stripeSecret = process.env.STRIPE_SECRET_KEY;
-  if (!stripeSecret) {
-    console.error('Missing STRIPE_SECRET_KEY');
-    return res.status(500).json({ error: 'server_misconfigured' });
-  }
-
-  const stripe = new Stripe(stripeSecret, { apiVersion: '2024-06-20' });
-
-  try {
-    const body = await parseJsonBody(req);
-    const items = Array.isArray(body?.items) ? body.items : [];
-    const customerEmail = (body?.email || body?.customerEmail || '').trim() || undefined;
-
-    if (items.length === 0) {
-      return res.status(400).json({ error: 'no_items' });
+    if (req.method !== 'POST') {
+      res.statusCode = 405;
+      res.setHeader('Allow', 'POST');
+      return res.json({ error: 'Method not allowed' });
     }
 
-    // Normalize items we understand:
-    // bulk example  : { type:'bulk' | sku:'BULK',  units: 50000 }
-    // starter kit   : { type:'kit'  | sku:'KIT',   qty:   1     }
-    const lineItems = [];
+    if (!stripe) {
+      return res.status(500).json({ error: 'Stripe key missing on server' });
+    }
+
+    const { items, email } = parseBody(req);
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'No items in request' });
+    }
+
+    // Normalize & validate items, then build Stripe line_items
+    const line_items = [];
 
     for (const raw of items) {
-      const type = (raw.type || raw.sku || '').toString().toLowerCase();
+      if (!raw || typeof raw !== 'object') continue;
 
-      if (type === 'bulk' || type === 'force-bulk' || type === 'bulk_dowels' || type === 'bulk-8mm' || type === 'bulk_8mm' || type === 'bulk_') {
-        let units = Number(raw.units || raw.qty || raw.quantity || 0);
-        if (!Number.isFinite(units) || units <= 0) continue;
+      if (raw.type === 'bulk') {
+        let units = Number(raw.units || 0);
+        if (!Number.isFinite(units)) units = BULK_MIN;
+        units = snapToStep(units, BULK_STEP);
+        units = clamp(units, BULK_MIN, BULK_MAX);
 
-        // Stripe expects quantity as an integer (count of something).
-        // We model "units" as the quantity; price is per unit in cents from tier.
-        const unitAmount = unitPriceCentsFor(units);
+        const usd = pricePerUnitUSD(units);
+        const uad = toUnitAmountDecimalString(usd); // decimal *cents* string
 
-        lineItems.push({
-          quantity: units,
+        line_items.push({
           price_data: {
             currency: 'usd',
             product_data: {
-              name: 'Force Dowels — Bulk',
-              description: 'Tiered pricing applies automatically',
+              name: `Force Dowels — Bulk (${units.toLocaleString()} units)`,
             },
-            unit_amount: unitAmount,
+            // Stripe expects unit_amount_decimal in *cents* as string
+            unit_amount_decimal: uad,
           },
+          quantity: units, // quantity = number of units
         });
-      } else if (type === 'kit' || type === 'starter' || type === 'fd-kit-300' || type === 'fd_kit_300') {
-        const kits = Math.max(1, Number(raw.qty || raw.quantity || 0));
-        const unitAmount = 3600; // $36.00 per kit
-        lineItems.push({
-          quantity: kits,
+      }
+
+      if (raw.type === 'kit') {
+        let qty = Number(raw.qty || 0);
+        if (!Number.isFinite(qty) || qty < 1) qty = 1;
+
+        line_items.push({
           price_data: {
             currency: 'usd',
             product_data: {
               name: 'Force Dowels — Starter Kit (300)',
-              description: '300 units per kit',
             },
-            unit_amount: unitAmount,
+            unit_amount: 3600, // $36.00
           },
+          quantity: qty,
         });
       }
     }
 
-    if (lineItems.length === 0) {
-      return res.status(400).json({ error: 'no_valid_items' });
+    if (line_items.length === 0) {
+      return res.status(400).json({ error: 'No valid items to charge' });
     }
 
-    const baseUrl = getBaseUrl(req);
+    const base = baseUrlFrom(req);
+    const success_url = `${base}/success.html?session_id={CHECKOUT_SESSION_ID}`;
+    const cancel_url  = `${base}/cart.html`;
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      payment_method_types: ['card'],
-      line_items: lineItems,
-      customer_email: customerEmail,
-      success_url: `${baseUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/cart.html`,
-      // optional: metadata for admin/recon
-      metadata: {
-        source: 'forcedowels-preview',
-      },
+      line_items,
+      allow_promotion_codes: true,
+      automatic_tax: { enabled: false },
+      success_url,
+      cancel_url,
+      customer_email: email && typeof email === 'string' ? email : undefined,
+      // You can add shipping address collection later if needed:
+      // shipping_address_collection: { allowed_countries: ['US', 'CA'] },
     });
 
     return res.status(200).json({ url: session.url });
   } catch (err) {
-    console.error('Stripe checkout error:', err);
-    return res.status(500).json({ error: 'checkout_failed', message: err.message || 'unknown_error' });
+    console.error('Checkout error:', err && err.message, err && err.stack);
+    // Try to surface Stripe error message safely
+    const msg = (err && err.raw && err.raw.message) || err.message || 'Internal error';
+    return res.status(500).json({ error: msg });
   }
 };
-
-// Ensure Node runtime (fixes the old "nodejs18.x" error)
-module.exports.config = { runtime: 'nodejs' };
