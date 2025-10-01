@@ -1,127 +1,151 @@
-// /script-order.js
-// Tiered calc + Add-to-Cart (writes consistent shape to localStorage 'fd_cart')
+/* /script-order.js  (MASTER) */
 
 (function () {
-  const CART_KEY = 'fd_cart';
-  const MIN = 5000, MAX = 960000, STEP = 5000;
-
-  // Tiers (must exactly match cart/checkout)
-  function unitPriceFor(units) {
-    if (units <= 20000) return 0.072;
-    if (units <= 160000) return 0.0675;
-    return 0.063;
-  }
-
-  // DOM
-  const tiers = Array.from(document.querySelectorAll('.tier'));
-  const qtyMinus = document.getElementById('qty-minus');
-  const qtyPlus  = document.getElementById('qty-plus');
+  // --- DOM ---
+  const tierBtns = Array.from(document.querySelectorAll('.tier'));
   const qtyInput = document.getElementById('qty-units');
+  const minusBtn = document.getElementById('qty-minus');
+  const plusBtn  = document.getElementById('qty-plus');
   const ppuEl    = document.getElementById('price-per-unit');
   const totalEl  = document.getElementById('price-total');
   const addBtn   = document.getElementById('btn-add-to-cart');
   const kitBtn   = document.getElementById('starter-kit');
-  const viewCartA = document.querySelector('.viewcart a');
 
-  if (viewCartA) viewCartA.href = '/cart.html';
+  if (!qtyInput || !ppuEl || !totalEl || tierBtns.length === 0) return;
 
-  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  const fmtMoney = (n) => `$${(Math.round(n * 100) / 100).toFixed(2)}`;
+  const STEP = 5000;
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+  const fmtMoney = (n) => n.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
 
-  function normalizeUnits(n) {
-    n = Number(n) || MIN;
-    n = Math.round(n / STEP) * STEP;
-    return clamp(n, MIN, MAX);
+  // Pull tiers from the DOM (sorted by min ascending)
+  let tiers = tierBtns.map(b => ({
+    el: b,
+    min: Number(b.dataset.min),
+    max: Number(b.dataset.max),
+    price: Number(b.dataset.price),
+  })).sort((a, b) => a.min - b.min);
+
+  function tierForQty(qty) {
+    for (const t of tiers) {
+      if (qty >= t.min && qty <= t.max) return t;
+    }
+    return tiers[tiers.length - 1];
   }
 
-  function setActiveTier(units) {
-    const up = unitPriceFor(units);
-    tiers.forEach(btn => {
-      const price = Number(btn.dataset.price || '0');
-      btn.classList.toggle('active', Math.abs(price - up) < 1e-9);
-    });
+  function setActiveTier(tier) {
+    tiers.forEach(t => t.el.classList.toggle('active', t === tier));
   }
 
-  function repaint() {
-    const units = normalizeUnits(qtyInput.value);
-    const up = unitPriceFor(units);
-    if (ppuEl)   ppuEl.textContent   = `$${up.toFixed(4)}`;
-    if (totalEl) totalEl.textContent = fmtMoney(units * up);
-    setActiveTier(units);
+  function setQtyToTierMin(tier) {
+    qtyInput.value = tier.min;
   }
 
-  if (qtyInput) {
-    qtyInput.value = normalizeUnits(qtyInput.value);
-    qtyInput.addEventListener('change', repaint);
-  }
-  if (qtyMinus) qtyMinus.addEventListener('click', () => { qtyInput.value = normalizeUnits(qtyInput.value - STEP); repaint(); });
-  if (qtyPlus)  qtyPlus .addEventListener('click', () => { qtyInput.value = normalizeUnits(qtyInput.value + STEP); repaint(); });
+  const GLOBAL_MIN = tiers[0].min;
+  const GLOBAL_MAX = tiers[tiers.length - 1].max;
 
-  // Click a tier button = jump units to that tier’s minimum (or clamp down)
-  tiers.forEach(btn => {
+  function coerceQty(q) {
+    if (!Number.isFinite(q)) q = GLOBAL_MIN;
+    q = Math.round(q / STEP) * STEP;     // snap to 5k
+    q = clamp(q, GLOBAL_MIN, GLOBAL_MAX); // clamp
+    return q;
+  }
+
+  function recalc() {
+    let qty = coerceQty(Number(qtyInput.value));
+    qtyInput.value = qty;
+
+    const t = tierForQty(qty);
+    setActiveTier(t);
+
+    ppuEl.textContent = `$${t.price.toFixed(4)}`;
+    totalEl.textContent = fmtMoney(qty * t.price);
+  }
+
+  // Clicking a tier: select only that tier, set qty to its MIN, recalc.
+  tierBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      const min = Number(btn.dataset.min || MIN);
-      const max = Number(btn.dataset.max || MAX);
-      let u = normalizeUnits(qtyInput.value);
-      if (u < min) u = min;
-      if (u > max) u = max;
-      qtyInput.value = u;
-      repaint();
+      const t = tiers.find(x => x.el === btn);
+      if (!t) return;
+      setActiveTier(t);
+      setQtyToTierMin(t);
+      recalc();
     });
   });
 
-  // Cart helpers
-  function readCart() {
-    try { const a = JSON.parse(localStorage.getItem(CART_KEY) || '[]'); return Array.isArray(a) ? a : []; }
-    catch { return []; }
+  minusBtn?.addEventListener('click', () => {
+    let q = Number(qtyInput.value) || GLOBAL_MIN;
+    q = coerceQty(q - STEP);
+    qtyInput.value = q;
+    recalc();
+  });
+
+  plusBtn?.addEventListener('click', () => {
+    let q = Number(qtyInput.value) || GLOBAL_MIN;
+    q = coerceQty(q + STEP);
+    qtyInput.value = q;
+    recalc();
+  });
+
+  qtyInput.addEventListener('input', () => recalc());
+
+  // Add-to-cart (bulk)
+  addBtn?.addEventListener('click', () => {
+    const qty = Number(qtyInput.value) || GLOBAL_MIN;
+    const applicableTier = tierForQty(qty);
+
+    const item = {
+      type: 'bulk',
+      name: 'Force Dowels — Bulk',
+      units: qty,
+      unitPrice: applicableTier.price,
+      sku: 'force-bulk',
+    };
+
+    const cart = JSON.parse(localStorage.getItem('fd_cart') || '[]');
+    cart.push(item);
+    localStorage.setItem('fd_cart', JSON.stringify(cart));
+
+    updateBadge();
+    addBtn.classList.add('pulse');
+    setTimeout(() => addBtn.classList.remove('pulse'), 700);
+  });
+
+  // Add Starter Kit (just add; no auto-nav)
+  const kitBtnEl = document.getElementById('starter-kit');
+  if (kitBtnEl) {
+    kitBtnEl.addEventListener('click', () => {
+      const item = {
+        type: 'kit',
+        name: 'Force Dowels Kit — 300 units',
+        units: 300,
+        unitPrice: 0.12,
+        price: 36.00,
+        sku: 'FD-KIT-300'
+      };
+      const cart = JSON.parse(localStorage.getItem('fd_cart') || '[]');
+      cart.push(item);
+      localStorage.setItem('fd_cart', JSON.stringify(cart));
+      updateBadge();
+      kitBtnEl.classList.add('pulse');
+      setTimeout(() => kitBtnEl.classList.remove('pulse'), 700);
+    });
   }
-  function saveCart(items) {
-    localStorage.setItem(CART_KEY, JSON.stringify(items));
-    // ping badge
+
+  function updateBadge() {
     try {
-      const ev = new Event('storage'); ev.key = CART_KEY; window.dispatchEvent(ev);
+      const n = JSON.parse(localStorage.getItem('fd_cart') || '[]')
+        .reduce((sum, it) => sum + (Number(it.units) || 0), 0);
+      const badge = document.getElementById('cart-count');
+      if (!badge) return;
+      if (n > 0) { badge.textContent = n.toLocaleString(); badge.style.display = 'inline-block'; }
+      else { badge.textContent = ''; badge.style.display = 'none'; }
     } catch {}
   }
 
-  // Merge rules:
-  // - BULK: keep single line with sku 'bulk', accumulate `units` (qty stays 1)
-  // - KIT : sku 'FD-KIT-300', qty += 1 (each kit is 300 units @ $0.12 → $36)
-  function addBulk(units) {
-    const cart = readCart();
-    const i = cart.findIndex(it => it.sku === 'bulk');
-    if (i >= 0) {
-      cart[i].units = (Number(cart[i].units) || 0) + units;
-      cart[i].qty = 1;
-      cart[i].name = `Force Dowels — Bulk`;
-    } else {
-      cart.push({ sku: 'bulk', name: 'Force Dowels — Bulk', units, qty: 1 });
-    }
-    saveCart(cart);
-  }
-
-  function addKit() {
-    const cart = readCart();
-    const i = cart.findIndex(it => it.sku === 'FD-KIT-300');
-    if (i >= 0) cart[i].qty = (Number(cart[i].qty) || 1) + 1;
-    else cart.push({ sku: 'FD-KIT-300', name: 'Force Dowels — Starter Kit (300)', units: 300, qty: 1 });
-    saveCart(cart);
-  }
-
-  if (addBtn) addBtn.addEventListener('click', () => {
-    const units = normalizeUnits(qtyInput.value);
-    addBulk(units);
-    // quick confirmation
-    const prev = addBtn.textContent; addBtn.disabled = true; addBtn.textContent = 'Added';
-    setTimeout(() => { addBtn.disabled = false; addBtn.textContent = prev; }, 900);
-  });
-
-  if (kitBtn) kitBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    addKit();
-    const strong = kitBtn.querySelector('strong');
-    const prev = strong ? strong.textContent : ''; if (strong) strong.textContent = 'Added';
-    setTimeout(() => { if (strong) strong.textContent = prev; }, 900);
-  });
-
-  repaint();
+  // init
+  const initial = tiers.find(t => t.el.classList.contains('active')) || tiers[0];
+  setActiveTier(initial);
+  setQtyToTierMin(initial);
+  recalc();
+  updateBadge();
 })();
