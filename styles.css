@@ -1991,3 +1991,45 @@ button,
   border-radius: 12px;
 }
 .cart-empty p { margin-bottom: 10px; }
+
+/* v48 cart polish */
+
+/* tighten the grid so the left card never gets clipped */
+.cart-grid{
+  grid-template-columns: minmax(0,1fr) 340px; /* was 360 */
+  gap: 24px;                                  /* a hair narrower */
+}
+
+/* ensure the left “bubble” renders fully */
+.cart-table{
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+/* make the row columns a little narrower so borders stay visible */
+.cart-table .row{
+  grid-template-columns: minmax(0,1fr) 280px 120px 140px; /* was 1fr 340 160 160 */
+  gap: 12px;
+}
+
+/* nice “Remove” button that fits the page vibe */
+.remove-btn{
+  display:inline-flex; align-items:center; gap:8px;
+  margin-top:8px;
+  background: transparent;
+  color: #ff7878;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font: inherit;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.remove-btn:hover{
+  background: rgba(255,120,120,.08);
+  border-color: rgba(255,120,120,.35);
+  color: #ff9a9a;
+}
+.remove-btn svg{
+  width: 14px; height: 14px;
+}
