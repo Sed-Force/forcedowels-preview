@@ -1850,3 +1850,12 @@ button,
   .cart-wrap { grid-template-columns: 1fr; }
   .cart-summary { order: -1; }
 }
+
+/* ensure the active tier is clearly highlighted */
+.tier {
+  border: 1px solid var(--surface-3, #2a2f3a);
+}
+.tier.active {
+  border-color: var(--accent, #f6b100);
+  box-shadow: 0 0 0 2px var(--accent, #f6b100) inset;
+}
