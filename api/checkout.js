@@ -1,134 +1,142 @@
-// Force Dowels — Stripe Checkout (Vercel Node function)
-// Accepts items like:
-//   { type: 'bulk', units: 5000 }
-//   { type: 'kit',  qty: 1 }
+// /api/checkout.js
+// Node.js Serverless function for Vercel
 
-const stripe = require('stripe')(
-  process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SK
-);
+exports.config = { runtime: "nodejs" };
 
-// Pin Vercel runtime (avoid "nodejs18.x" error)
-module.exports.config = { runtime: 'nodejs' };
+const Stripe = require("stripe");
 
-// ---- Pricing / guards ----
-const BULK_MIN = 5000;
-const BULK_MAX = 960000;
-const BULK_STEP = 5000;
+// ---- ENV REQUIREMENTS ----
+// STRIPE_SECRET_KEY           -> sk_test_... (for test mode)
+// NEXT_PUBLIC_BASE_URL        -> e.g. https://your-preview.vercel.app
+//
+// NOTE: We do NOT rely on price IDs here (to avoid fractional-cent issues).
+// We compute the total for bulk as 1 line item priced at the full amount.
+// The kit uses a fixed $36.00 per kit.
 
-function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
-function snapToStep(n, step) { return Math.round(n / step) * step; }
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
+  apiVersion: "2024-06-20",
+});
 
-// Returns USD per-unit price as a JS number (e.g. 0.072)
-function pricePerUnitUSD(units) {
-  if (units >= 160000) return 0.063;
-  if (units >= 20000)  return 0.0675;
-  return 0.072;
+function tierPricePerUnit(units) {
+  // Server-side source of truth for tiered pricing
+  if (units >= 160000 && units <= 960000) return 0.063;
+  if (units >= 20000 && units < 160000) return 0.0675;
+  if (units >= 5000 && units < 20000) return 0.072;
+  throw new Error("Invalid bulk units: must be between 5,000 and 960,000.");
 }
 
-// Stripe fractional cents via `unit_amount_decimal` (string, in *cents*).
-// $0.072 -> 7.2 cents => "7.2"
-function toUnitAmountDecimalString(usd) {
-  const cents = usd * 100; // 0.0675 * 100 = 6.75
-  return Number(cents.toFixed(4)).toString();
+function normalizeItems(body) {
+  // Accept many shapes: {items:[...]}, {cart:[...]}, or a single object
+  const raw =
+    Array.isArray(body?.items) ? body.items :
+    Array.isArray(body?.cart)  ? body.cart  :
+    Array.isArray(body)        ? body       :
+    body ? [body] : [];
+
+  const out = [];
+  for (const it of raw) {
+    // Starter Kit
+    if (it?.type === "kit" || it?.sku === "FD-KIT-300" || it?.sku === "kit") {
+      const qty = Math.max(1, Number(it.qty ?? it.quantity ?? 1));
+      out.push({ kind: "kit", qty });
+      continue;
+    }
+
+    // Bulk
+    const units = Number(it?.units ?? it?.qty ?? it?.quantity ?? 0);
+    if (units && units >= 5000) {
+      // snap to 5k increments to be safe
+      const snapped = Math.min(960000, Math.max(5000, Math.round(units / 5000) * 5000));
+      out.push({ kind: "bulk", units: snapped });
+      continue;
+    }
+  }
+  return out;
 }
 
-function parseBody(req) {
+function buildLineItem(item) {
+  if (item.kind === "kit") {
+    // $36 per kit
+    return {
+      price_data: {
+        currency: "usd",
+        product_data: {
+          name: "Force Dowels — Starter Kit (300)",
+        },
+        unit_amount: 3600, // $36.00
+      },
+      quantity: item.qty,
+    };
+  }
+
+  if (item.kind === "bulk") {
+    // Compute total and make a single-price line to avoid fractional cents per unit
+    const ppu = tierPricePerUnit(item.units);
+    const totalCents = Math.round(item.units * ppu * 100); // integer cents
+    return {
+      price_data: {
+        currency: "usd",
+        product_data: {
+          name: "Force Dowels — Bulk",
+          // Keep the details for the customer (and you)
+          description: `${item.units.toLocaleString()} units @ $${ppu.toFixed(4)}/unit`,
+        },
+        unit_amount: totalCents, // charge as ONE item for the full total
+      },
+      quantity: 1,
+    };
+  }
+
+  throw new Error("Unknown cart item.");
+}
+
+module.exports = async function handler(req, res) {
   try {
-    if (typeof req.body === 'string') return JSON.parse(req.body);
-    if (typeof req.body === 'object' && req.body) return req.body;
-  } catch {}
-  return {};
-}
-
-function baseUrlFrom(req) {
-  const xfProto = req.headers['x-forwarded-proto'];
-  const xfHost  = req.headers['x-forwarded-host'];
-  if (xfProto && xfHost) return `${xfProto}://${xfHost}`.replace(/\/+$/,'');
-  if (req.headers.origin) return req.headers.origin.replace(/\/+$/,'');
-  if (req.headers.host) return `https://${req.headers.host}`.replace(/\/+$/,'');
-  return (process.env.SITE_URL || 'https://forcedowels.com').replace(/\/+$/,'');
-}
-
-module.exports = async (req, res) => {
-  try {
-    if (req.method !== 'POST') {
-      res.statusCode = 405;
-      res.setHeader('Allow', 'POST');
-      return res.json({ error: 'Method not allowed' });
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "POST");
+      return res.status(405).json({ error: "METHOD_NOT_ALLOWED" });
     }
 
-    if (!stripe) {
-      return res.status(500).json({ error: 'Stripe key missing on server' });
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return res.status(500).json({ error: "MISSING_STRIPE_SECRET_KEY" });
     }
 
-    const { items, email } = parseBody(req);
-    if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'No items in request' });
+    // Parse JSON body safely (Vercel Node can give string or object)
+    let body = req.body;
+    if (typeof body === "string") {
+      try { body = JSON.parse(body); } catch { body = {}; }
     }
 
-    const line_items = [];
-
-    for (const raw of items) {
-      if (!raw || typeof raw !== 'object') continue;
-
-      if (raw.type === 'bulk') {
-        let units = Number(raw.units || 0);
-        if (!Number.isFinite(units)) units = BULK_MIN;
-        units = snapToStep(units, BULK_STEP);
-        units = clamp(units, BULK_MIN, BULK_MAX);
-
-        const usd = pricePerUnitUSD(units);
-        const uad = toUnitAmountDecimalString(usd); // decimal *cents* string
-
-        line_items.push({
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `Force Dowels — Bulk (${units.toLocaleString()} units)`,
-            },
-            unit_amount_decimal: uad, // cents, string (e.g. "7.2", "6.75")
-          },
-          quantity: units // quantity equals number of units
-        });
-      }
-
-      if (raw.type === 'kit') {
-        let qty = Number(raw.qty || 0);
-        if (!Number.isFinite(qty) || qty < 1) qty = 1;
-
-        line_items.push({
-          price_data: {
-            currency: 'usd',
-            product_data: { name: 'Force Dowels — Starter Kit (300)' },
-            unit_amount: 3600 // $36.00
-          },
-          quantity: qty
-        });
-      }
+    const items = normalizeItems(body);
+    if (!items.length) {
+      return res.status(400).json({ error: "EMPTY_CART" });
     }
 
-    if (line_items.length === 0) {
-      return res.status(400).json({ error: 'No valid items to charge' });
-    }
+    const line_items = items.map(buildLineItem);
 
-    const base = baseUrlFrom(req);
-    const success_url = `${base}/success.html?session_id={CHECKOUT_SESSION_ID}`;
-    const cancel_url  = `${base}/cart.html`;
+    // Base URL for redirects (env first; fallback to Host header)
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      (req.headers && req.headers.host ? `https://${req.headers.host}` : "http://localhost:3000");
 
     const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
+      mode: "payment",
+      payment_method_types: ["card"],
       line_items,
-      allow_promotion_codes: true,
-      automatic_tax: { enabled: false },
-      success_url,
-      cancel_url,
-      customer_email: email && typeof email === 'string' ? email : undefined
+      success_url: `${baseUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/cart.html`,
+      phone_number_collection: { enabled: true },
+      shipping_address_collection: { allowed_countries: ["US", "CA"] },
+      metadata: { source: "forcedowels-preview" },
     });
 
     return res.status(200).json({ url: session.url });
   } catch (err) {
-    console.error('Checkout error:', err);
-    const msg = (err && err.raw && err.raw.message) || err.message || 'Internal error';
-    return res.status(500).json({ error: msg, code: err && err.code ? err.code : 'server_error' });
+    console.error("CHECKOUT ERROR:", err);
+    // Bubble a friendly error to the browser so you can see it in DevTools
+    return res.status(500).json({
+      error: "CHECKOUT_FAILED",
+      message: err?.message || "Internal error",
+    });
   }
 };
