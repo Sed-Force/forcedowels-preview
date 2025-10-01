@@ -15,11 +15,11 @@
   const BULK_MAX = 960000;
   const BULK_STEP = 5000;
 
-  // Pricing (server uses the same)
-  function unitPriceCentsFor(units) {
-    if (units >= 160000) return Math.round(0.063 * 100);   // $0.0630
-    if (units >= 20000)  return Math.round(0.0675 * 100);  // $0.0675
-    return Math.round(0.072 * 100);                        // $0.0720
+  // Pricing (match server: use DOLLARS with 4dp — round only at line end)
+  function unitPriceDollarsFor(units) {
+    if (units >= 160000) return 0.0630;   // $0.0630
+    if (units >= 20000)  return 0.0675;   // $0.0675
+    return 0.0720;                        // $0.0720
   }
 
   // ---------- DOM helpers ----------
@@ -75,7 +75,7 @@
 
   function updateBadge(items) {
     if (!badgeEl) return;
-    // Show total units + kits as a simple count (units for bulk + kits for kit)
+    // Your existing behavior: bulk adds units; kits add count (kept as-is)
     let total = 0;
     for (const it of items) {
       if (it.type === 'bulk') total += it.units;
@@ -90,16 +90,18 @@
     n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
 
   // ---------- Totals ----------
+  function lineCentsForItem(it) {
+    if (it.type === 'kit') {
+      return 3600 * it.qty; // 36.00 each
+    }
+    // bulk: use 4dp ppu, round once at the line end
+    const ppu = unitPriceDollarsFor(it.units);
+    return Math.round(it.units * ppu * 100);
+  }
+
   function computeSubtotal(items) {
     let cents = 0;
-    for (const it of items) {
-      if (it.type === 'bulk') {
-        const unitCents = unitPriceCentsFor(it.units);
-        cents += unitCents * it.units;
-      } else if (it.type === 'kit') {
-        cents += 3600 * it.qty; // $36.00 per kit
-      }
-    }
+    for (const it of items) cents += lineCentsForItem(it);
     return cents / 100;
   }
 
@@ -133,8 +135,8 @@
       tr.dataset.index = String(idx);
 
       if (it.type === 'bulk') {
-        const unitCents = unitPriceCentsFor(it.units);
-        const lineTotal = (unitCents * it.units) / 100;
+        const ppu = unitPriceDollarsFor(it.units);               // 4dp
+        const lineTotal = lineCentsForItem(it) / 100;
 
         tr.innerHTML = `
           <td class="col-item">
@@ -154,7 +156,7 @@
           </td>
 
           <td class="col-unitprice">
-            <span class="unit-price">${fmtMoney(unitCents / 100)}</span>
+            <span class="unit-price">$${ppu.toFixed(4)}</span>
           </td>
 
           <td class="col-total">
@@ -163,7 +165,7 @@
           </td>
         `;
       } else if (it.type === 'kit') {
-        const lineTotal = 36.0 * it.qty;
+        const lineTotal = lineCentsForItem(it) / 100;
 
         tr.innerHTML = `
           <td class="col-item">
@@ -335,7 +337,7 @@
         const res = await fetchWithTimeout('/api/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items }), // email can be added if you collect it here
+          body: JSON.stringify({ items }), // add email if collecting here
         });
 
         if (!res.ok) {
@@ -379,3 +381,4 @@
   // ---------- Init ----------
   render();
 })();
+
