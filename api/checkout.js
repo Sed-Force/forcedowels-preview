@@ -25,32 +25,28 @@ function pricePerUnitUSD(units) {
   return 0.072;
 }
 
-// Stripe supports fractional cents via `unit_amount_decimal` (string, in *cents*).
-// For $0.072 -> 7.2 cents, so "7.2"
+// Stripe fractional cents via `unit_amount_decimal` (string, in *cents*).
+// $0.072 -> 7.2 cents => "7.2"
 function toUnitAmountDecimalString(usd) {
-  const cents = usd * 100;                // e.g. 0.0675 * 100 = 6.75
-  // keep up to 4 decimals to be safe
+  const cents = usd * 100; // 0.0675 * 100 = 6.75
   return Number(cents.toFixed(4)).toString();
 }
 
 function parseBody(req) {
-  if (!req || typeof req !== 'object') return {};
-  if (req.body == null) return {};
-  if (typeof req.body === 'string') {
-    try { return JSON.parse(req.body); } catch { return {}; }
-  }
-  // vercel often gives parsed object already
-  return req.body;
+  try {
+    if (typeof req.body === 'string') return JSON.parse(req.body);
+    if (typeof req.body === 'object' && req.body) return req.body;
+  } catch {}
+  return {};
 }
 
 function baseUrlFrom(req) {
-  const origin =
-    process.env.SITE_URL ||
-    (req.headers && (req.headers['x-forwarded-proto'] && req.headers['x-forwarded-host']
-      ? `${req.headers['x-forwarded-proto']}://${req.headers['x-forwarded-host']}`
-      : (req.headers.origin || (req.headers.host ? `https://${req.headers.host}` : 'https://forcedowels.com'))));
-
-  return origin.replace(/\/+$/, '');
+  const xfProto = req.headers['x-forwarded-proto'];
+  const xfHost  = req.headers['x-forwarded-host'];
+  if (xfProto && xfHost) return `${xfProto}://${xfHost}`.replace(/\/+$/,'');
+  if (req.headers.origin) return req.headers.origin.replace(/\/+$/,'');
+  if (req.headers.host) return `https://${req.headers.host}`.replace(/\/+$/,'');
+  return (process.env.SITE_URL || 'https://forcedowels.com').replace(/\/+$/,'');
 }
 
 module.exports = async (req, res) => {
@@ -66,12 +62,10 @@ module.exports = async (req, res) => {
     }
 
     const { items, email } = parseBody(req);
-
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'No items in request' });
     }
 
-    // Normalize & validate items, then build Stripe line_items
     const line_items = [];
 
     for (const raw of items) {
@@ -92,10 +86,9 @@ module.exports = async (req, res) => {
             product_data: {
               name: `Force Dowels — Bulk (${units.toLocaleString()} units)`,
             },
-            // Stripe expects unit_amount_decimal in *cents* as string
-            unit_amount_decimal: uad,
+            unit_amount_decimal: uad, // cents, string (e.g. "7.2", "6.75")
           },
-          quantity: units, // quantity = number of units
+          quantity: units // quantity equals number of units
         });
       }
 
@@ -106,12 +99,10 @@ module.exports = async (req, res) => {
         line_items.push({
           price_data: {
             currency: 'usd',
-            product_data: {
-              name: 'Force Dowels — Starter Kit (300)',
-            },
-            unit_amount: 3600, // $36.00
+            product_data: { name: 'Force Dowels — Starter Kit (300)' },
+            unit_amount: 3600 // $36.00
           },
-          quantity: qty,
+          quantity: qty
         });
       }
     }
@@ -131,16 +122,13 @@ module.exports = async (req, res) => {
       automatic_tax: { enabled: false },
       success_url,
       cancel_url,
-      customer_email: email && typeof email === 'string' ? email : undefined,
-      // You can add shipping address collection later if needed:
-      // shipping_address_collection: { allowed_countries: ['US', 'CA'] },
+      customer_email: email && typeof email === 'string' ? email : undefined
     });
 
     return res.status(200).json({ url: session.url });
   } catch (err) {
-    console.error('Checkout error:', err && err.message, err && err.stack);
-    // Try to surface Stripe error message safely
+    console.error('Checkout error:', err);
     const msg = (err && err.raw && err.raw.message) || err.message || 'Internal error';
-    return res.status(500).json({ error: msg });
+    return res.status(500).json({ error: msg, code: err && err.code ? err.code : 'server_error' });
   }
 };
