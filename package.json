@@ -1,10 +1,12 @@
 {
-  "name": "forcedowels-static",
+  "name": "forcedowels-preview",
   "private": true,
-  "type": "module",
+  "version": "1.0.0",
   "engines": { "node": "22.x" },
+  "scripts": {
+    "build": "echo \"static build\""
+  },
   "dependencies": {
-    "@clerk/backend": "^1.7.5",
-    "stripe": "^16.0.0"
+    "stripe": "^16.6.0"
   }
 }
