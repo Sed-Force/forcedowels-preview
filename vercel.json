@@ -1,14 +1,8 @@
 {
+  "outputDirectory": ".",
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
-    },
-    {
-      "source": "/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=300" }]
-    }
+    { "source": "/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=300" }] }
   ]
 }
