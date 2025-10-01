@@ -1,231 +1,229 @@
-// /script-cart.js  (MASTER)
-(function(){
-  const FD_CART_KEY = 'fd_cart';
+// /script-cart.js
+(function () {
+  const CART_KEY = 'fd_cart';
+  const MIN = 5000, MAX = 960000, STEP = 5000;
 
-  // Price tiers based on TOTAL bulk units across cart
-  function ppuFor(totalUnits) {
-    if (totalUnits >= 160000) return 0.0630;
-    if (totalUnits >= 20000)  return 0.0675;
-    return 0.0720; // 5k–20k
+  // SAME TIERS as order page
+  function unitPriceFor(units) {
+    if (units <= 20000) return 0.072;
+    if (units <= 160000) return 0.0675;
+    return 0.063;
   }
-  const KIT_PRICE = 36.00;
+  const fmtMoney = n => `$${(Math.round(n * 100) / 100).toFixed(2)}`;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-  // ---- storage helpers ----
-  function getCart() {
-    try {
-      const raw = localStorage.getItem(FD_CART_KEY);
-      if (!raw) return [];
-      const p = JSON.parse(raw);
-      return Array.isArray(p) ? p : [];
-    } catch {
-      localStorage.removeItem(FD_CART_KEY);
-      return [];
-    }
+  function readCart() {
+    try { const a = JSON.parse(localStorage.getItem(CART_KEY) || '[]'); return Array.isArray(a) ? a : []; }
+    catch { return []; }
   }
   function saveCart(items) {
-    localStorage.setItem(FD_CART_KEY, JSON.stringify(items || []));
-    updateBadge(items);
+    localStorage.setItem(CART_KEY, JSON.stringify(items));
+    // update header badge
+    try {
+      const totalUnits = items.reduce((s, it) => s + (Number(it.units)||0) * (Number(it.qty)||0), 0);
+      document.querySelectorAll('#cart-count').forEach(el => {
+        el.textContent = totalUnits > 0 ? totalUnits.toLocaleString() : '';
+        el.setAttribute('title', totalUnits > 0 ? `${totalUnits.toLocaleString()} dowels` : '');
+      });
+    } catch {}
   }
-  function updateBadge(items) {
-    const el = document.getElementById('cart-count');
-    if (!el) return;
-    items = items || getCart();
-    const totalQty = items.reduce((s, it) => s + (+it.qty || 0), 0);
-    el.textContent = totalQty > 0 ? String(totalQty) : '';
-  }
 
-  // ---- rendering ----
-  const listEl     = document.getElementById('cart-items');
-  const subtotalEl = document.getElementById('cart-subtotal');
-  const emptyEl    = document.getElementById('cart-empty');
-  const cardEl     = document.getElementById('cart-card');
-  const checkoutBtn= document.getElementById('btn-checkout');
-  const clearBtn   = document.getElementById('btn-clear');
-
-  function fmt$(n)  { return '$' + (+n || 0).toFixed(2); }
-  function fmt4$(n) { return '$' + (+n || 0).toFixed(4); }
-
-  function totalBulkUnits(items) {
-    return items
-      .filter(it => it.type === 'bulk')
-      .reduce((s, it) => s + ((+it.units || 0) * (+it.qty || 0)), 0);
+  function normalizeUnits(n) {
+    n = Number(n) || MIN;
+    n = Math.round(n / STEP) * STEP;
+    return clamp(n, MIN, MAX);
   }
 
   function render() {
-    const items = getCart();
-    updateBadge(items);
+    const body = document.getElementById('cart-body');
+    const wrap = document.getElementById('cart-wrap');
+    const empty = document.getElementById('cart-empty');
+    const subtotalEl = document.getElementById('cart-subtotal');
+    if (!body) return;
 
-    if (!listEl || !subtotalEl || !emptyEl || !cardEl) return;
+    let cart = readCart();
 
-    if (!items.length) {
-      emptyEl.style.display = 'block';
-      cardEl.style.display = 'none';
+    if (!cart.length) {
+      wrap.style.display = 'none';
+      empty.style.display = '';
       subtotalEl.textContent = '$0.00';
+      body.innerHTML = '';
       return;
     }
+    empty.style.display = 'none';
+    wrap.style.display = '';
 
-    emptyEl.style.display = 'none';
-    cardEl.style.display = 'block';
-    listEl.innerHTML = '';
-
-    // Compute PPU once from TOTAL bulk units
-    const totalUnits = totalBulkUnits(items);
-    const ppu = ppuFor(totalUnits);
-
+    // Compute totals and rebuild rows
+    body.innerHTML = '';
     let subtotal = 0;
 
-    items.forEach((it) => {
-      const row = document.createElement('div');
-      row.className = 'cart-row';
+    // Figure bulk units total (all bulk merged logically)
+    let bulkIdx = cart.findIndex(it => it.sku === 'bulk');
+    let kitIdx  = cart.findIndex(it => it.sku === 'FD-KIT-300');
 
-      const title = document.createElement('div');
-      title.className = 'cart-title';
+    // BULK row (if present)
+    if (bulkIdx >= 0) {
+      const bulk = cart[bulkIdx];
+      bulk.qty = 1; // always 1 line for bulk
+      bulk.units = normalizeUnits(bulk.units);
 
-      const details = document.createElement('div');
-      details.className = 'cart-details';
+      const ppu = unitPriceFor(bulk.units);
+      const line = bulk.units * ppu;
+      subtotal += line;
 
-      const qtyWrap = document.createElement('div');
-      qtyWrap.className = 'cart-qty';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>Force Dowels — Bulk</strong><div class="muted">Tiered pricing applies automatically</div></td>
+        <td class="num">
+          <div class="qtywrap">
+            <button class="step" data-act="bulk-dec" aria-label="decrease">–</button>
+            <input class="bulk-units" type="number" step="${STEP}" min="${MIN}" max="${MAX}" value="${bulk.units}">
+            <button class="step" data-act="bulk-inc" aria-label="increase">+</button>
+            <span class="units">units</span>
+          </div>
+        </td>
+        <td class="num"><span class="ppu">${ppu.toFixed(4)}</span></td>
+        <td class="num"><span class="line">${fmtMoney(line)}</span></td>
+        <td class="num"><button class="btn btn--ghost" data-act="remove-bulk">Remove</button></td>
+      `;
+      body.appendChild(tr);
+    }
 
-      const price = document.createElement('div');
-      price.className = 'cart-price';
+    // KIT row (if present)
+    if (kitIdx >= 0) {
+      const kit = cart[kitIdx];
+      kit.units = 300;
+      kit.qty = Math.max(1, Number(kit.qty) || 1);
+      const kitTotal = kit.qty * 36.00; // fixed $36 each
+      subtotal += kitTotal;
 
-      // Content per type
-      if (it.type === 'bulk') {
-        title.innerHTML = `<strong>Force Dowels — Bulk</strong>`;
-        details.innerHTML =
-          `${(+it.units || 0).toLocaleString()} units @ ${fmt4$(ppu)}/unit`;
-        const lineTotal = (+it.units || 0) * (+it.qty || 1) * ppu;
-        price.innerHTML = `<strong>${fmt$(lineTotal)}</strong>`;
-        subtotal += lineTotal;
-      } else {
-        title.innerHTML = `<strong>Force Dowels Kit — 300 units</strong>`;
-        details.textContent = `Fixed ${fmt$(KIT_PRICE)} each`;
-        const lineTotal = (+it.qty || 1) * KIT_PRICE;
-        price.innerHTML = `<strong>${fmt$(lineTotal)}</strong>`;
-        subtotal += lineTotal;
-      }
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>Force Dowels — Starter Kit (300)</strong><div class="muted">300 units per kit</div></td>
+        <td class="num">
+          <div class="qtywrap">
+            <button class="step" data-act="kit-dec" aria-label="decrease">–</button>
+            <input class="kit-qty" type="number" min="1" step="1" value="${kit.qty}">
+            <button class="step" data-act="kit-inc" aria-label="increase">+</button>
+            <span class="units">kits</span>
+          </div>
+        </td>
+        <td class="num"><span class="ppu">36.00</span></td>
+        <td class="num"><span class="line">${fmtMoney(kitTotal)}</span></td>
+        <td class="num"><button class="btn btn--ghost" data-act="remove-kit">Remove</button></td>
+      `;
+      body.appendChild(tr);
+    }
 
-      // Qty controls (this is the number of identical orders, not units)
-      const minus = document.createElement('button');
-      minus.type = 'button';
-      minus.className = 'qty-btn';
-      minus.textContent = '–';
+    subtotalEl.textContent = fmtMoney(subtotal);
 
-      const input = document.createElement('input');
-      input.type = 'number';
-      input.min = '1';
-      input.step = '1';
-      input.value = String(+it.qty || 1);
-
-      const plus = document.createElement('button');
-      plus.type = 'button';
-      plus.className = 'qty-btn';
-      plus.textContent = '+';
-
-      qtyWrap.appendChild(minus);
-      qtyWrap.appendChild(input);
-      qtyWrap.appendChild(plus);
-
-      // Remove button
-      const remove = document.createElement('button');
-      remove.type = 'button';
-      remove.className = 'cart-remove';
-      remove.textContent = 'Remove';
-
-      // Wire events
-      minus.addEventListener('click', () => {
-        let q = (+input.value || 1) - 1;
-        if (q < 1) q = 1;
-        input.value = String(q);
-        it.qty = q;
-        saveCart(items);
-        render();
+    // Wire up row controls
+    body.querySelectorAll('[data-act="bulk-dec"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cart = readCart();
+        const i = cart.findIndex(it => it.sku === 'bulk');
+        if (i < 0) return;
+        cart[i].units = normalizeUnits((Number(cart[i].units) || MIN) - STEP);
+        saveCart(cart); render();
       });
-      plus.addEventListener('click', () => {
-        let q = (+input.value || 1) + 1;
-        input.value = String(q);
-        it.qty = q;
-        saveCart(items);
-        render();
+    });
+    body.querySelectorAll('[data-act="bulk-inc"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cart = readCart();
+        const i = cart.findIndex(it => it.sku === 'bulk');
+        if (i < 0) return;
+        cart[i].units = normalizeUnits((Number(cart[i].units) || MIN) + STEP);
+        saveCart(cart); render();
       });
-      input.addEventListener('change', () => {
-        let q = Math.max(1, Math.floor(+input.value || 1));
-        input.value = String(q);
-        it.qty = q;
-        saveCart(items);
-        render();
+    });
+    body.querySelectorAll('.bulk-units').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const cart = readCart();
+        const i = cart.findIndex(it => it.sku === 'bulk');
+        if (i < 0) return;
+        cart[i].units = normalizeUnits(inp.value);
+        saveCart(cart); render();
       });
-      remove.addEventListener('click', () => {
-        const next = getCart().filter(x => x.id !== it.id);
-        saveCart(next);
-        render();
+    });
+    body.querySelectorAll('[data-act="remove-bulk"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        let cart = readCart().filter(it => it.sku !== 'bulk');
+        saveCart(cart); render();
       });
-
-      // Assemble row
-      const left = document.createElement('div');
-      left.className = 'cart-left';
-      left.appendChild(title);
-      left.appendChild(details);
-
-      const right = document.createElement('div');
-      right.className = 'cart-right';
-      right.appendChild(qtyWrap);
-      right.appendChild(price);
-      right.appendChild(remove);
-
-      row.appendChild(left);
-      row.appendChild(right);
-
-      listEl.appendChild(row);
     });
 
-    subtotalEl.textContent = fmt$(subtotal);
-  }
-
-  // Clear cart
-  if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      if (!confirm('Clear your cart?')) return;
-      localStorage.removeItem(FD_CART_KEY);
-      render();
+    body.querySelectorAll('[data-act="kit-dec"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cart = readCart();
+        const i = cart.findIndex(it => it.sku === 'FD-KIT-300');
+        if (i < 0) return;
+        cart[i].qty = Math.max(1, (Number(cart[i].qty) || 1) - 1);
+        saveCart(cart); render();
+      });
+    });
+    body.querySelectorAll('[data-act="kit-inc"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cart = readCart();
+        const i = cart.findIndex(it => it.sku === 'FD-KIT-300');
+        if (i < 0) return;
+        cart[i].qty = (Number(cart[i].qty) || 1) + 1;
+        saveCart(cart); render();
+      });
+    });
+    body.querySelectorAll('.kit-qty').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const cart = readCart();
+        const i = cart.findIndex(it => it.sku === 'FD-KIT-300');
+        if (i < 0) return;
+        cart[i].qty = Math.max(1, Math.floor(Number(inp.value) || 1));
+        saveCart(cart); render();
+      });
+    });
+    body.querySelectorAll('[data-act="remove-kit"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        let cart = readCart().filter(it => it.sku !== 'FD-KIT-300');
+        saveCart(cart); render();
+      });
     });
   }
 
-  // Checkout → Stripe
-  if (checkoutBtn) {
-    checkoutBtn.addEventListener('click', async () => {
-      const items = getCart();
+  // Checkout
+  const btnCheckout = document.getElementById('btn-checkout');
+  if (btnCheckout) {
+    btnCheckout.addEventListener('click', async () => {
+      const items = readCart();
       if (!items.length) return;
 
-      checkoutBtn.disabled = true;
-      const prev = checkoutBtn.textContent;
-      checkoutBtn.textContent = 'Starting checkout…';
+      btnCheckout.disabled = true;
+      const prev = btnCheckout.textContent;
+      btnCheckout.textContent = 'Starting checkout…';
 
       try {
         const res = await fetch('/api/checkout', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ items })
         });
-        if (!res.ok) throw new Error('Server error');
+        if (!res.ok) {
+          const msg = await res.text();
+          throw new Error(msg || 'Checkout failed');
+        }
         const data = await res.json();
         if (data && data.url) {
-          window.location.href = data.url;
+          window.location = data.url;
         } else {
-          alert('Checkout failed: No URL returned.');
+          throw new Error('No checkout URL returned');
         }
-      } catch (e) {
-        console.error(e);
-        alert('Checkout failed. Please try again.');
+      } catch (err) {
+        alert('A server error occurred while starting checkout. Please try again.');
+        console.error(err);
       } finally {
-        checkoutBtn.disabled = false;
-        checkoutBtn.textContent = prev;
+        btnCheckout.disabled = false;
+        btnCheckout.textContent = prev;
       }
     });
   }
 
-  // initial paint
-  render();
+  document.addEventListener('DOMContentLoaded', render);
 })();
 
