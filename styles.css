@@ -2117,3 +2117,90 @@ button,
   border-radius:8px; padding:6px 10px; line-height:1; cursor:pointer;
 }
 .col-total .btn-remove:hover{ border-color:#3e5581; }
+
+/* === CART SUMMARY / SHIPPING FORM FIXES === */
+.cart-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 28px;
+  align-items: start;
+}
+@media (max-width: 980px) {
+  .cart-grid { grid-template-columns: 1fr; }
+}
+
+/* summary card */
+.cart-summary { position: sticky; top: 88px; }
+.summary-card {
+  width: 100%;
+  background: #0f1a2b;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 16px 16px 18px;
+  box-sizing: border-box;
+}
+.summary-title { margin: 2px 0 10px; font-size: 1.05rem; font-weight: 700; }
+.summary-row {
+  display:flex; justify-content:space-between; align-items:center;
+  gap: 12px; padding: 8px 0;
+}
+.summary-row.total { border-top:1px dashed rgba(255,255,255,0.12); margin-top:8px; padding-top:12px; }
+.summary-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 10px 0; }
+
+/* shipping fields container */
+.ship-form .ship-head {
+  display:flex; justify-content:space-between; align-items:center; margin: 8px 0 10px;
+}
+.ship-fields {
+  display:flex; flex-wrap:wrap; gap: 10px; margin-bottom: 10px;
+}
+.ship-fields .fld { flex: 1 1 100%; }
+.ship-fields .fld.half { flex: 1 1 calc(50% - 5px); min-width: 150px; }
+
+.ship-fields .fld > span {
+  display:block; font-size:.84rem; opacity:.85; margin-bottom:6px;
+}
+
+/* inputs/selects stay inside boundaries */
+.ship-fields input,
+.ship-fields select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: #0b1524;
+  color: #fff;                  /* make text visible */
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+}
+.ship-fields select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: linear-gradient(45deg,transparent 50%,rgba(255,255,255,.6) 50%),
+                    linear-gradient(135deg,rgba(255,255,255,.6) 50%,transparent 50%);
+  background-position: calc(100% - 18px) 16px, calc(100% - 13px) 16px;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+/* rates list */
+.rates { list-style:none; padding:0; margin: 8px 0 10px; display:flex; flex-direction:column; gap: 8px; }
+.rates li {
+  display:flex; justify-content:space-between; align-items:center; gap: 10px;
+  background:#0b1524; border:1px solid rgba(255,255,255,0.12); border-radius:10px;
+  padding:10px 12px;
+}
+.rates li .rate-carrier { font-weight:600; }
+.rates li .rate-eta { font-size:.85rem; opacity:.8; }
+.rates li .rate-amt { font-weight:700; }
+
+/* “Remove” button style in table, if you use .btn-remove */
+.btn-remove {
+  background: transparent; color: #f36e1f; border: 1px solid rgba(243,110,31,.5);
+  padding: 6px 10px; border-radius: 10px; cursor: pointer;
+}
+.btn-remove:hover { background: rgba(243,110,31,.1); }
+
+/* stop footer from overlapping the sticky card on short pages */
+.site-footer { margin-top: 30px; }
