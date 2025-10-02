@@ -1,172 +1,134 @@
-// /api/checkout.js
-// Node.js Serverless function for Vercel
+// /api/checkout.js  (Vercel Node runtime)
+const Stripe = require('stripe');
 
-exports.config = { runtime: "nodejs" };
+function unitPriceCentsFor(units) {
+  if (units >= 160000) return Math.round(0.063 * 100);   // $0.0630
+  if (units >= 20000)  return Math.round(0.0675 * 100);  // $0.0675
+  return Math.round(0.072 * 100);                        // $0.0720
+}
+const BULK_MIN  = 5000;
+const BULK_MAX  = 960000;
+const BULK_STEP = 5000;
 
-const Stripe = require("stripe");
-
-// ---- ENV REQUIREMENTS ----
-// STRIPE_SECRET_KEY           -> sk_test_... (for test mode)
-// NEXT_PUBLIC_BASE_URL        -> e.g. https://your-preview.vercel.app
-//
-// NOTE: We do NOT rely on price IDs here (to avoid fractional-cent issues).
-// We compute the total for bulk as 1 line item priced at the full amount.
-// The kit uses a fixed $36.00 per kit.
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2024-06-20",
-});
-
-function tierPricePerUnit(units) {
-  // Server-side source of truth for tiered pricing
-  if (units >= 160000 && units <= 960000) return 0.063;
-  if (units >= 20000 && units < 160000) return 0.0675;
-  if (units >= 5000 && units < 20000) return 0.072;
-  throw new Error("Invalid bulk units: must be between 5,000 and 960,000.");
+// Build absolute URL fallback (for success/cancel)
+function originFromReq(req) {
+  const proto = (req.headers['x-forwarded-proto'] || 'https');
+  const host  = req.headers['x-forwarded-host'] || req.headers.host;
+  return `${proto}://${host}`;
 }
 
-function normalizeItems(body) {
-  // Accept many shapes: {items:[...]}, {cart:[...]}, or a single object
-  const raw =
-    Array.isArray(body?.items) ? body.items :
-    Array.isArray(body?.cart)  ? body.cart  :
-    Array.isArray(body)        ? body       :
-    body ? [body] : [];
-
-  const out = [];
-  for (const it of raw) {
-    // Starter Kit
-    if (it?.type === "kit" || it?.sku === "FD-KIT-300" || it?.sku === "kit") {
-      const qty = Math.max(1, Number(it.qty ?? it.quantity ?? 1));
-      out.push({ kind: "kit", qty });
-      continue;
-    }
-
-    // Bulk
-    const units = Number(it?.units ?? it?.qty ?? it?.quantity ?? 0);
-    if (units && units >= 5000) {
-      // snap to 5k increments to be safe
-      const snapped = Math.min(960000, Math.max(5000, Math.round(units / 5000) * 5000));
-      out.push({ kind: "bulk", units: snapped });
-      continue;
-    }
-  }
-  return out;
-}
-
-function buildLineItem(item) {
-  if (item.kind === "kit") {
-    // $36 per kit
-    return {
-      price_data: {
-        currency: "usd",
-        product_data: {
-          name: "Force Dowels — Starter Kit (300)",
-        },
-        unit_amount: 3600, // $36.00
-      },
-      quantity: item.qty,
-    };
+async function handler(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  if (item.kind === "bulk") {
-    // Compute total and make a single-price line to avoid fractional cents per unit
-    const ppu = tierPricePerUnit(item.units);
-    const totalCents = Math.round(item.units * ppu * 100); // integer cents
-    return {
-      price_data: {
-        currency: "usd",
-        product_data: {
-          name: "Force Dowels — Bulk",
-          // Keep the details for the customer (and you)
-          description: `${item.units.toLocaleString()} units @ $${ppu.toFixed(4)}/unit`,
-        },
-        unit_amount: totalCents, // charge as ONE item for the full total
-      },
-      quantity: 1,
-    };
-  }
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return res.status(500).json({ error: 'Missing STRIPE_SECRET_KEY' });
 
-  throw new Error("Unknown cart item.");
-}
+  const stripe = new Stripe(key, { apiVersion: '2023-10-16' });
 
-module.exports = async function handler(req, res) {
   try {
-    if (req.method !== "POST") {
-      res.setHeader("Allow", "POST");
-      return res.status(405).json({ error: "METHOD_NOT_ALLOWED" });
+    const { items = [], shipping = null, destination = null } = req.body || {};
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'No items' });
     }
 
-    if (!process.env.STRIPE_SECRET_KEY) {
-      return res.status(500).json({ error: "MISSING_STRIPE_SECRET_KEY" });
+    // Normalize + validate
+    const norm = [];
+    for (const raw of items) {
+      if (!raw) continue;
+      if (raw.type === 'bulk') {
+        let u = Number(raw.units || 0);
+        if (!Number.isFinite(u)) continue;
+        u = Math.round(u / BULK_STEP) * BULK_STEP;
+        if (u < BULK_MIN) u = BULK_MIN;
+        if (u > BULK_MAX) u = BULK_MAX;
+        norm.push({ type: 'bulk', units: u });
+      } else if (raw.type === 'kit') {
+        let q = Number(raw.qty || 0);
+        if (!Number.isFinite(q) || q < 1) q = 1;
+        norm.push({ type: 'kit', qty: Math.floor(q) });
+      }
     }
+    if (!norm.length) return res.status(400).json({ error: 'No valid items' });
 
-    // Parse JSON body safely (Vercel Node can give string or object)
-    let body = req.body;
-    if (typeof body === "string") {
-      try { body = JSON.parse(body); } catch { body = {}; }
-    }
-
-    const items = normalizeItems(body);
-    if (!items.length) {
-      return res.status(400).json({ error: "EMPTY_CART" });
-    }
-
-    const line_items = items.map(buildLineItem);
-
-    // /api/checkout.js  (only the important part shown)
-export const config = { runtime: 'nodejs' };
-
-export default async function handler(req, res) {
-  try {
-    const { items, shipping } = req.body || {};
-    // ...you already build lineItems from 'items'
-    const lineItems = []; // <-- your existing items push here
-
-    // NEW: add shipping as a line item if provided
-    if (shipping && Number.isFinite(shipping.priceCents) && shipping.priceCents > 0) {
-      lineItems.push({
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: `Shipping — ${shipping.carrier} ${shipping.service}`,
+    // Build Stripe line_items (dynamic price_data)
+    const line_items = [];
+    for (const it of norm) {
+      if (it.type === 'bulk') {
+        const unitCents = unitPriceCentsFor(it.units);
+        // Make it a single line item with exact amount (units * unitCents)
+        line_items.push({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Force Dowels — Bulk',
+              description: `${it.units.toLocaleString()} units @ $${(unitCents/100).toFixed(4)}/unit`,
+            },
+            unit_amount: unitCents, // cents per unit
           },
-          unit_amount: Math.round(shipping.priceCents),
+          quantity: it.units,
+        });
+      } else {
+        line_items.push({
+          price_data: {
+            currency: 'usd',
+            product_data: { name: 'Force Dowels — Starter Kit (300)' },
+            unit_amount: 3600, // $36.00
+          },
+          quantity: it.qty,
+        });
+      }
+    }
+
+    // Optional: add shipping as a separate line item when you pass it from cart
+    if (shipping && Number.isFinite(Number(shipping.amount)) && Number(shipping.amount) >= 0) {
+      const amt = Math.round(Number(shipping.amount) * 100); // dollars -> cents if needed
+      // If the front-end already stores dollars, convert; if it stores number in USD already, remove *100 above.
+      // We’ll accept both: if amount < 1000 we treat it as dollars; tweak:
+      const cents = shipping.amount >= 1000 ? Math.round(shipping.amount) : amt;
+
+      line_items.push({
+        price_data: {
+          currency: (shipping.currency || 'USD').toLowerCase(),
+          product_data: {
+            name: `Shipping — ${shipping.carrier || 'Carrier'} ${shipping.service || ''}`.trim(),
+          },
+          unit_amount: cents,
         },
         quantity: 1,
       });
     }
 
-    // create the session with lineItems
-    // ...
-  } catch (e) {
-    // ...
-  }
-}
-
-    // Base URL for redirects (env first; fallback to Host header)
-    const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL ||
-      (req.headers && req.headers.host ? `https://${req.headers.host}` : "http://localhost:3000");
+    // URLs
+    const origin = originFromReq(req);
+    const success_url = process.env.CHECKOUT_SUCCESS_URL || `${origin}/success.html`;
+    const cancel_url  = process.env.CHECKOUT_CANCEL_URL  || `${origin}/cart.html`;
 
     const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      payment_method_types: ["card"],
+      mode: 'payment',
+      payment_method_types: ['card'],
       line_items,
-      success_url: `${baseUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/cart.html`,
-      phone_number_collection: { enabled: true },
-      shipping_address_collection: { allowed_countries: ["US", "CA"] },
-      metadata: { source: "forcedowels-preview" },
+      success_url,
+      cancel_url,
+      // Optional shipping address collection (if you want Stripe to capture address)
+      shipping_address_collection: {
+        allowed_countries: ['US', 'CA', 'MX'],
+      },
+      metadata: {
+        // Helpful for webhooks/emails
+        payload: JSON.stringify({ items: norm, shipping, destination }),
+      },
     });
 
     return res.status(200).json({ url: session.url });
   } catch (err) {
-    console.error("CHECKOUT ERROR:", err);
-    // Bubble a friendly error to the browser so you can see it in DevTools
-    return res.status(500).json({
-      error: "CHECKOUT_FAILED",
-      message: err?.message || "Internal error",
-    });
+    console.error('Checkout error:', err);
+    return res.status(500).json({ error: 'Server error creating session' });
   }
-};
+}
+
+// Vercel runtime flag
+module.exports = handler;
+module.exports.config = { runtime: 'nodejs' };
