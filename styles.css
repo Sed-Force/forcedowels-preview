@@ -2033,3 +2033,87 @@ button,
 .remove-btn svg{
   width: 14px; height: 14px;
 }
+
+/* ===== Cart layout & footer-safe sticky ===== */
+.cart-section { padding: 24px 0 120px; } /* extra bottom room so sticky never hits footer */
+.cart-grid {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 360px;
+  gap: 28px;
+  align-items: start;
+}
+@media (max-width: 980px) {
+  .cart-grid { grid-template-columns: 1fr; }
+  .cart-summary .summary-card { position: static; }
+}
+
+/* ===== Summary card styling ===== */
+.cart-summary .summary-card {
+  position: sticky;
+  top: 88px;
+  background: #0c1422;
+  border: 1px solid #1e2a3d;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+.summary-title { font-size: 18px; margin: 0 0 10px; }
+
+.summary-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0;
+}
+.summary-row + .summary-row { border-top: 1px dashed rgba(255,255,255,.08); }
+.summary-row.total { font-size: 18px; font-weight: 700; }
+.summary-divider { height: 1px; background: rgba(255,255,255,.08); margin: 12px 0; }
+
+.muted.small { font-size: 12px; opacity: .75; margin-top: 8px; }
+
+/* ===== Shipping form UI ===== */
+.ship-form .ship-head{
+  display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;
+}
+.ship-form .link{
+  background:none; border:none; padding:0; color:#ffa72b; text-decoration:underline; cursor:pointer;
+}
+
+.ship-fields{
+  display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;
+}
+.ship-fields .fld { display:flex; flex-direction:column; gap:6px; grid-column: span 2; }
+.ship-fields .fld.half { grid-column: span 1; }
+.ship-fields .fld span{ font-size:12px; color:#a8b0bd; }
+
+.ship-fields input,
+.ship-fields select{
+  height: 38px; padding: 0 12px; border-radius: 10px;
+  border: 1px solid #26334a; background: #0a1220; color: #e8edf7; outline: none;
+}
+.ship-fields input:focus,
+.ship-fields select:focus{
+  border-color: #ffb34d; box-shadow: 0 0 0 3px rgba(255,179,77,.2);
+}
+
+/* Buttons (secondary = dark ghost style) */
+.btn.btn--secondary { background:#152236; border:1px solid #2c3d5a; color:#e9eef8; }
+.btn.btn--secondary:hover{ border-color:#425b87; transform: translateY(-1px); }
+.btn.btn--secondary.btn-wide, .btn.btn--accent.btn-wide { width:100%; }
+
+/* ===== Rates list ===== */
+.rates{ list-style:none; margin:8px 0 12px; padding:0; display:flex; flex-direction:column; gap:8px; }
+.rate-option{
+  display:flex; align-items:center; gap:10px; padding:10px 12px;
+  border:1px solid #1d2a3f; background:#0a1321; border-radius:10px; cursor:pointer;
+}
+.rate-option:hover{ border-color:#2f4264; }
+.rate-option input{ accent-color:#ffb34d; }
+.rate-carrier{ font-weight:600; }
+.rate-service{ opacity:.85; }
+.rate-price{ margin-left:auto; font-weight:700; }
+
+/* ===== Nicer remove button in table ===== */
+.col-total .btn-remove{
+  margin-left:12px; border:1px solid #2b3b57; background:#121c2d; color:#e9eef8;
+  border-radius:8px; padding:6px 10px; line-height:1; cursor:pointer;
+}
+.col-total .btn-remove:hover{ border-color:#3e5581; }
