@@ -144,6 +144,28 @@
   </section>
 </main>
 
+  <script>
+(function () {
+  const link = document.getElementById('btn-view-cart') || document.querySelector('[data-view-cart]');
+  if (!link) return;
+  link.addEventListener('click', function (e) {
+    try {
+      const raw = localStorage.getItem('fd_cart');
+      if (!raw) return; // nothing to pass
+      const b64 = btoa(unescape(encodeURIComponent(raw)));
+      // go to your cart on the same site; the cart page will import from ?cart=
+      const href = '/cart.html?cart=' + encodeURIComponent(b64);
+      e.preventDefault();
+      window.location.href = href;
+
+      // Optional cookie backup (helps if someone navigates to /cart.html manually afterwards)
+      document.cookie = 'fd_cart_b64=' + b64 + '; path=/; max-age=1200';
+    } catch {}
+  });
+})();
+</script>
+
+
 <!-- Footer (trimmed) -->
 <footer class="site-footer">
   <div class="container footer-main">
