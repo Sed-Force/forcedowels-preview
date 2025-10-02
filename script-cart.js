@@ -1,5 +1,3 @@
-<!-- /public/script-cart.js -->
-<script>
 /* MASTER cart logic with cross-origin import + street support
    Storage:
      'fd_cart'       : normalized array
@@ -25,7 +23,6 @@
     return 0.0720;
   }
   function lineTotalCentsForUnits(units) {
-    // multiply then round, so 5,000 * 0.0720 => $360.00 (not 350)
     return Math.round(unitPriceFor(units) * 100 * units);
   }
 
@@ -73,7 +70,6 @@
     if (!raw) return null;
     const lower = (x)=> String(x||'').toLowerCase();
 
-    // explicit types
     if (raw.type === 'bulk' || raw.type === 'BULK') {
       let u = n(raw.units ?? raw.qty ?? raw.quantity);
       if (!Number.isFinite(u) || u <= 0) return null;
@@ -87,7 +83,6 @@
       return { type:'kit', qty:q };
     }
 
-    // SKU shapes
     if ('sku' in raw) {
       const s = lower(raw.sku);
       if (s.includes('kit')) {
@@ -103,7 +98,6 @@
       }
     }
 
-    // generic
     if ('units' in raw) {
       let u = n(raw.units);
       if (!Number.isFinite(u) || u <= 0) return null;
@@ -144,7 +138,6 @@
     return document.cookie.split(';').map(s=>s.trim()).find(s=>s.startsWith(name+'='))?.split('=').slice(1).join('=') || '';
   }
   function importCartIfPresent() {
-    // 1) URL param ?cart=<base64 json>
     const qp = new URLSearchParams(location.search);
     const enc = qp.get('cart');
     if (enc) {
@@ -154,14 +147,12 @@
         const items = (Array.isArray(arr)?arr:[]).map(normalizeItem).filter(Boolean);
         if (items.length) {
           saveCart(items);
-          // clean URL
           qp.delete('cart');
           history.replaceState({}, '', location.pathname + (qp.toString()?('?'+qp.toString()):''));
           return true;
         }
       } catch {}
     }
-    // 2) Cookie fallback
     const c = parseCookie('fd_cart_b64');
     if (c) {
       const json = b64decodeToString(c);
@@ -287,7 +278,6 @@
         cartBody.appendChild(tr);
       });
 
-      // events
       $$('.btn-dec', cartBody).forEach(b=>b.addEventListener('click', onStep.bind(null,-1)));
       $$('.btn-inc', cartBody).forEach(b=>b.addEventListener('click', onStep.bind(null,+1)));
       $$('.qty-input', cartBody).forEach(i=>i.addEventListener('change', onManual));
@@ -504,13 +494,10 @@
 
   // ---------- Init ----------
   ensureCountryOptions();
-  // If LS is empty on this origin, try importing from URL/cookie
   const hadImport = importCartIfPresent();
   if (!hadImport && !loadCartLS().length) {
-    // nothing yet; still render empty UI
+    // nothing yet
   }
   writeDestToUI(getDest());
   render();
 })();
-</script>
-
