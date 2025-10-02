@@ -1,283 +1,305 @@
 // /api/shipping/quote.js
-// Runtime: Node (NOT Edge) so we can call carrier APIs in later steps.
-export const config = { runtime: 'nodejs' };
+// Quotes shipping for cart items using UPS + USPS (live) and an LTL estimate (TQL placeholder).
+const fetch = require('node-fetch');
 
-/**
- * Request shape (POST JSON):
- * {
- *   destination: { country: 'US'|'CA'|'MX', state: 'AZ', city: 'Gilbert', postal: '85296' },
- *   items: [
- *     { type: 'bulk', units: number }, // 5k..960k in 5k steps
- *     { type: 'kit',  qty:   number }  // 1..N (300 pcs per kit)
- *   ]
- * }
- *
- * Response:
- * {
- *   ok: true,
- *   summary: {
- *     totalUnits, totalKits, totalWeightLbs,
- *     parcels: [{qty, weightLbs, dims:{l,w,h}, kind:'bulk-5k'|'bulk-10k'|'bulk-15k'|'bulk-20k'|'kit-2per'}],
- *     pallets: [{qty, weightLbs, dims:{l,w,h}}],
- *     notes: string[]
- *   },
- *   rates: [
- *     { carrier:'UPS',   service:'Ground',  amount: 123.45, currency:'USD', eta:null, meta:{} },
- *     { carrier:'USPS',  service:'Priority', amount: 98.76, currency:'USD', eta:null, meta:{} },
- *     { carrier:'TQL',   service:'LTL',     amount: 210.00, currency:'USD', eta:null, meta:{} },
- *   ]
- * }
- */
-
-// ---------- ENV (origin address + carrier creds) ----------
 const ORIGIN = {
-  name   : process.env.SHIP_FROM_NAME   || 'Force Dowels',
-  street : process.env.SHIP_FROM_STREET || '',
-  city   : process.env.SHIP_FROM_CITY   || '',
-  state  : process.env.SHIP_FROM_STATE  || '',
-  postal : process.env.SHIP_FROM_ZIP    || '',
-  country: process.env.SHIP_FROM_COUNTRY|| 'US',
+  name:   process.env.ORIGIN_NAME   || 'Force Dowels',
+  street: process.env.ORIGIN_STREET || '4455 E Nunneley Rd, Ste 103',
+  city:   process.env.ORIGIN_CITY   || 'Gilbert',
+  state:  process.env.ORIGIN_STATE  || 'AZ',
+  postal: process.env.ORIGIN_POSTAL || '85296',
+  country:process.env.ORIGIN_COUNTRY|| 'US',
 };
 
-// UPS creds (we’ll wire these in step 5)
 const UPS = {
-  clientId     : process.env.UPS_CLIENT_ID || '',
-  clientSecret : process.env.UPS_CLIENT_SECRET || '',
-  accountNumber: process.env.UPS_ACCOUNT_NUMBER || '',
-  env          : (process.env.UPS_ENV || 'test').toLowerCase(), // 'test' or 'prod'
+  clientId:     process.env.UPS_CLIENT_ID || '',
+  clientSecret: process.env.UPS_CLIENT_SECRET || '',
+  shipperNumber:process.env.UPS_SHIPPER_NUMBER || '',
 };
 
-// USPS creds (we’ll wire these in step 5)
 const USPS = {
-  clientId    : process.env.USPS_CLIENT_ID || '',
-  clientSecret: process.env.USPS_CLIENT_SECRET || '',
+  userId: process.env.USPS_WEBTOOLS_USERID || '', // recommended USPS WebTools UserID
 };
 
-// TQL creds (we’ll wire these in step 6)
-const TQL = {
-  username    : process.env.TQL_USERNAME || '',
-  password    : process.env.TQL_PASSWORD || '',
-  clientId    : process.env.TQL_CLIENT_ID || '',
-  clientSecret: process.env.TQL_CLIENT_SECRET || '',
-  baseUrl     : process.env.TQL_BASE_URL || '',
-  testBaseUrl : process.env.TQL_TEST_BASE_URL || '',
-  subKey      : process.env.NEXT_PUBLIC_TQL_SUBSCRIPTION_KEY || '',
-};
+// Packaging rules
+const BULK_STEP  = 5000;
+const LBS_PER_5K = 19;        // round up 5,000 → 19 lb
+// Boxes:
+//  - 5k/10k: 15x15x12
+//  - 15k/20k: 22x22x12
+const BOX_A = { l: 15, w: 15, h: 12 }; // fits up to 10k
+const BOX_B = { l: 22, w: 22, h: 12 }; // fits up to 20k
+// Starter kits: 9x11x2, up to 2 kits/box, 1.7 lb each
+const KIT_BOX = { l: 11, w: 9, h: 2, maxKits: 2, kitWeight: 1.7 };
 
-// ---------- Product packing rules (from your sheet + notes) ----------
-// Bulk unit -> weight ~0.0038 lb (5k ≈ 19 lb; 20k ≈ 77 lb)
-// Box sizes:
-//   - up to 10k: 15"x15"x12"
-//   - 15k or 20k: 22"x22"x12"
-// Pallet rule (LTL): 80k units per pallet (4 x 20k boxes).
-// Pallet dims (approx): 48" x 40" x 36". First pallet 458 lb, each additional +308 lb.
-const WEIGHT_PER_UNIT = 0.0038; // lbs (rounded)
-const BOX_5K  = { units:  5000, weight:  19, dims: { l:15, w:15, h:12 }, code: 'bulk-5k'  };
-const BOX_10K = { units: 10000, weight:  38, dims: { l:15, w:15, h:12 }, code: 'bulk-10k' };
-const BOX_15K = { units: 15000, weight:  58, dims: { l:22, w:22, h:12 }, code: 'bulk-15k' };
-const BOX_20K = { units: 20000, weight:  77, dims: { l:22, w:22, h:12 }, code: 'bulk-20k' };
+function round(n) { return Math.round(n * 1000) / 1000; }
 
-const PALLET = {
-  unitsPerPallet: 80000, // 4 x 20k boxes
-  firstWeight: 458,       // lbs
-  addPerPallet: 308,      // lbs (766-458, then +308 consistently on your table)
-  dims: { l:48, w:40, h:36 },
-};
+// Compute packages for bulk units
+function packBulk(units) {
+  let left = units;
+  const boxes = [];
 
-// Starter kits: 2 kits per parcel, 9"x11"x2", 1.7 lb per kit
-const KIT = { perBox: 2, weightPer: 1.7, dims: { l:9, w:11, h:2 }, code: 'kit-2per' };
-
-// ---------- Helpers ----------
-function badRequest(res, message) {
-  res.status(400).json({ ok:false, error: message });
-}
-
-function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
-
-// Greedy packer: prefer 20k, then 15k, then 10k, then 5k
-function packBulkIntoParcels(units) {
-  const parcels = [];
-  let remain = Math.max(0, Math.floor(units / 5000) * 5000); // snap to 5k
-
-  const useBox = (BOX) => {
-    const count = Math.floor(remain / BOX.units);
-    if (count > 0) {
-      parcels.push({ qty: count, weightLbs: BOX.weight, dims: BOX.dims, kind: BOX.code });
-      remain -= count * BOX.units;
-    }
-  };
-
-  useBox(BOX_20K);
-  useBox(BOX_15K);
-  useBox(BOX_10K);
-  useBox(BOX_5K);
-
-  return { parcels, remainderUnits: remain };
-}
-
-function palletsForUnits(units) {
-  const pallets = Math.ceil(units / PALLET.unitsPerPallet);
-  if (pallets <= 0) return { pallets: [], totalWeight: 0 };
-
-  const arr = [];
-  let totalWeight = 0;
-  for (let i=0; i<pallets; i++) {
-    const w = i === 0 ? PALLET.firstWeight : PALLET.firstWeight + PALLET.addPerPallet * i;
-    arr.push({ qty: 1, weightLbs: w, dims: PALLET.dims });
-    totalWeight += w;
+  while (left >= 20000) {
+    boxes.push({ type: 'bulk', units: 20000, weight: LBS_PER_5K * 4, dims: BOX_B });
+    left -= 20000;
   }
-  return { pallets: arr, totalWeight };
+  while (left >= 10000) {
+    boxes.push({ type: 'bulk', units: 10000, weight: LBS_PER_5K * 2, dims: BOX_A });
+    left -= 10000;
+  }
+  while (left >= 15000) {
+    boxes.push({ type: 'bulk', units: 15000, weight: LBS_PER_5K * 3, dims: BOX_B });
+    left -= 15000;
+  }
+  while (left >= 5000) {
+    boxes.push({ type: 'bulk', units: 5000, weight: LBS_PER_5K, dims: BOX_A });
+    left -= 5000;
+  }
+  return boxes;
 }
 
 function packKits(qty) {
-  const boxes = Math.ceil(Math.max(0, qty) / KIT.perBox);
-  if (boxes <= 0) return [];
-  return [{ qty: boxes, weightLbs: round2(KIT.weightPer * KIT.perBox), dims: KIT.dims, kind: KIT.code }];
+  const out = [];
+  let remaining = Math.max(0, qty|0);
+  while (remaining > 0) {
+    const inBox = Math.min(KIT_BOX.maxKits, remaining);
+    out.push({
+      type: 'kit',
+      kits: inBox,
+      weight: round(inBox * KIT_BOX.kitWeight),
+      dims: { l: KIT_BOX.l, w: KIT_BOX.w, h: KIT_BOX.h },
+    });
+    remaining -= inBox;
+  }
+  return out;
 }
 
-// Build a complete packing plan from cart items
-function buildPackingPlan(items) {
-  let bulkUnits = 0;
-  let totalKits = 0;
-
-  for (const it of (items || [])) {
-    if (it?.type === 'bulk') bulkUnits += Number(it.units || 0);
-    if (it?.type === 'kit')  totalKits += Number(it.qty || 0);
-  }
-
-  const notes = [];
-  const summary = {
-    totalUnits: bulkUnits,
-    totalKits,
-    parcels: [],
-    pallets: [],
-    totalWeightLbs: 0,
-    notes,
-  };
-
-  // Decide parcel vs pallet: if >= 80k units, we start using pallets.
-  if (bulkUnits >= PALLET.unitsPerPallet) {
-    const { pallets, totalWeight } = palletsForUnits(bulkUnits);
-    summary.pallets = pallets;
-    summary.totalWeightLbs += totalWeight;
-    notes.push('Bulk packed on pallets (80k units per pallet).');
-  } else if (bulkUnits > 0) {
-    const packed = packBulkIntoParcels(bulkUnits);
-    packed.parcels.forEach(p => {
-      // each "p" entry represents one kind of box; duplicate into rows
-      summary.parcels.push({ qty: p.qty, weightLbs: p.weightLbs, dims: p.dims, kind: p.kind });
-      summary.totalWeightLbs += p.qty * p.weightLbs;
-    });
-    if (packed.remainderUnits > 0) {
-      notes.push(`Unpacked remainder (snapped to 5k): ${packed.remainderUnits} units.`);
-    } else {
-      notes.push('Bulk packed in parcel boxes (5k/10k/15k/20k).');
+function buildPackages(items) {
+  const pkgs = [];
+  for (const it of items) {
+    if (it.type === 'bulk') {
+      const u = Number(it.units || 0);
+      if (u >= BULK_STEP) pkgs.push(...packBulk(u));
+    } else if (it.type === 'kit') {
+      const q = Number(it.qty || 0);
+      if (q > 0) pkgs.push(...packKits(q));
     }
   }
+  return pkgs;
+}
 
-  // Kits
-  if (totalKits > 0) {
-    const kitBoxes = packKits(totalKits); // 2 kits per parcel
-    kitBoxes.forEach(k => {
-      summary.parcels.push({ qty: k.qty, weightLbs: k.weightLbs, dims: k.dims, kind: k.kind });
-      summary.totalWeightLbs += k.qty * k.weightLbs;
-    });
-    notes.push('Starter kits: 2 kits per parcel (9x11x2).');
+// ----- USPS (WebTools) live rating (domestic only here for brevity) -----
+async function uspsRateDomestic(pkg, dest) {
+  if (!USPS.userId) return null;
+
+  // USPS expects ounces. 1 lb = 16 oz
+  const weightLbs = Math.ceil(pkg.weight || 1);
+  const pounds = Math.max(0, weightLbs);
+  const ounces = 0;
+
+  // Priority Mail (Retail) example. Container options can include "MediumFlatRateBox".
+  const container = (pkg.type === 'kit' && pkg.kits <= 5) ? 'MediumFlatRateBox' : '';
+  const size = (pkg.dims.l > 12 || pkg.dims.w > 12 || pkg.dims.h > 12) ? 'LARGE' : 'REGULAR';
+
+  const xml = `
+    <RateV4Request USERID="${USPS.userId}">
+      <Revision>2</Revision>
+      <Package ID="1">
+        <Service>PRIORITY</Service>
+        <ZipOrigination>${ORIGIN.postal}</ZipOrigination>
+        <ZipDestination>${dest.postal}</ZipDestination>
+        <Pounds>${pounds}</Pounds>
+        <Ounces>${ounces}</Ounces>
+        <Container>${container}</Container>
+        <Size>${size}</Size>
+        <Width>${pkg.dims.w}</Width>
+        <Length>${pkg.dims.l}</Length>
+        <Height>${pkg.dims.h}</Height>
+        <Machinable>true</Machinable>
+      </Package>
+    </RateV4Request>`.replace(/\s+/g, ' ').trim();
+
+  const url = `https://secure.shippingapis.com/ShippingAPI.dll?API=RateV4&XML=${encodeURIComponent(xml)}`;
+  const res = await fetch(url);
+  const text = await res.text();
+
+  const rateMatch = text.match(/<Rate>([\d.]+)<\/Rate>/i);
+  const amount = rateMatch ? Number(rateMatch[1]) : null;
+  if (!amount) return null;
+
+  const service = container === 'MediumFlatRateBox' ? 'Priority Mail Medium Flat Rate' : 'Priority Mail';
+  return { carrier: 'USPS', service, amount, currency: 'USD' };
+}
+
+async function uspsQuote(packages, dest) {
+  if (dest.country !== 'US') return [];
+  const results = [];
+  for (const p of packages) {
+    const r = await uspsRateDomestic(p, dest).catch(()=>null);
+    if (r) results.push(r);
   }
-
-  summary.totalWeightLbs = round2(summary.totalWeightLbs);
-  return summary;
+  if (!results.length) return [];
+  const total = results.reduce((s,r)=>s + (r.amount||0), 0);
+  return [{ carrier:'USPS', service:'USPS (combined)', amount: total, currency:'USD' }];
 }
 
-// ---------- Carrier rate stubs (step 5 will wire real calls) ----------
-async function quoteUPS(/* origin, destination, parcels, pallets */) {
-  // TODO (Step 5): Implement real UPS OAuth + Rate API calls here.
-  // If you want a visible placeholder in the UI until creds are wired, return null to hide it.
-  return null;
+// ----- UPS OAuth + Rate (simplified) -----
+async function upsToken() {
+  if (!UPS.clientId || !UPS.clientSecret) return null;
+  const res = await fetch('https://www.ups.com/security/v1/oauth/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type':'application/x-www-form-urlencoded',
+      'x-merchant-id': UPS.shipperNumber || '',
+      'Accept':'application/json',
+      'Authorization': 'Basic ' + Buffer.from(`${UPS.clientId}:${UPS.clientSecret}`).toString('base64'),
+    },
+    body: 'grant_type=client_credentials',
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.access_token || null;
 }
 
-async function quoteUSPS(/* origin, destination, parcels */) {
-  // TODO (Step 5): Implement USPS Web Tools or eVS rate calls.
-  return null;
-}
-
-async function quoteTQL(/* origin, destination, pallets */) {
-  // TODO (Step 6): Implement TQL LTL quotes.
-  return null;
-}
-
-// ---------- A safe, conservative estimate (optional) ----------
-// Shown only if all carriers return null (so UI has *something* to show).
-function fallbackEstimate(destination, summary) {
-  const { totalWeightLbs, parcels, pallets } = summary;
-  const hasPallets = (pallets || []).length > 0;
-
-  // Very rough per-lb heuristic; we’ll replace with real quotes later.
-  const country = (destination?.country || 'US').toUpperCase();
-  let perLb = 0.9, base = 12;   // US parcel-ish
-  if (country === 'CA') { perLb = 1.6; base = 25; }
-  if (country === 'MX') { perLb = 1.8; base = 28; }
-
-  let amount = 0;
-  if (hasPallets) {
-    // Pallet heuristic
-    // first pallet “base” + per-lb (lower rate)
-    amount = 180 + Math.max(0, totalWeightLbs) * (country === 'US' ? 0.35 : 0.55);
-  } else {
-    amount = base + totalWeightLbs * perLb;
-  }
-  return {
-    carrier: 'Estimate',
-    service: hasPallets ? 'LTL (est.)' : 'Parcel (est.)',
-    amount: round2(Math.max(0, amount)),
-    currency: 'USD',
-    eta: null,
-    meta: { note: 'Temporary estimate until real carrier rates are enabled.' }
+async function upsRatePackage(token, pkg, dest) {
+  // If this returns 404 for your account, change v2405 -> v2403 or v2205
+  const endpoint = 'https://onlinetools.ups.com/api/rating/v2405/Rate';
+  const body = {
+    RateRequest: {
+      Request: { TransactionReference: { CustomerContext: 'Force Dowels' } },
+      Shipment: {
+        Shipper: {
+          Name: ORIGIN.name,
+          ShipperNumber: UPS.shipperNumber || undefined,
+          Address: { AddressLine: ORIGIN.street, City: ORIGIN.city, StateProvinceCode: ORIGIN.state, PostalCode: ORIGIN.postal, CountryCode: ORIGIN.country },
+        },
+        ShipTo: {
+          Name: dest.name || 'Customer',
+          Address: { AddressLine: dest.street || '', City: dest.city || '', StateProvinceCode: dest.state || '', PostalCode: dest.postal, CountryCode: dest.country },
+        },
+        ShipFrom: {
+          Name: ORIGIN.name,
+          Address: { AddressLine: ORIGIN.street, City: ORIGIN.city, StateProvinceCode: ORIGIN.state, PostalCode: ORIGIN.postal, CountryCode: ORIGIN.country },
+        },
+        Service: { Code: '03' }, // Ground (placeholder)
+        Package: [{
+          PackagingType: { Code: '02' }, // Customer supplied
+          Dimensions: {
+            UnitOfMeasurement: { Code: 'IN' },
+            Length: String(pkg.dims.l),
+            Width:  String(pkg.dims.w),
+            Height: String(pkg.dims.h),
+          },
+          PackageWeight: {
+            UnitOfMeasurement: { Code: 'LBS' },
+            Weight: String(Math.ceil(pkg.weight || 1)),
+          },
+        }],
+      },
+    },
   };
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type':'application/json',
+      'Accept':'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) return null;
+  const data = await res.json().catch(()=>null);
+  const monetary = data?.RateResponse?.RatedShipment?.TotalCharges?.MonetaryValue;
+  const currency = data?.RateResponse?.RatedShipment?.TotalCharges?.CurrencyCode || 'USD';
+  if (!monetary) return null;
+  return { carrier:'UPS', service:'Ground', amount: Number(monetary), currency };
 }
 
-// ---------- Handler ----------
-export default async function handler(req, res) {
+async function upsQuote(packages, dest) {
+  const token = await upsToken();
+  if (!token) return [];
+  const out = [];
+  for (const p of packages) {
+    const r = await upsRatePackage(token, p, dest).catch(()=>null);
+    if (r) out.push(r);
+  }
+  if (!out.length) return [];
+  const total = out.reduce((s,r)=> s + (r.amount||0), 0);
+  return [{ carrier:'UPS', service:'UPS (combined)', amount: total, currency:'USD' }];
+}
+
+// ----- TQL LTL (placeholder estimate) -----
+function tqlEstimate(packages, dest) {
+  // Very rough: $0.45/lb domestic, $0.55/lb CA/MX, min $180
+  const totalWeight = packages.reduce((s,p)=> s + (p.weight||0), 0);
+  const perLb = (dest.country === 'CA' || dest.country === 'MX') ? 0.55 : 0.45;
+  const estimate = Math.max(180, Math.ceil(totalWeight * perLb));
+  return { carrier:'TQL', service:'LTL (estimated)', amount: estimate, currency:'USD' };
+}
+
+function shouldPreferLTL(packages) {
+  const totalWeight = packages.reduce((s,p)=> s + (p.weight||0), 0);
+  const oversized = packages.some(p => Math.max(p.dims.l, p.dims.w, p.dims.h) > 48);
+  return totalWeight > 150 || packages.length > 6 || oversized;
+}
+
+async function handler(req, res) {
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return badRequest(res, 'Use POST with { destination, items }');
+    res.setHeader('Allow','POST');
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
-    const { destination, items } = req.body || {};
-    if (!destination || !items) {
-      return badRequest(res, 'Missing destination or items');
+    const { items = [], destination } = req.body || {};
+    if (!Array.isArray(items) || !destination || !destination.country || !destination.postal) {
+      return res.status(400).json({ error: 'Missing items or destination' });
     }
 
-    // Build packing plan
-    const summary = buildPackingPlan(items);
+    const pkgs = buildPackages(items);
 
-    // Ask carriers (stubs return null until wired)
-    const carriers = [];
-    const ups = await quoteUPS(ORIGIN, destination, summary.parcels, summary.pallets);
-    if (ups) carriers.push(ups);
+    const dest = {
+      country: (destination.country || 'US').toUpperCase(),
+      state:   (destination.state || '').toUpperCase(),
+      city:     destination.city || '',
+      postal:   destination.postal || '',
+      street:   destination.street || '',
+      name:     destination.name || 'Customer',
+    };
 
-    const usps = await quoteUSPS(ORIGIN, destination, summary.parcels);
-    if (usps) carriers.push(usps);
+    const quotes = [];
 
-    const tql = await quoteTQL(ORIGIN, destination, summary.pallets);
-    if (tql) carriers.push(tql);
-
-    // If nothing real yet, add a fallback single “estimate” so the UI shows something
-    if (carriers.length === 0) {
-      carriers.push(fallbackEstimate(destination, summary));
+    // USPS (domestic snippet)
+    if (dest.country === 'US') {
+      const usps = await uspsQuote(pkgs, dest).catch(()=>[]);
+      quotes.push(...usps);
     }
 
-    // Sort by price asc (if any null amounts sneak in, push them to the end)
-    carriers.sort((a, b) => {
-      const ax = typeof a.amount === 'number' ? a.amount : Number.POSITIVE_INFINITY;
-      const bx = typeof b.amount === 'number' ? b.amount : Number.POSITIVE_INFINITY;
-      return ax - bx;
-    });
+    // UPS
+    const ups = await upsQuote(pkgs, dest).catch(()=>[]);
+    quotes.push(...ups);
 
-    return res.status(200).json({ ok: true, summary, rates: carriers });
-  } catch (err) {
-    console.error('quote error', err);
-    return res.status(500).json({ ok:false, error: 'Failed to build shipping quote.' });
+    // LTL estimate
+    if (shouldPreferLTL(pkgs)) {
+      quotes.push(tqlEstimate(pkgs, dest));
+    }
+
+    if (!quotes.length) {
+      quotes.push(tqlEstimate(pkgs, dest));
+    }
+
+    const normalized = quotes
+      .filter(q => Number.isFinite(q.amount))
+      .map(q => ({ ...q, currency: (q.currency || 'USD').toUpperCase() }))
+      .sort((a,b) => a.amount - b.amount);
+
+    return res.status(200).json({ rates: normalized, packages: pkgs });
+  } catch (e) {
+    console.error('Quote error:', e);
+    return res.status(500).json({ error: 'Failed to get rates' });
   }
 }
+
+module.exports = handler;
+module.exports.config = { runtime: 'nodejs' };
