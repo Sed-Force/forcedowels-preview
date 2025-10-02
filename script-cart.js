@@ -1,11 +1,13 @@
 <!-- /public/script-cart.js -->
 <script>
-/* MASTER: /public/script-cart.js
-   Force Dowels — Cart + Shipping (robust cart loader, street support)
+/* MASTER cart logic with cross-origin import + street support
    Storage:
-     'fd_cart'       : array of items (various shapes supported)
+     'fd_cart'       : normalized array
      'fd_dest'       : {country, state, city, postal, street}
      'fd_ship_quote' : chosen rate
+   Cross-origin import:
+     - ?cart=<base64 json of fd_cart>   (preferred)
+     - cookie "fd_cart_b64" (optional fallback)
 */
 (function () {
   // ---------- Config ----------
@@ -17,14 +19,13 @@
   const BULK_MAX  = 960000;
   const BULK_STEP = 5000;
 
-  // Tiered unit pricing in dollars (not cents)
   function unitPriceFor(units) {
     if (units >= 160000) return 0.0630;
     if (units >= 20000)  return 0.0675;
     return 0.0720;
   }
   function lineTotalCentsForUnits(units) {
-    // multiply first, round after — avoids the $350 issue
+    // multiply then round, so 5,000 * 0.0720 => $360.00 (not 350)
     return Math.round(unitPriceFor(units) * 100 * units);
   }
 
@@ -46,7 +47,7 @@
   const btnCheckout = $('#btn-checkout');
   const linkUseSaved= $('#use-saved-dest') || $('#btn-use-saved');
 
-  // Shipping inputs (includes Street)
+  // Shipping inputs (Street included)
   const inCountry = $('#ship-country');
   const inState   = $('#ship-state');
   const inCity    = $('#ship-city');
@@ -56,88 +57,8 @@
   // ---------- Utils ----------
   const fmtMoney = (n)=> (Number(n)||0).toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2});
   const fmtUnit  = (d)=> '$' + Number(d).toFixed(4);
-  const n = (v)=> Number(v);
+  const n        = (v)=> Number(v);
 
-  // ---------- Cart: robust loader ----------
-  function normalizeItem(raw) {
-    if (!raw) return null;
-    const lower = (x)=> String(x||'').toLowerCase();
-
-    // Direct types
-    if (raw.type === 'bulk' || raw.type === 'BULK') {
-      let u = n(raw.units ?? raw.qty ?? raw.quantity);
-      if (!Number.isFinite(u) || u <= 0) return null;
-      u = Math.round(u / BULK_STEP) * BULK_STEP;
-      u = Math.max(BULK_MIN, Math.min(BULK_MAX, u));
-      return { type: 'bulk', units: u };
-    }
-    if (raw.type === 'kit' || raw.type === 'KIT') {
-      let q = n(raw.qty ?? raw.quantity ?? 1);
-      q = Number.isFinite(q) && q > 0 ? Math.floor(q) : 1;
-      return { type: 'kit', qty: q };
-    }
-
-    // SKU-based or generic shapes
-    if ('sku' in raw) {
-      const s = lower(raw.sku);
-      if (s.includes('kit')) {
-        let q = n(raw.qty ?? raw.quantity ?? 1);
-        q = Number.isFinite(q) && q > 0 ? Math.floor(q) : 1;
-        return { type: 'kit', qty: q };
-      } else {
-        let u = n(raw.units ?? raw.qty ?? raw.quantity);
-        if (!Number.isFinite(u) || u <= 0) return null;
-        u = Math.round(u / BULK_STEP) * BULK_STEP;
-        u = Math.max(BULK_MIN, Math.min(BULK_MAX, u));
-        return { type: 'bulk', units: u };
-      }
-    }
-
-    // Unit/qty heuristics
-    if ('units' in raw) {
-      let u = n(raw.units);
-      if (!Number.isFinite(u) || u <= 0) return null;
-      u = Math.round(u / BULK_STEP) * BULK_STEP;
-      u = Math.max(BULK_MIN, Math.min(BULK_MAX, u));
-      return { type: 'bulk', units: u };
-    }
-    if ('qty' in raw || 'quantity' in raw) {
-      const qval = n(raw.qty ?? raw.quantity);
-      if (!Number.isFinite(qval) || qval <= 0) return null;
-      // If it looks like units amount (>= 5000), treat as bulk; else kit
-      if (qval >= BULK_MIN) {
-        let u = Math.round(qval / BULK_STEP) * BULK_STEP;
-        u = Math.max(BULK_MIN, Math.min(BULK_MAX, u));
-        return { type: 'bulk', units: u };
-      } else {
-        return { type: 'kit', qty: Math.floor(qval) };
-      }
-    }
-
-    return null;
-  }
-
-  function loadCart() {
-    try {
-      const raw = localStorage.getItem(KEY_CART);
-      const arr = raw ? JSON.parse(raw) : [];
-      const norm = (Array.isArray(arr) ? arr : []).map(normalizeItem).filter(Boolean);
-      return norm;
-    } catch { return []; }
-  }
-  function saveCart(items) {
-    localStorage.setItem(KEY_CART, JSON.stringify(items));
-    updateBadge(items);
-  }
-  function updateBadge(items) {
-    if (!badgeEl) return;
-    let total = 0;
-    for (const it of items) total += it.type === 'bulk' ? it.units : it.qty;
-    badgeEl.textContent = total > 0 ? String(total) : '';
-    badgeEl.style.display = total > 0 ? 'inline-block' : 'none';
-  }
-
-  // ---------- Destination ----------
   function ensureCountryOptions() {
     if (!inCountry) return;
     if (inCountry.options.length === 0) {
@@ -146,12 +67,128 @@
       });
     }
   }
-  function getDest() {
-    try { return JSON.parse(localStorage.getItem(KEY_DEST) || 'null'); } catch { return null; }
+
+  // ---------- Cart normalize ----------
+  function normalizeItem(raw) {
+    if (!raw) return null;
+    const lower = (x)=> String(x||'').toLowerCase();
+
+    // explicit types
+    if (raw.type === 'bulk' || raw.type === 'BULK') {
+      let u = n(raw.units ?? raw.qty ?? raw.quantity);
+      if (!Number.isFinite(u) || u <= 0) return null;
+      u = Math.round(u / BULK_STEP) * BULK_STEP;
+      u = Math.max(BULK_MIN, Math.min(BULK_MAX, u));
+      return { type:'bulk', units:u };
+    }
+    if (raw.type === 'kit' || raw.type === 'KIT') {
+      let q = n(raw.qty ?? raw.quantity ?? 1);
+      q = Number.isFinite(q) && q > 0 ? Math.floor(q) : 1;
+      return { type:'kit', qty:q };
+    }
+
+    // SKU shapes
+    if ('sku' in raw) {
+      const s = lower(raw.sku);
+      if (s.includes('kit')) {
+        let q = n(raw.qty ?? raw.quantity ?? 1);
+        q = Number.isFinite(q) && q > 0 ? Math.floor(q) : 1;
+        return { type:'kit', qty:q };
+      } else {
+        let u = n(raw.units ?? raw.qty ?? raw.quantity);
+        if (!Number.isFinite(u) || u <= 0) return null;
+        u = Math.round(u / BULK_STEP) * BULK_STEP;
+        u = Math.max(BULK_MIN, Math.min(BULK_MAX, u));
+        return { type:'bulk', units:u };
+      }
+    }
+
+    // generic
+    if ('units' in raw) {
+      let u = n(raw.units);
+      if (!Number.isFinite(u) || u <= 0) return null;
+      u = Math.round(u / BULK_STEP) * BULK_STEP;
+      u = Math.max(BULK_MIN, Math.min(BULK_MAX, u));
+      return { type:'bulk', units:u };
+    }
+    if ('qty' in raw || 'quantity' in raw) {
+      const qval = n(raw.qty ?? raw.quantity);
+      if (!Number.isFinite(qval) || qval <= 0) return null;
+      if (qval >= BULK_MIN) {
+        let u = Math.round(qval / BULK_STEP) * BULK_STEP;
+        u = Math.max(BULK_MIN, Math.min(BULK_MAX, u));
+        return { type:'bulk', units:u };
+      }
+      return { type:'kit', qty: Math.floor(qval) };
+    }
+    return null;
   }
-  function setDest(d) {
-    localStorage.setItem(KEY_DEST, JSON.stringify(d || null));
+
+  function loadCartLS() {
+    try {
+      const raw = localStorage.getItem(KEY_CART);
+      const arr = raw ? JSON.parse(raw) : [];
+      return (Array.isArray(arr) ? arr : []).map(normalizeItem).filter(Boolean);
+    } catch { return []; }
   }
+  function saveCart(items) {
+    localStorage.setItem(KEY_CART, JSON.stringify(items||[]));
+    updateBadge(items||[]);
+  }
+
+  // --- Cross-origin import helpers ---
+  function b64decodeToString(b64) {
+    try { return decodeURIComponent(escape(atob(b64))); } catch { return ''; }
+  }
+  function parseCookie(name) {
+    return document.cookie.split(';').map(s=>s.trim()).find(s=>s.startsWith(name+'='))?.split('=').slice(1).join('=') || '';
+  }
+  function importCartIfPresent() {
+    // 1) URL param ?cart=<base64 json>
+    const qp = new URLSearchParams(location.search);
+    const enc = qp.get('cart');
+    if (enc) {
+      const json = b64decodeToString(enc);
+      try {
+        const arr = JSON.parse(json);
+        const items = (Array.isArray(arr)?arr:[]).map(normalizeItem).filter(Boolean);
+        if (items.length) {
+          saveCart(items);
+          // clean URL
+          qp.delete('cart');
+          history.replaceState({}, '', location.pathname + (qp.toString()?('?'+qp.toString()):''));
+          return true;
+        }
+      } catch {}
+    }
+    // 2) Cookie fallback
+    const c = parseCookie('fd_cart_b64');
+    if (c) {
+      const json = b64decodeToString(c);
+      try {
+        const arr = JSON.parse(json);
+        const items = (Array.isArray(arr)?arr:[]).map(normalizeItem).filter(Boolean);
+        if (items.length) {
+          saveCart(items);
+          return true;
+        }
+      } catch {}
+    }
+    return false;
+  }
+
+  // ---------- Badge ----------
+  function updateBadge(items) {
+    if (!badgeEl) return;
+    let total = 0;
+    for (const it of items) total += it.type==='bulk' ? it.units : it.qty;
+    badgeEl.textContent = total > 0 ? String(total) : '';
+    badgeEl.style.display = total > 0 ? 'inline-block' : 'none';
+  }
+
+  // ---------- Destination ----------
+  function getDest() { try { return JSON.parse(localStorage.getItem(KEY_DEST)||'null'); } catch { return null; } }
+  function setDest(d) { localStorage.setItem(KEY_DEST, JSON.stringify(d||null)); }
   function writeDestToUI(d) {
     if (!d) return;
     if (inCountry) inCountry.value = (d.country||'US').toUpperCase();
@@ -175,7 +212,7 @@
 
   // ---------- Totals ----------
   function subtotal() {
-    const items = loadCart();
+    const items = loadCartLS();
     let cents = 0;
     for (const it of items) {
       if (it.type === 'bulk') cents += lineTotalCentsForUnits(it.units);
@@ -186,7 +223,7 @@
 
   // ---------- Render ----------
   function render() {
-    const items = loadCart();
+    const items = loadCartLS();
 
     if (!items.length) {
       if (cartBody) cartBody.innerHTML = `<tr><td colspan="4" class="muted" style="padding:20px 0;">Your cart is empty.</td></tr>`;
@@ -247,11 +284,10 @@
               <button class="btn-remove" type="button">Remove</button>
             </td>`;
         }
-
         cartBody.appendChild(tr);
       });
 
-      // Bind row events
+      // events
       $$('.btn-dec', cartBody).forEach(b=>b.addEventListener('click', onStep.bind(null,-1)));
       $$('.btn-inc', cartBody).forEach(b=>b.addEventListener('click', onStep.bind(null,+1)));
       $$('.qty-input', cartBody).forEach(i=>i.addEventListener('change', onManual));
@@ -269,14 +305,14 @@
   }
 
   function afterCartChange() {
-    clearRate();     // cart size changed -> invalidate quote
+    clearRate();
     clearRateUI();
     render();
   }
   function onStep(delta, ev) {
     const tr   = ev.currentTarget.closest('tr');
     const idx  = n(tr?.dataset.index);
-    const arr  = loadCart();
+    const arr  = loadCartLS();
     const item = arr[idx];
     if (!item) return;
 
@@ -294,7 +330,7 @@
   function onManual(ev) {
     const tr   = ev.currentTarget.closest('tr');
     const idx  = n(tr?.dataset.index);
-    const arr  = loadCart();
+    const arr  = loadCartLS();
     const item = arr[idx];
     if (!item) return;
 
@@ -312,25 +348,22 @@
   function onRemove(ev) {
     const tr  = ev.currentTarget.closest('tr');
     const idx = n(tr?.dataset.index);
-    const arr = loadCart();
+    const arr = loadCartLS();
     arr.splice(idx,1);
     saveCart(arr);
     afterCartChange();
   }
 
   // ---------- Rates ----------
-  function getRate() {
-    try { return JSON.parse(localStorage.getItem(KEY_RATE)||'null'); } catch { return null; }
-  }
-  function setRate(r) { localStorage.setItem(KEY_RATE, JSON.stringify(r||null)); }
+  function getRate() { try { return JSON.parse(localStorage.getItem(KEY_RATE)||'null'); } catch { return null; } }
+  function setRate(r){ localStorage.setItem(KEY_RATE, JSON.stringify(r||null)); }
   function clearRate(){ localStorage.removeItem(KEY_RATE); }
-
-  function clearRateUI() {
+  function clearRateUI(){
     if (ratesList) ratesList.innerHTML = '';
     if (shipTotalEl) shipTotalEl.textContent = fmtMoney(0);
     if (grandEl)     grandEl.textContent     = fmtMoney(subtotal());
   }
-  function selectRate(r) {
+  function selectRate(r){
     setRate(r);
     if (shipTotalEl) shipTotalEl.textContent = fmtMoney(r.amount||0);
     if (grandEl)     grandEl.textContent     = fmtMoney(subtotal() + (r.amount||0));
@@ -342,7 +375,6 @@
     try { return await fetch(url, { ...opts, signal: ctl.signal }); }
     finally { clearTimeout(id); }
   }
-
   function renderRates(rates){
     if (!ratesList) return;
     ratesList.innerHTML = '';
@@ -367,9 +399,8 @@
     });
     selectRate(rates[0]);
   }
-
   async function getRates(){
-    const items = loadCart();
+    const items = loadCartLS();
     if (!items.length) return alert('Your cart is empty.');
 
     ensureCountryOptions();
@@ -416,7 +447,7 @@
 
   // ---------- Checkout ----------
   async function checkout(){
-    const items = loadCart();
+    const items = loadCartLS();
     if (!items.length) return alert('Your cart is empty.');
     const rate = getRate() || null;
 
@@ -449,7 +480,7 @@
   // ---------- Wire up ----------
   if (btnClear) btnClear.addEventListener('click', ()=>{ if(confirm('Clear your cart?')){ saveCart([]); clearRate(); clearRateUI(); render(); }});
   if (btnCons)   btnCons.addEventListener('click', ()=>{
-    const items = loadCart();
+    const items = loadCartLS();
     let bulk=0, kits=0;
     for (const it of items){ if(it.type==='bulk') bulk+=it.units; else kits+=it.qty; }
     const merged=[];
@@ -461,8 +492,8 @@
     if (kits>0) merged.push({type:'kit',qty:kits});
     saveCart(merged); clearRate(); clearRateUI(); render();
   });
-  if (btnMore)   btnMore.addEventListener('click', ()=>{ location.href='/order.html'; });
-  if (btnRates)  btnRates.addEventListener('click', getRates);
+  if (btnMore)     btnMore.addEventListener('click', ()=>{ location.href='/order.html'; });
+  if (btnRates)    btnRates.addEventListener('click', getRates);
   if (btnCheckout) btnCheckout.addEventListener('click', checkout);
 
   [inCountry,inState,inCity,inPostal,inStreet].forEach(el=>{
@@ -473,7 +504,13 @@
 
   // ---------- Init ----------
   ensureCountryOptions();
+  // If LS is empty on this origin, try importing from URL/cookie
+  const hadImport = importCartIfPresent();
+  if (!hadImport && !loadCartLS().length) {
+    // nothing yet; still render empty UI
+  }
   writeDestToUI(getDest());
   render();
 })();
 </script>
+
