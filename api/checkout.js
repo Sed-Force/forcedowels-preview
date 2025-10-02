@@ -114,6 +114,36 @@ module.exports = async function handler(req, res) {
 
     const line_items = items.map(buildLineItem);
 
+    // /api/checkout.js  (only the important part shown)
+export const config = { runtime: 'nodejs' };
+
+export default async function handler(req, res) {
+  try {
+    const { items, shipping } = req.body || {};
+    // ...you already build lineItems from 'items'
+    const lineItems = []; // <-- your existing items push here
+
+    // NEW: add shipping as a line item if provided
+    if (shipping && Number.isFinite(shipping.priceCents) && shipping.priceCents > 0) {
+      lineItems.push({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `Shipping — ${shipping.carrier} ${shipping.service}`,
+          },
+          unit_amount: Math.round(shipping.priceCents),
+        },
+        quantity: 1,
+      });
+    }
+
+    // create the session with lineItems
+    // ...
+  } catch (e) {
+    // ...
+  }
+}
+
     // Base URL for redirects (env first; fallback to Host header)
     const baseUrl =
       process.env.NEXT_PUBLIC_BASE_URL ||
