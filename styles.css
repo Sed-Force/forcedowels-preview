@@ -2204,3 +2204,10 @@ button,
 
 /* stop footer from overlapping the sticky card on short pages */
 .site-footer { margin-top: 30px; }
+
+/* keep summary inputs inside the card */
+.summary-card .field input,
+.summary-card .field select {
+  width: 100%;
+  box-sizing: border-box;
+}
