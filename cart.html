@@ -125,29 +125,30 @@
             </div>
 
             <div class="ship-fields">
-              <label class="fld">
-                <span>Country</span>
-                <select id="dest-country">
-                  <option value="US">United States</option>
-                  <option value="CA">Canada</option>
-                  <option value="MX">Mexico</option>
-                </select>
-              </label>
+            <label class="field">
+  <span>Country</span>
+  <select id="ship-country" required>
+    <option value="US">United States</option>
+    <option value="CA">Canada</option>
+    <option value="MX">Mexico</option>
+  </select>
+</label>
 
-              <label class="fld half">
-                <span>State/Province</span>
-                <input id="dest-state" type="text" maxlength="32" placeholder="e.g., AZ">
-              </label>
+<label class="field">
+  <span>State/Province</span>
+  <input id="ship-state" type="text" placeholder="e.g., AZ" maxlength="3" />
+</label>
 
-              <label class="fld half">
-                <span>City</span>
-                <input id="dest-city" type="text" maxlength="64" placeholder="City">
-              </label>
+<label class="field">
+  <span>City</span>
+  <input id="ship-city" type="text" />
+</label>
 
-              <label class="fld">
-                <span>ZIP / Postal</span>
-                <input id="dest-postal" type="text" maxlength="16" placeholder="e.g., 85142">
-              </label>
+<label class="field">
+  <span>ZIP / Postal</span>
+  <input id="ship-postal" type="text" />
+</label>
+
 
               <button id="btn-get-rates" class="btn btn--secondary btn-wide" type="button">Get Rates</button>
             </div>
