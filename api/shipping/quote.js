@@ -1,5 +1,5 @@
 // /api/shipping/quote.js
-// Live quotes for UPS + USPS (domestic) and an LTL estimate (TQL placeholder).
+// Live quotes for UPS + USPS (US) and an LTL estimate fallback (TQL placeholder).
 // No external deps; uses global fetch in Vercel Node runtime.
 
 const ORIGIN = {
@@ -11,20 +11,17 @@ const ORIGIN = {
   country: process.env.ORIGIN_COUNTRY || 'US',
 };
 
-// Accept both UPPER and lower case env names (so your existing vars work)
+// Accept both UPPER and lower case env names
 const UPS = {
   clientId:
     process.env.UPS_CLIENT_ID ||
-    process.env.ups_client_id ||
-    '',
+    process.env.ups_client_id || '',
   clientSecret:
     process.env.UPS_CLIENT_SECRET ||
-    process.env.ups_client_secret ||
-    '',
+    process.env.ups_client_secret || '',
   shipperNumber:
     process.env.UPS_SHIPPER_NUMBER ||
-    process.env.ups_shipper_number ||
-    '',
+    process.env.ups_shipper_number || '',
 };
 
 const USPS_USER =
@@ -33,29 +30,39 @@ const USPS_USER =
   process.env.USPS_USER_ID ||
   process.env.usps_webtools_userid ||
   process.env.usps_client_id ||
-  process.env.usps_user_id ||
-  '';
+  process.env.usps_user_id || '';
 
-// Packaging rules you provided
+// Packaging rules
 const BULK_STEP   = 5000;
-const LBS_PER_5K  = 19; // round up
-const BOX_A = { l: 15, w: 15, h: 12 }; // fits 5k/10k
-const BOX_B = { l: 22, w: 22, h: 12 }; // fits 15k/20k
+const LBS_PER_5K  = 19; // round up per your note
+const BOX_A = { l: 15, w: 15, h: 12 }; // 5k/10k
+const BOX_B = { l: 22, w: 22, h: 12 }; // 15k/20k
 
-// Starter kit: 9" x 11" x 2", up to 2 kits/box, 1.7 lb each
+// Starter kits: 9x11x2", up to 2 per box, 1.7 lb each
 const KIT_BOX = { l: 11, w: 9, h: 2, maxKits: 2, kitWeight: 1.7 };
 
-// ---------- helpers ----------
-function round(n) { return Math.round(n * 1000) / 1000; }
-function isUS(country) { return (country || '').toUpperCase() === 'US'; }
+// --------------- helpers ---------------
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-// Normalize country input like "United States" → "US"
+async function fetchWithTimeout(url, opts = {}, ms = 8000) {
+  const ctl = new AbortController();
+  const id = setTimeout(() => ctl.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctl.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+function round(n) { return Math.round(n * 1000) / 1000; }
+function isUS(c)  { return (c || '').toUpperCase() === 'US'; }
+
 function normalizeCountry(c) {
   if (!c) return 'US';
   const t = String(c).trim().toUpperCase();
-  if (t === 'UNITED STATES' || t === 'USA' || t === 'US') return 'US';
-  if (t === 'CANADA' || t === 'CA') return 'CA';
-  if (t === 'MEXICO' || t === 'MX') return 'MX';
+  if (['UNITED STATES','USA','US'].includes(t)) return 'US';
+  if (['CANADA','CA'].includes(t)) return 'CA';
+  if (['MEXICO','MX'].includes(t)) return 'MX';
   return t;
 }
 
@@ -101,15 +108,12 @@ function buildPackages(items) {
   return pkgs;
 }
 
-// ---------- USPS (domestic; WebTools RateV4) ----------
+// --------------- USPS (domestic) ---------------
 async function uspsRateDomestic(pkg, dest) {
   if (!USPS_USER) return null;
 
-  // USPS wants whole pounds/ounces
   const pounds = Math.max(0, Math.ceil(pkg.weight || 1));
   const ounces = 0;
-
-  // Medium Flat Rate for kits-only boxes up to 5 kits
   const container =
     (pkg.type === 'kit' && pkg.kits <= 5) ? 'MediumFlatRateBox' : '';
   const size = (pkg.dims.l > 12 || pkg.dims.w > 12 || pkg.dims.h > 12)
@@ -131,16 +135,13 @@ async function uspsRateDomestic(pkg, dest) {
         <Height>${pkg.dims.h}</Height>
         <Machinable>true</Machinable>
       </Package>
-    </RateV4Request>`
-    .replace(/\s+/g, ' ')
-    .trim();
+    </RateV4Request>`.replace(/\s+/g,' ').trim();
 
   const url = `https://secure.shippingapis.com/ShippingAPI.dll?API=RateV4&XML=${encodeURIComponent(xml)}`;
 
-  const res = await fetch(url);
+  const res  = await fetchWithTimeout(url, {}, 7000).catch(e => { throw e; });
   const text = await res.text();
 
-  // If USPS returns an error, it will be inside <Error><Description>…</Description>
   if (/<Error>/i.test(text)) {
     console.error('USPS error:', text);
     return null;
@@ -155,35 +156,32 @@ async function uspsRateDomestic(pkg, dest) {
 }
 
 async function uspsQuote(packages, dest) {
-  if (!isUS(dest.country)) return [];
-  const perBox = [];
-  for (const p of packages) {
-    const r = await uspsRateDomestic(p, dest).catch(err => {
-      console.error('USPS rate error:', err);
-      return null;
-    });
-    if (r) perBox.push(r);
-  }
+  if (!isUS(dest.country) || !USPS_USER) return [];
+  const promises = packages.map(p => uspsRateDomestic(p, dest));
+  const settled  = await Promise.allSettled(promises);
+  const perBox   = settled
+    .filter(r => r.status === 'fulfilled' && r.value)
+    .map(r => r.value);
+
   if (!perBox.length) return [];
   const total = perBox.reduce((s,r)=> s + (r.amount||0), 0);
   return [{ carrier:'USPS', service:'USPS (combined)', amount: total, currency:'USD' }];
 }
 
-// ---------- UPS OAuth + Rate ----------
+// --------------- UPS OAuth + Rate (timeouts + version fallback) ---------------
 async function upsToken() {
   if (!UPS.clientId || !UPS.clientSecret) return null;
   try {
-    const res = await fetch('https://www.ups.com/security/v1/oauth/token', {
+    const res = await fetchWithTimeout('https://www.ups.com/security/v1/oauth/token', {
       method: 'POST',
       headers: {
         'Content-Type':'application/x-www-form-urlencoded',
         'Accept':'application/json',
-        // x-merchant-id optional but helps in some accounts
         ...(UPS.shipperNumber ? {'x-merchant-id': UPS.shipperNumber} : {}),
         'Authorization': 'Basic ' + Buffer.from(`${UPS.clientId}:${UPS.clientSecret}`).toString('base64'),
       },
       body: 'grant_type=client_credentials',
-    });
+    }, 6000);
     if (!res.ok) {
       console.error('UPS token HTTP', res.status, await res.text());
       return null;
@@ -233,9 +231,8 @@ async function upsRatePackageWithVersion(token, pkg, dest, version) {
             CountryCode: ORIGIN.country,
           },
         },
-        // Service left generic; UPS will rate available services
         Package: [{
-          PackagingType: { Code: '02' }, // Customer supplied
+          PackagingType: { Code: '02' }, // customer supplied
           Dimensions: {
             UnitOfMeasurement: { Code: 'IN' },
             Length: String(pkg.dims.l),
@@ -251,7 +248,7 @@ async function upsRatePackageWithVersion(token, pkg, dest, version) {
     },
   };
 
-  const res = await fetch(endpoint, {
+  const res = await fetchWithTimeout(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type':'application/json',
@@ -259,10 +256,10 @@ async function upsRatePackageWithVersion(token, pkg, dest, version) {
       'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify(body),
-  });
+  }, 7000);
 
   if (!res.ok) {
-    const t = await res.text();
+    const t = await res.text().catch(()=> '');
     console.error(`UPS rate HTTP ${res.status} (v=${version}):`, t);
     return null;
   }
@@ -270,7 +267,6 @@ async function upsRatePackageWithVersion(token, pkg, dest, version) {
   const rated = data?.RateResponse?.RatedShipment;
   if (!rated) return null;
 
-  // If multiple services returned, pick cheapest
   const arr = Array.isArray(rated) ? rated : [rated];
   let best = null;
   for (const r of arr) {
@@ -284,33 +280,31 @@ async function upsRatePackageWithVersion(token, pkg, dest, version) {
   return { carrier:'UPS', service:'UPS (per box)', amount: best.amount, currency: best.currency };
 }
 
-async function upsRatePackage(token, pkg, dest) {
-  // Try newest → older versions for compatibility
-  const versions = ['v2405', 'v2403', 'v2205'];
-  for (const v of versions) {
-    const r = await upsRatePackageWithVersion(token, pkg, dest, v);
-    if (r) return r;
-  }
-  return null;
-}
-
 async function upsQuote(packages, dest) {
   const token = await upsToken();
   if (!token) return [];
-  const perBox = [];
-  for (const p of packages) {
-    const r = await upsRatePackage(token, p, dest).catch(err => {
-      console.error('UPS rate error:', err);
-      return null;
-    });
-    if (r) perBox.push(r);
-  }
+
+  const versions = ['v2405', 'v2403', 'v2205'];
+  // For each box, try versions until one works, in parallel:
+  const promises = packages.map(async (p) => {
+    for (const v of versions) {
+      const r = await upsRatePackageWithVersion(token, p, dest, v);
+      if (r) return r;
+    }
+    return null;
+  });
+
+  const settled = await Promise.allSettled(promises);
+  const perBox  = settled
+    .filter(s => s.status === 'fulfilled' && s.value)
+    .map(s => s.value);
+
   if (!perBox.length) return [];
   const total = perBox.reduce((s,r)=> s + (r.amount||0), 0);
   return [{ carrier:'UPS', service:'UPS (combined)', amount: total, currency:'USD' }];
 }
 
-// ---------- TQL LTL (rough estimate) ----------
+// --------------- TQL LTL (estimate) ---------------
 function tqlEstimate(packages, dest) {
   const totalWeight = packages.reduce((s,p)=> s + (p.weight||0), 0);
   const perLb = (dest.country === 'CA' || dest.country === 'MX') ? 0.55 : 0.45;
@@ -323,7 +317,7 @@ function shouldPreferLTL(packages) {
   return totalWeight > 150 || packages.length > 6 || oversized;
 }
 
-// ---------- handler ----------
+// --------------- handler ---------------
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -334,9 +328,7 @@ module.exports = async function handler(req, res) {
     let { items = [], destination } = req.body || {};
     if (!Array.isArray(items)) items = [];
 
-    if (!destination) {
-      return res.status(400).json({ error: 'Missing destination' });
-    }
+    if (!destination) return res.status(400).json({ error: 'Missing destination' });
 
     const dest = {
       country: normalizeCountry(destination.country || 'US'),
@@ -346,29 +338,23 @@ module.exports = async function handler(req, res) {
       street:  String(destination.street || ''),
       name:    String(destination.name || 'Customer'),
     };
-
-    if (!dest.postal) {
-      return res.status(400).json({ error: 'Destination postal/ZIP required' });
-    }
+    if (!dest.postal) return res.status(400).json({ error: 'Destination postal/ZIP required' });
 
     const pkgs = buildPackages(items);
-    if (!pkgs.length) {
-      return res.status(400).json({ error: 'No shippable items' });
+    if (!pkgs.length) return res.status(400).json({ error: 'No shippable items' });
+
+    // Run carriers in parallel with independent timeouts
+    const tasks = [
+      (async () => isUS(dest.country) ? await uspsQuote(pkgs, dest) : [])(),
+      (async () => await upsQuote(pkgs, dest))(),
+    ];
+
+    let quotes = [];
+    const settled = await Promise.allSettled(tasks);
+    for (const r of settled) {
+      if (r.status === 'fulfilled' && Array.isArray(r.value)) quotes.push(...r.value);
     }
 
-    const quotes = [];
-
-    // USPS domestic (if you provided USPS credentials)
-    if (isUS(dest.country) && USPS_USER) {
-      const usps = await uspsQuote(pkgs, dest).catch(e => { console.error('USPS quote err', e); return []; });
-      quotes.push(...usps);
-    }
-
-    // UPS (domestic + international)
-    const ups = await upsQuote(pkgs, dest).catch(e => { console.error('UPS quote err', e); return []; });
-    quotes.push(...ups);
-
-    // LTL estimate if likely better / or as fallback
     if (shouldPreferLTL(pkgs)) quotes.push(tqlEstimate(pkgs, dest));
     if (!quotes.length)        quotes.push(tqlEstimate(pkgs, dest));
 
