@@ -83,22 +83,72 @@
         </div>
       </div>
 
-      <!-- Right: sticky summary -->
-      <aside class="cart-summary">
-        <div class="summary-card">
-          <div class="summary-row">
-            <span>Subtotal</span>
-            <strong id="cart-subtotal">$0.00</strong>
-          </div>
-          <p class="muted">Shipping &amp; taxes calculated at checkout.</p>
-          <button id="btn-checkout" class="btn btn--accent btn-wide" type="button">
-            Proceed to Checkout
-          </button>
-        </div>
-      </aside>
+  <!-- Right: sticky summary -->
+<aside class="cart-summary">
+  <div class="summary-card">
+
+    <!-- Subtotal row (script fills #summary-subtotal) -->
+    <div class="summary-row">
+      <span>Subtotal</span>
+      <strong id="summary-subtotal">$0.00</strong>
     </div>
-  </section>
-</main>
+
+    <!-- Shipping Estimator -->
+    <div id="ship-estimator" class="ship-card" style="margin-top:12px">
+      <h4 style="margin:0 0 8px;">Shipping</h4>
+
+      <div class="ship-fields" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <label style="display:flex;flex-direction:column;gap:4px;">
+          <span>Country</span>
+          <select id="ship-country">
+            <option value="US" selected>United States</option>
+            <option value="CA">Canada</option>
+            <option value="MX">Mexico</option>
+          </select>
+        </label>
+
+        <label style="display:flex;flex-direction:column;gap:4px;">
+          <span>State/Province</span>
+          <input id="ship-state" placeholder="AZ" />
+        </label>
+
+        <label style="grid-column:1 / span 1; display:flex;flex-direction:column;gap:4px;">
+          <span>City</span>
+          <input id="ship-city" placeholder="Gilbert" />
+        </label>
+
+        <label style="grid-column:2 / span 1; display:flex;flex-direction:column;gap:4px;">
+          <span>ZIP / Postal</span>
+          <input id="ship-postal" placeholder="85296" />
+        </label>
+      </div>
+
+      <button class="btn btn--ghost btn-wide" id="btn-get-rates" type="button" style="margin-top:10px;">
+        Get Rates
+      </button>
+
+      <!-- Rates list renders here -->
+      <div id="ship-rates" class="ship-rates" style="margin-top:10px;"></div>
+
+      <!-- Live totals (script fills these) -->
+      <div class="summary-row" style="margin-top:10px;">
+        <span>Shipping</span>
+        <strong id="summary-shipping">$0.00</strong>
+      </div>
+      <div class="summary-row">
+        <span>Total</span>
+        <strong id="summary-grand">$0.00</strong>
+      </div>
+    </div>
+
+    <!-- Checkout -->
+    <button id="btn-checkout" class="btn btn--accent btn-wide" type="button" style="margin-top:12px;">
+      Proceed to Checkout
+    </button>
+    <p class="muted" style="margin-top:8px;">Taxes are calculated during payment.</p>
+  </div>
+</aside>
+
 
 <!-- Footer (trimmed) -->
 <footer class="site-footer">
