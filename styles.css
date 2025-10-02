@@ -2211,3 +2211,10 @@ button,
   width: 100%;
   box-sizing: border-box;
 }
+
+/* in /public/styles.css */
+.summary-card .field input,
+.summary-card .field select {
+  width: 100%;
+  box-sizing: border-box;
+}
