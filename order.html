@@ -165,6 +165,31 @@
 })();
 </script>
 
+  <script>
+(function () {
+  const link =
+    document.getElementById('btn-view-cart') ||
+    document.querySelector('[data-view-cart]') ||
+    document.querySelector('a[href="/cart.html"]');
+
+  if (!link) return;
+
+  link.addEventListener('click', function (e) {
+    try {
+      const raw = localStorage.getItem('fd_cart');
+      if (!raw) return; // nothing to pass
+      const b64 = btoa(unescape(encodeURIComponent(raw)));
+      const href = '/cart.html?cart=' + encodeURIComponent(b64);
+      e.preventDefault();
+      // backup cookie (helps if user later opens /cart.html without ?cart)
+      document.cookie = 'fd_cart_b64=' + b64 + '; path=/; max-age=1200';
+      window.location.href = href;
+    } catch {}
+  });
+})();
+</script>
+
+
 
 <!-- Footer (trimmed) -->
 <footer class="site-footer">
