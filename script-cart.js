@@ -1,67 +1,67 @@
-/* MASTER v2: /public/script-cart.js
-   Force Dowels — Cart page logic + Shipping quotes
+<!-- /public/script-cart.js -->
+<script>
+/* MASTER: /public/script-cart.js
+   Force Dowels — Cart page logic + Shipping quotes (US/CA/MX)
    Storage keys:
      - 'fd_cart'       : [{type:'bulk',units:<int>} | {type:'kit',qty:<int>}]
      - 'fd_dest'       : {country:'US'|'CA'|'MX', state:'', city:'', postal:''}
      - 'fd_ship_quote' : {carrier, service, amount, currency, meta?}
 */
-
 (function () {
   // ---------- Config ----------
   const STORAGE_KEY_CART = 'fd_cart';
   const STORAGE_KEY_DEST = 'fd_dest';
   const STORAGE_KEY_RATE = 'fd_ship_quote';
 
-  // Bulk constraints
+  // Bulk constants
   const BULK_MIN  = 5000;
   const BULK_MAX  = 960000;
   const BULK_STEP = 5000;
 
-  // Pricing tiers (MUST match server & order page)
-  // Return integer cents for exact math
-  function unitPriceCentsFor(units) {
-    if (units >= 160000) return Math.round(0.063 * 100);   // $0.0630
-    if (units >= 20000)  return Math.round(0.0675 * 100);  // $0.0675
-    return Math.round(0.072 * 100);                        // $0.0720
+  // Pricing tiers (use dollar value; round only at the end)
+  function unitPriceFor(units) {
+    if (units >= 160000) return 0.0630;   // $0.0630
+    if (units >= 20000)  return 0.0675;   // $0.0675
+    return 0.0720;                        // $0.0720
+  }
+  function lineTotalCentsForUnits(units) {
+    // round after multiplying; avoids the $350 issue for 5,000
+    return Math.round(unitPriceFor(units) * 100 * units);
   }
 
   // ---------- DOM helpers ----------
   const $  = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
-  // Main cart table
+  // Main cart areas
   const cartBody    = $('#cart-body') || $('#cart-items') || $('#cart-table tbody');
   const subtotalEl  = $('#summary-subtotal') || $('#cart-subtotal') || $('#summary .subtotal') || $('#summaryTotal');
   const badgeEl     = $('#cart-count');
 
-  // Toolbar / actions
+  // Toolbar
   const btnClear    = $('#btn-clear');
   const btnCons     = $('#btn-consolidate');
   const btnMore     = $('#btn-add-more');
   const btnCheckout = $('#btn-checkout');
 
-  // Shipping summary chunk
-  const btnChangeDest = $('#btn-change-dest');   // optional; opens mini prompt
+  // Shipping UI (right summary)
   const btnGetRates   = $('#btn-get-rates');
-  const ratesList     = $('#rates-list');        // <ul>
-  const shipTotalEl   = $('#summary-shipping');  // $0.00 | $xx.xx
-  const grandTotalEl  = $('#summary-grand');     // subtotal + shipping
+  const ratesList     = $('#rates-list');
+  const shipTotalEl   = $('#summary-shipping');
+  const grandTotalEl  = $('#summary-grand');
+  const linkUseSaved  = $('#use-saved-dest') || $('#btn-use-saved');
 
-  // Destination labels (for “Ship to …” display)
-  const destCountryEl = $('#dest-country');
-  const destStateEl   = $('#dest-state');
-  const destCityEl    = $('#dest-city');
-  const destPostalEl  = $('#dest-postal');
-
-  // Optional live destination inputs (if present in your HTML)
-  const fldCountry = $('#ship-country');
-  const fldState   = $('#ship-state');
-  const fldCity    = $('#ship-city');
-  const fldPostal  = $('#ship-postal');
+  // Shipping form inputs
+  const inCountry = $('#ship-country');
+  const inState   = $('#ship-state');
+  const inCity    = $('#ship-city');
+  const inPostal  = $('#ship-postal');
 
   // ---------- Money ----------
   const fmtMoney = (n) =>
     (Number(n) || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+
+  const fmtUnit  = (d) => '$' + Number(d).toFixed(4);
 
   // ---------- Storage: cart ----------
   function loadCart() {
@@ -75,7 +75,7 @@
             let u = Number(it.units || 0);
             if (!Number.isFinite(u) || u < BULK_MIN) u = BULK_MIN;
             if (u > BULK_MAX) u = BULK_MAX;
-            u = Math.round(u / BULK_STEP) * BULK_STEP;  // snap
+            u = Math.round(u / BULK_STEP) * BULK_STEP;
             if (u < BULK_MIN) u = BULK_MIN;
             return { type: 'bulk', units: u };
           }
@@ -84,9 +84,8 @@
             if (!Number.isFinite(q) || q < 1) q = 1;
             return { type: 'kit', qty: q };
           }
-          // legacy leniency
           if ('units' in it) return { type: 'bulk', units: Number(it.units) || BULK_MIN };
-          if ('qty'   in it) return { type: 'kit',  qty:   Math.max(1, Number(it.qty) || 1) };
+          if ('qty'   in it) return { type: 'kit',  qty: Math.max(1, Number(it.qty) || 1) };
           return null;
         })
         .filter(Boolean);
@@ -104,11 +103,50 @@
     if (!badgeEl) return;
     let total = 0;
     for (const it of items) {
-      if (it.type === 'bulk') total += it.units; // design choice: show units
+      if (it.type === 'bulk') total += it.units; // design choice: show aggregate units
       else if (it.type === 'kit') total += it.qty;
     }
     badgeEl.textContent = total > 0 ? String(total) : '';
     badgeEl.style.display = total > 0 ? 'inline-block' : 'none';
+  }
+
+  // ---------- Destination storage ----------
+  function getStoredDest() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY_DEST) || 'null'); } catch { return null; }
+  }
+  function setStoredDest(dest) {
+    localStorage.setItem(STORAGE_KEY_DEST, JSON.stringify(dest || null));
+  }
+
+  // Read/write shipping UI
+  function ensureCountryOptions() {
+    if (!inCountry) return;
+    // If empty, populate US/CA/MX options
+    if (inCountry.options.length === 0) {
+      [['US','United States'],['CA','Canada'],['MX','Mexico']].forEach(([v,t])=>{
+        const opt = new Option(t, v);
+        inCountry.add(opt);
+      });
+    }
+  }
+  function writeDestToUI(dest) {
+    if (!dest) return;
+    if (inCountry) inCountry.value = (dest.country || '').toUpperCase();
+    if (inState)   inState.value   = (dest.state   || '').toUpperCase();
+    if (inCity)    inCity.value    = dest.city   || '';
+    if (inPostal)  inPostal.value  = dest.postal || '';
+  }
+  function readDestFromUI() {
+    if (!inCountry) return null;
+    const dest = {
+      country: (inCountry.value || 'US').toUpperCase(),
+      state:   (inState?.value || '').toUpperCase(),
+      city:     inCity?.value || '',
+      postal:   inPostal?.value || '',
+    };
+    // Basic guard: must have postal for quotes
+    if (!dest.postal) return null;
+    return dest;
   }
 
   // ---------- Totals ----------
@@ -116,8 +154,7 @@
     let cents = 0;
     for (const it of items) {
       if (it.type === 'bulk') {
-        const unitCents = unitPriceCentsFor(it.units);
-        cents += unitCents * it.units;
+        cents += lineTotalCentsForUnits(it.units);
       } else if (it.type === 'kit') {
         cents += 3600 * it.qty; // $36.00 per kit
       }
@@ -129,13 +166,13 @@
   function render() {
     const items = loadCart();
 
-    // Empty state
+    // Empty
     if (!items.length) {
       if (cartBody) {
         cartBody.innerHTML = `<tr><td colspan="4" class="muted" style="padding:20px 0;">Your cart is empty.</td></tr>`;
       }
-      if (subtotalEl)   subtotalEl.textContent  = fmtMoney(0);
-      if (shipTotalEl)  shipTotalEl.textContent = fmtMoney(0);
+      if (subtotalEl)   subtotalEl.textContent   = fmtMoney(0);
+      if (shipTotalEl)  shipTotalEl.textContent  = fmtMoney(0);
       if (grandTotalEl) grandTotalEl.textContent = fmtMoney(0);
       clearRatesUI();
       updateBadge(items);
@@ -150,9 +187,8 @@
         tr.dataset.index = String(idx);
 
         if (it.type === 'bulk') {
-          const unitCents  = unitPriceCentsFor(it.units);  // exact math for totals
-          const uiRate     = (it.units >= 160000 ? 0.0630 : (it.units >= 20000 ? 0.0675 : 0.0720)); // for display
-          const lineTotal  = (unitCents * it.units) / 100;
+          const unitPrice = unitPriceFor(it.units);
+          const lineCents = lineTotalCentsForUnits(it.units);
 
           tr.innerHTML = `
             <td class="col-item">
@@ -171,17 +207,16 @@
             </td>
 
             <td class="col-unitprice">
-              <span class="unit-price">$${uiRate.toFixed(4)}/unit</span>
+              <span class="unit-price">${fmtUnit(unitPrice)}</span>
             </td>
 
             <td class="col-total">
-              <span class="line-total">${fmtMoney(lineTotal)}</span>
+              <span class="line-total">${fmtMoney(lineCents / 100)}</span>
               <button class="btn-remove" type="button" aria-label="Remove item">Remove</button>
             </td>
           `;
         } else if (it.type === 'kit') {
           const lineTotal = 36.0 * it.qty;
-
           tr.innerHTML = `
             <td class="col-item">
               <div class="item-title"><strong>Force Dowels — Starter Kit (300)</strong></div>
@@ -216,12 +251,11 @@
 
     // Update totals
     const subtotal = computeSubtotal(items);
-    if (subtotalEl) subtotalEl.textContent = fmtMoney(subtotal);
+    if (subtotalEl)  subtotalEl.textContent  = fmtMoney(subtotal);
 
-    // Keep grand total in sync with any selected rate
     const chosen = getStoredRate();
     if (shipTotalEl)  shipTotalEl.textContent  = fmtMoney(chosen?.amount || 0);
-    if (grandTotalEl) grandTotalEl.textContent = fmtMoney((chosen?.amount || 0) + subtotal);
+    if (grandTotalEl) grandTotalEl.textContent = fmtMoney(subtotal + (chosen?.amount || 0));
 
     updateBadge(items);
   }
@@ -231,6 +265,12 @@
     $$('.btn-inc', cartBody).forEach((btn) => btn.addEventListener('click', onStep.bind(null, +1)));
     $$('.qty-input', cartBody).forEach((inp) => inp.addEventListener('change', onManualChange));
     $$('.btn-remove', cartBody).forEach((btn) => btn.addEventListener('click', onRemove));
+  }
+
+  function bumpShippingAndRender() {
+    clearStoredRate();
+    clearRatesUI();
+    render();
   }
 
   function onStep(delta, ev) {
@@ -253,10 +293,7 @@
     }
 
     saveCart(items);
-    // Cart change invalidates shipping rate (size/weight)
-    clearStoredRate();
-    clearRatesUI();
-    render();
+    bumpShippingAndRender();
   }
 
   function onManualChange(ev) {
@@ -280,9 +317,7 @@
     }
 
     saveCart(items);
-    clearStoredRate();
-    clearRatesUI();
-    render();
+    bumpShippingAndRender();
   }
 
   function onRemove(ev) {
@@ -292,148 +327,58 @@
     const items = loadCart();
     items.splice(idx, 1);
     saveCart(items);
-    clearStoredRate();
-    clearRatesUI();
-    render();
+    bumpShippingAndRender();
   }
 
-  // ---------- Toolbar ----------
-  if (btnClear) {
-    btnClear.addEventListener('click', () => {
-      if (!confirm('Clear your cart?')) return;
-      saveCart([]);
-      clearStoredRate();
-      clearRatesUI();
-      render();
-    });
-  }
-
-  if (btnCons) {
-    btnCons.addEventListener('click', () => {
-      const items = loadCart();
-      let bulkUnits = 0, kits = 0;
-      for (const it of items) {
-        if (it.type === 'bulk') bulkUnits += Number(it.units || 0);
-        if (it.type === 'kit')  kits += Number(it.qty || 0);
-      }
-      const merged = [];
-      if (bulkUnits > 0) {
-        let u = Math.min(BULK_MAX, Math.max(BULK_MIN, Math.round(bulkUnits / BULK_STEP) * BULK_STEP));
-        merged.push({ type:'bulk', units:u });
-      }
-      if (kits > 0) merged.push({ type:'kit', qty:kits });
-      saveCart(merged);
-      clearStoredRate();
-      clearRatesUI();
-      render();
-    });
-  }
-
-  if (btnMore) {
-    btnMore.addEventListener('click', () => { window.location.href = '/order.html'; });
-  }
-
-  // ---------- Destination storage + UI ----------
-  function getStoredDest() {
-    try { const raw = localStorage.getItem(STORAGE_KEY_DEST); return raw ? JSON.parse(raw) : null; }
-    catch { return null; }
-  }
-  function setStoredDest(dest) {
-    localStorage.setItem(STORAGE_KEY_DEST, JSON.stringify(dest));
-    renderDestLabels(dest);
-  }
-  function renderDestLabels(dest) {
-    if (!dest) dest = getStoredDest() || {};
-    if (destCountryEl) destCountryEl.textContent = dest.country || '—';
-    if (destStateEl)   destStateEl.textContent   = dest.state   || '—';
-    if (destCityEl)    destCityEl.textContent    = dest.city    || '—';
-    if (destPostalEl)  destPostalEl.textContent  = dest.postal  || '—';
-  }
-
-  // Support prompt-based destination (fallback)
-  function promptDestination() {
-    const current = getStoredDest() || { country:'US', state:'', city:'', postal:'' };
-    const country = (prompt('Ship to country (US, CA, MX):', current.country || 'US') || '').toUpperCase();
-    if (!country) return null;
-    const state   = prompt('State/Province (e.g., AZ):', current.state || '') || '';
-    const city    = prompt('City:', current.city || '') || '';
-    const postal  = prompt('Postal/ZIP:', current.postal || '') || '';
-    const dest = { country, state, city, postal };
-    setStoredDest(dest);
-    return dest;
-  }
-
-  if (btnChangeDest) {
-    btnChangeDest.addEventListener('click', () => {
-      const dest = promptDestination();
-      if (dest) {
-        clearStoredRate();
-        clearRatesUI();
-        render();
-      }
-    });
-  }
-
-  // Live destination fields (if present)
-  function readDestFromForm() {
-    const country = fldCountry?.value?.trim().toUpperCase() || undefined;
-    const state   = fldState?.value?.trim() || undefined;
-    const city    = fldCity?.value?.trim() || undefined;
-    const postal  = fldPostal?.value?.trim() || undefined;
-    if (!country && !state && !city && !postal) return null;
-    return { country, state, city, postal };
-  }
-  function wireDestForm() {
-    if (!fldCountry && !fldState && !fldCity && !fldPostal) return;
-    const sync = () => {
-      const dest = readDestFromForm();
-      if (!dest) return;
-      setStoredDest(dest);
-      clearStoredRate();
-      clearRatesUI();
-      render(); // recompute grand with 0 shipping
-    };
-    [fldCountry, fldState, fldCity, fldPostal].forEach((el) => el && el.addEventListener('change', sync));
-  }
-
-  // ---------- Shipping quotes ----------
+  // ---------- Shipping quote helpers ----------
   function getStoredRate() {
-    try { const raw = localStorage.getItem(STORAGE_KEY_RATE); return raw ? JSON.parse(raw) : null; }
-    catch { return null; }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY_RATE) || 'null'); } catch { return null; }
   }
-  function setStoredRate(rate) { localStorage.setItem(STORAGE_KEY_RATE, JSON.stringify(rate || null)); }
-  function clearStoredRate()    { localStorage.removeItem(STORAGE_KEY_RATE); }
-
+  function setStoredRate(rate) {
+    localStorage.setItem(STORAGE_KEY_RATE, JSON.stringify(rate || null));
+  }
+  function clearStoredRate() {
+    localStorage.removeItem(STORAGE_KEY_RATE);
+  }
   function clearRatesUI() {
     if (ratesList) ratesList.innerHTML = '';
-    if (shipTotalEl) shipTotalEl.textContent = fmtMoney(0);
+    if (shipTotalEl)  shipTotalEl.textContent  = fmtMoney(0);
     if (grandTotalEl) grandTotalEl.textContent = fmtMoney(computeSubtotal(loadCart()));
   }
-
   function onSelectRate(rate) {
     setStoredRate(rate);
-    if (shipTotalEl)  shipTotalEl.textContent = fmtMoney(rate.amount || 0);
-    if (grandTotalEl) grandTotalEl.textContent = fmtMoney((rate.amount || 0) + computeSubtotal(loadCart()));
+    if (shipTotalEl)  shipTotalEl.textContent  = fmtMoney(rate.amount || 0);
+    if (grandTotalEl) grandTotalEl.textContent = fmtMoney(computeSubtotal(loadCart()) + (rate.amount || 0));
   }
 
   async function fetchWithTimeout(url, opts = {}, ms = 15000) {
     const ctl = new AbortController();
-    const id  = setTimeout(() => ctl.abort(), ms);
+    const id = setTimeout(() => ctl.abort(), ms);
     try { return await fetch(url, { ...opts, signal: ctl.signal }); }
     finally { clearTimeout(id); }
   }
 
   async function requestRates() {
-    let dest = getStoredDest();
-    if (!dest || !dest.country || !dest.postal) {
-      // try reading from form first, then prompt
-      dest = readDestFromForm() || promptDestination();
-      if (!dest) return;
+    const items = loadCart();
+    if (!items.length) {
+      alert('Your cart is empty.');
+      return;
     }
 
-    const items = loadCart();
-    if (!items.length) { alert('Your cart is empty.'); return; }
+    // Prefer UI destination; fall back to stored; if still empty, ask for ZIP
+    ensureCountryOptions();
+    let dest = readDestFromUI() || getStoredDest();
+    if (!dest || !dest.postal) {
+      const zip = prompt('Enter destination ZIP/Postal:');
+      if (!zip) return;
+      dest = { country: (inCountry?.value || 'US').toUpperCase(), state: (inState?.value || '').toUpperCase(), city: inCity?.value || '', postal: zip };
+      setStoredDest(dest);
+      writeDestToUI(dest);
+    } else {
+      setStoredDest(dest);
+    }
 
+    // UI state
     if (btnGetRates) {
       btnGetRates.disabled = true;
       const prev = btnGetRates.textContent;
@@ -450,7 +395,6 @@
           alert('Could not get shipping rates. Please try again.');
           return;
         }
-
         const data = await res.json();
         renderRates(data?.rates || []);
       } catch (e) {
@@ -465,7 +409,6 @@
 
   function renderRates(rates) {
     if (!ratesList) return;
-
     ratesList.innerHTML = '';
     if (!rates || rates.length === 0) {
       ratesList.innerHTML = `<li class="muted">No rates available for this destination.</li>`;
@@ -487,16 +430,31 @@
         </label>
       `;
       ratesList.appendChild(li);
-
-      const radio = li.querySelector('input[type="radio"]');
-      radio.addEventListener('change', () => onSelectRate(r));
+      li.querySelector('input').addEventListener('change', () => onSelectRate(r));
     });
 
-    // auto-select cheapest (assumes API sorted)
-    onSelectRate(rates[0]);
+    onSelectRate(rates[0]); // pick cheapest (API should return sorted)
   }
 
   if (btnGetRates) btnGetRates.addEventListener('click', requestRates);
+  if (linkUseSaved) {
+    linkUseSaved.addEventListener('click', (e) => {
+      e.preventDefault();
+      const dest = getStoredDest();
+      if (!dest) return alert('No saved address yet.');
+      ensureCountryOptions();
+      writeDestToUI(dest);
+    });
+  }
+
+  // Keep dest in sync when user types
+  [inCountry, inState, inCity, inPostal].forEach((el) => {
+    if (!el) return;
+    el.addEventListener('change', () => {
+      const dest = readDestFromUI();
+      if (dest) setStoredDest(dest);
+    });
+  });
 
   // ---------- Checkout ----------
   if (btnCheckout) {
@@ -507,17 +465,14 @@
         btnCheckout.textContent = 'Loading…';
 
         const items = loadCart();
-        if (items.length === 0) {
+        if (!items.length) {
           alert('Your cart is empty.');
           btnCheckout.disabled = false;
           btnCheckout.textContent = prev;
           return;
         }
 
-        // Optional: require a selected rate before checkout
-        const rate = getStoredRate();
-        // If you want to force selection, uncomment:
-        // if (!rate) { alert('Please select a shipping rate.'); btnCheckout.disabled=false; btnCheckout.textContent=prev; return; }
+        const rate = getStoredRate(); // optional; you can enforce selection if you want
 
         const res = await fetchWithTimeout('/api/checkout', {
           method: 'POST',
@@ -553,7 +508,8 @@
   }
 
   // ---------- Init ----------
-  wireDestForm();                    // hook up live fields if present
-  renderDestLabels(getStoredDest()); // paint current destination text
-  render();                          // draw cart + totals
+  ensureCountryOptions();
+  writeDestToUI(getStoredDest());
+  render();
 })();
+</script>
