@@ -4,27 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Your Cart — Force Dowels™</title>
-  <meta name="description" content="Review your cart, select shipping, and proceed to checkout." />
+  <meta name="description" content="Review your Force Dowels cart, get shipping rates, and proceed to checkout.">
   <link rel="icon" href="/favicon.ico" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=cart-ui-2">
-
-  <!-- Clerk (Browser) -->
-  <script
-    async
-    crossorigin="anonymous"
-    data-clerk-publishable-key="pk_test_dmlhYmxlLWhhZGRvY2stMzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
-    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
-  </script>
-
-  <!-- Auth glue + site + cart -->
-  <script defer src="/script-auth.js"></script>
-  <script defer src="/script.js"></script>
-  <script defer src="/script-cart.js?v=47"></script>
+  <link rel="stylesheet" href="/styles.css?v=cart-6">
+  <script defer src="/script.js?v=cart-6"></script>
 </head>
-<body>
+<body class="cart-page">
 
 <!-- Header -->
 <header class="site-header">
@@ -54,131 +42,94 @@
     </nav>
 
     <div class="header-actions">
-      <a href="/cart.html" class="btn btn--ghost btn--invert" id="btn-cart" aria-label="Shopping cart">
+      <a href="/cart.html"
+         class="btn btn--ghost btn--invert"
+         id="btn-cart"
+         aria-label="Shopping cart"
+         onclick="window.location='/cart.html'; return false;">
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
           <path fill="currentColor" d="M7 18a2 2 0 1 0 0 4a2 2 0 0 0 0-4m10 0a2 2 0 1 0 0 4a2 2 0 0 0 0-4M6.2 6l.3 2h12.3a1 1 0 0 1 1 1l-1.2 6a2 2 0 0 1-2 1.6H8.7a2 2 0 0 1-2-1.7L5.3 5H3V3h3a1 1 0 0 1 1 .9L7.2 6Z"/>
         </svg>
         <span class="hide-sm">Cart</span>
         <span id="cart-count" class="badge"></span>
       </a>
-
-      <div class="auth-buttons">
-        <button class="btn btn--ghost btn--invert" id="btn-login" type="button">Login</button>
-        <button class="btn btn--accent" id="btn-signup" type="button">Sign Up</button>
-      </div>
-      <button class="btn btn--ghost btn--invert" id="btn-signout" type="button" style="display:none;">Sign Out</button>
-      <div id="user-button"></div>
     </div>
   </div>
 </header>
 
 <main id="content">
   <section class="section">
-    <div class="container"><a href="/order.html" class="link">← Back to Order</a></div>
-  </section>
-
-  <!-- CART -->
-  <section class="section cart-section">
     <div class="container cart-grid">
 
-      <!-- LEFT: Cart table -->
-      <div class="cart-left">
+      <!-- Left: table -->
+      <div class="cart-main">
         <h1>Your Cart</h1>
 
-        <table class="cart-table" id="cart-table">
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Units / Qty</th>
-              <th>Unit Price</th>
-              <th>Line Total</th>
-            </tr>
-          </thead>
-          <tbody id="cart-body">
-            <!-- rows are rendered by script-cart.js -->
-          </tbody>
-        </table>
+        <div class="table-wrap">
+          <table id="cart-table" class="cart-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th style="width:280px">Quantity</th>
+                <th style="width:160px">Unit Price</th>
+                <th style="width:200px">Total</th>
+              </tr>
+            </thead>
+            <tbody id="cart-body">
+              <tr><td colspan="4" class="muted" style="padding:20px 0;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
 
-        <div class="cart-tools">
-          <button class="btn btn--ghost" id="btn-clear" type="button">Clear Cart</button>
-          <button class="btn btn--ghost" id="btn-consolidate" type="button">Consolidate Items</button>
-          <button class="btn btn--accent" id="btn-add-more" type="button">Add More Items</button>
+        <div class="cart-toolbar">
+          <button id="btn-add-more" class="btn btn--ghost" type="button">Add More Items</button>
+          <div class="spacer"></div>
+          <button id="btn-consolidate" class="btn btn--ghost" type="button" title="Merge all bulk lines into one">Consolidate</button>
+          <button id="btn-clear" class="btn btn--ghost" type="button">Clear Cart</button>
         </div>
       </div>
 
-      <!-- RIGHT: Sticky summary -->
+      <!-- Right: summary -->
       <aside class="cart-summary">
         <div class="summary-card">
-          <h3 class="summary-title">Order Summary</h3>
+          <h3>Shipping</h3>
+
+          <div class="ship-dest">
+            <div class="dest-row"><span>Country</span><strong id="dest-country">—</strong></div>
+            <div class="dest-row"><span>State/Prov</span><strong id="dest-state">—</strong></div>
+            <div class="dest-row"><span>City</span><strong id="dest-city">—</strong></div>
+            <div class="dest-row"><span>Postal</span><strong id="dest-postal">—</strong></div>
+            <button id="btn-change-dest" class="btn btn--ghost btn--small" type="button">Change</button>
+          </div>
+
+          <div class="rates-wrap">
+            <div class="rates-head">
+              <span>Available Rates</span>
+              <button id="btn-get-rates" class="btn btn--ghost btn--small" type="button">Get Rates</button>
+            </div>
+
+            <ul id="rates-list" class="rates-list"></ul>
+
+            <!-- Debug (hidden unless ?shipdebug=1) -->
+            <pre id="rates-debug" style="display:none; margin-top:10px; padding:10px; background:#0b1020; color:#cde; border:1px solid #243; border-radius:10px; max-height:220px; overflow:auto;"></pre>
+          </div>
+
+          <div class="summary-sep"></div>
 
           <div class="summary-row">
             <span>Subtotal</span>
             <strong id="summary-subtotal">$0.00</strong>
           </div>
-
-          <div class="summary-divider"></div>
-
-          <div class="ship-form" aria-label="Shipping">
-            <div class="ship-head">
-              <span>Shipping</span>
-              <button id="btn-change-dest" type="button" class="link">Use saved</button>
-            </div>
-
-            <div class="ship-fields">
-            <label class="field">
-  <span>Country</span>
-  <select id="ship-country" required>
-    <option value="US">United States</option>
-    <option value="CA">Canada</option>
-    <option value="MX">Mexico</option>
-  </select>
-</label>
-
-<label class="field">
-  <span>State/Province</span>
-  <input id="ship-state" type="text" placeholder="e.g., AZ" maxlength="3" />
-</label>
-
-<label class="field">
-  <span>City</span>
-  <input id="ship-city" type="text" />
-</label>
-
-<label class="field">
-  <span>ZIP / Postal</span>
-  <input id="ship-postal" type="text" />
-</label>
-
-              <label class="field">
-  <span>Street</span>
-  <input id="ship-street"
-         type="text"
-         placeholder="4455 E Nunneley Rd, Ste 103"
-         autocomplete="shipping street-address" />
-</label>
-
-
-              <button id="btn-get-rates" class="btn btn--secondary btn-wide" type="button">Get Rates</button>
-            </div>
-
-            <ul id="rates-list" class="rates"><!-- populated by JS --></ul>
-          </div>
-
           <div class="summary-row">
             <span>Shipping</span>
             <strong id="summary-shipping">$0.00</strong>
           </div>
-
-          <div class="summary-row total">
-            <span>Total</span>
+          <div class="summary-row summary-row--grand">
+            <span>Grand Total</span>
             <strong id="summary-grand">$0.00</strong>
           </div>
 
-          <button id="btn-checkout" class="btn btn--accent btn-wide" type="button">
-            Proceed to Checkout
-          </button>
-
-          <p class="muted small">Taxes are calculated during payment.</p>
+          <button id="btn-checkout" class="btn btn--accent btn-wide" type="button">Proceed to Checkout</button>
         </div>
       </aside>
 
@@ -205,8 +156,8 @@
         <li><a href="/">Home</a></li>
         <li><a href="/order.html">Order Now</a></li>
         <li><a href="/videos.html">Product Videos</a></li>
-        <li><a href="/distributors.html">Find a Distributor</a></li>
-        <li><a href="/distributor-application.html">Become a Distributor</a></li>
+        <li><a href="/distributors">Find a Distributor</a></li>
+        <li><a href="/distributor-application">Become a Distributor</a></li>
       </ul>
     </section>
 
@@ -246,8 +197,7 @@
   </div>
 </footer>
 
-<script>
-  (function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})();
-</script>
+<script> (function(){var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})(); </script>
+<script defer src="/script-cart.js?v=ship-7"></script>
 </body>
 </html>
