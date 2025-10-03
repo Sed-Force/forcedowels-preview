@@ -1,145 +1,145 @@
 // /api/shipping/quote.js
-// Returns { rates: [...], diagnostics: { ups: {...}, usps: {...}, tql: {...} } }
-// so you can see exactly why a carrier is missing.
+// Returns { rates: [...], diagnostics: {...} }
+// UPS (OAuth + Rate Shop), USPS (RateV4 domestic), TQL (LTL stub)
 
 export const config = { runtime: 'nodejs' };
 
-function mask(str) {
-  if (!str) return '';
-  const s = String(str);
-  if (s.length <= 4) return '****';
-  return s.slice(0, 2) + '***' + s.slice(-2);
+// ---------------------------------------------------------------------------
+// helpers
+const mask = (v) => (v ? true : false);
+const round = (n, p = 0) => Number((+n).toFixed(p));
+const five = (z = '') => String(z || '').trim().slice(0, 5);
+
+// robust body parse for Vercel Node runtime
+function getJsonBody(req) {
+  if (req.body == null) return {};
+  if (typeof req.body === 'string') {
+    try { return JSON.parse(req.body); } catch { return {}; }
+  }
+  return req.body;
 }
 
-// --- Read envs with fallbacks to match your screenshots ---
+// env (matches your screenshots)
 const ENV = {
-  UPS_CLIENT_ID:       process.env.UPS_CLIENT_ID,
-  UPS_CLIENT_SECRET:   process.env.UPS_CLIENT_SECRET,
-  UPS_ENV:             process.env.UPS_ENV || 'prod', // 'prod' or 'test'
-  UPS_SHIPPER_NUMBER:  process.env.UPS_SHIPPER_NUMBER || process.env.UPS_ACCOUNT_NUMBER,
+  UPS_CLIENT_ID:      process.env.UPS_CLIENT_ID,
+  UPS_CLIENT_SECRET:  process.env.UPS_CLIENT_SECRET,
+  UPS_ENV:            (process.env.UPS_ENV || 'prod').toLowerCase(), // 'prod' or 'test'
+  UPS_SHIPPER_NUMBER: process.env.UPS_SHIPPER_NUMBER || process.env.UPS_ACCOUNT_NUMBER,
 
   USPS_USERID:
     process.env.USPS_WEBTOOLS_USERID ||
     process.env.USPS_USER_ID ||
     process.env.USPS_CLIENT_ID,
 
-  TQL_CLIENT_ID:       process.env.TQL_CLIENT_ID,
-  TQL_CLIENT_SECRET:   process.env.TQL_CLIENT_SECRET,
-  TQL_USERNAME:        process.env.TQL_USERNAME,
-  TQL_PASSWORD:        process.env.TQL_PASSWORD,
-  TQL_BASE_URL:        process.env.TQL_BASE_URL,
-  TQL_TEST_BASE_URL:   process.env.TQL_TEST_BASE_URL,
+  TQL_CLIENT_ID:      process.env.TQL_CLIENT_ID,
+  TQL_CLIENT_SECRET:  process.env.TQL_CLIENT_SECRET,
+  TQL_USERNAME:       process.env.TQL_USERNAME,
+  TQL_PASSWORD:       process.env.TQL_PASSWORD,
+  TQL_BASE_URL:       process.env.TQL_BASE_URL,
+  TQL_TEST_BASE_URL:  process.env.TQL_TEST_BASE_URL,
 
   FROM: {
-    name:    process.env.SHIP_FROM_NAME,
+    name:    process.env.SHIP_FROM_NAME || 'Force Dowels',
     street:  process.env.SHIP_FROM_STREET,
     city:    process.env.SHIP_FROM_CITY,
     state:   process.env.SHIP_FROM_STATE,
     postal:  process.env.SHIP_FROM_ZIP,
-    country: process.env.SHIP_FROM_COUNTRY || 'US',
+    country: (process.env.SHIP_FROM_COUNTRY || 'US').toUpperCase(),
   },
 };
 
-// --- Simple packer (same as before) just to produce a weight/dims estimate ---
-function round(n, p = 0) { return Number((+n).toFixed(p)); }
-
-// Bulk packaging based on your table (approx):
-// 5k = 19 lb, 15x15x12
-// 10k = two 5k boxes
-// 15k/20k use 22x22x12
-// >=80k -> palletized weights provided in earlier notes (we’ll hand to TQL)
+// ---------------------------------------------------------------------------
+// packing logic you gave me
 function buildPackages(items) {
   let bulkUnits = 0, kits = 0;
   for (const it of items || []) {
-    if (it.type === 'bulk') bulkUnits += +it.units || 0;
-    if (it.type === 'kit')  kits += +it.qty || 0;
+    if (it?.type === 'bulk') bulkUnits += +it.units || 0;
+    if (it?.type === 'kit')  kits += +it.qty   || 0;
   }
 
   const pkgs = [];
 
-  // Starter kits: 2 kits per UPS pkg, 9x11x2, 1.7 lb each
+  // Starter kits: 2 kits per pkg, 9x11x2, 1.7 lb each
   if (kits > 0) {
-    let remaining = kits;
-    while (remaining > 0) {
-      const inBox = Math.min(2, remaining);
+    let left = kits;
+    while (left > 0) {
+      const inBox = Math.min(2, left);
       pkgs.push({ weight: round(1.7 * inBox, 1), length: 11, width: 9, height: 2 });
-      remaining -= inBox;
+      left -= inBox;
     }
   }
 
-  // Bulk parcels up to 20k -> small parcel boxes.
+  // Bulk parcels up to 20k → small package boxes
   let remaining = bulkUnits;
-
-  // For 20k and below, use parcel boxes
   let parcelUnits = Math.min(remaining, 20000);
   remaining -= parcelUnits;
 
   while (parcelUnits > 0) {
     if (parcelUnits >= 20000) {
-      // 20k -> one 22x22x12 @ ~? use two 15x15x12 logic stacked (approx 2x19=38 lb, but your 20k box is larger).
-      pkgs.push({ weight: 154, length: 22, width: 22, height: 12 }); // 2x 10k (approx 77lb x2); conservative
+      // conservative single 20k box approximation
+      pkgs.push({ weight: 154, length: 22, width: 22, height: 12 });
       parcelUnits -= 20000;
     } else if (parcelUnits >= 15000) {
-      pkgs.push({ weight: 115, length: 22, width: 22, height: 12 }); // 15k approx
+      pkgs.push({ weight: 115, length: 22, width: 22, height: 12 });
       parcelUnits -= 15000;
     } else if (parcelUnits >= 10000) {
-      pkgs.push({ weight: 77, length: 15, width: 15, height: 12 }); // 10k
+      pkgs.push({ weight: 77, length: 15, width: 15, height: 12 });
       parcelUnits -= 10000;
-    } else if (parcelUnits >= 5000) {
-      pkgs.push({ weight: 19, length: 15, width: 15, height: 12 }); // 5k
-      parcelUnits -= 5000;
     } else {
-      // snap up to 5k minimum parcel
+      // ≥ 5k and < 10k
       pkgs.push({ weight: 19, length: 15, width: 15, height: 12 });
       parcelUnits = 0;
     }
   }
 
-  // Anything over 20k is pallet/LTL territory handled by TQL; we’ll pass the big number as freight lbs.
+  // Anything over 20k → LTL territory
   const freightUnits = remaining > 0 ? remaining : 0;
 
   return { pkgs, freightUnits };
 }
 
-// ---- USPS quote (WebTools RateV4) ----
+// ---------------------------------------------------------------------------
+// USPS (domestic only, WebTools RateV4 Priority as a baseline)
 async function uspsQuote(from, dest, pkgs, diagnostics) {
-  const diag = (diagnostics.usps = { enabled: !!ENV.USPS_USERID, userIdPresent: !!ENV.USPS_USERID, errors: [] });
+  const diag = (diagnostics.usps = {
+    enabled: mask(ENV.USPS_USERID),
+    errors: [],
+  });
   if (!ENV.USPS_USERID) return [];
 
+  // USPS only domestic in this simple handler
+  if ((dest.country || 'US').toUpperCase() !== 'US') {
+    diag.errors.push('USPS limited to US destination in this integration.');
+    return [];
+  }
+
+  if (!pkgs.length) {
+    diag.errors.push('No parcel packages available for USPS.');
+    return [];
+  }
+
   try {
-    // Only support US destinations for USPS.
-    if ((dest.country || 'US').toUpperCase() !== 'US') {
-      diag.errors.push('USPS limited to US destination in this demo.');
-      return [];
-    }
-
     const endpoint = 'https://secure.shippingapis.com/ShippingAPI.dll';
+    const p = pkgs[0]; // First package only for estimate
 
-    // Build XML for RateV4 (Parcel Select / Priority / Ground Advantage etc.)
-    // For simplicity, pick the first parcel and quote on that; you can multi-package sum if needed.
-    if (!pkgs.length) {
-      diag.errors.push('No parcel packages to rate.');
-      return [];
-    }
-    const pkg = pkgs[0];
-
-    const pounds = Math.max(0, Math.floor(pkg.weight));
-    const ounces = Math.max(1, Math.round((pkg.weight - pounds) * 16) || 1);
+    // USPS wants LBS/OZ integers and 5-digit ZIPs
+    const pounds = Math.max(0, Math.floor(p.weight));
+    const ounces = Math.max(1, Math.round((p.weight - pounds) * 16) || 1);
 
     const xml =
       `<RateV4Request USERID="${ENV.USPS_USERID}">
          <Revision>2</Revision>
          <Package ID="1">
            <Service>PRIORITY</Service>
-           <ZipOrigination>${from.postal}</ZipOrigination>
-           <ZipDestination>${dest.postal}</ZipDestination>
+           <ZipOrigination>${five(from.postal)}</ZipOrigination>
+           <ZipDestination>${five(dest.postal)}</ZipDestination>
            <Pounds>${pounds}</Pounds>
            <Ounces>${ounces}</Ounces>
-           <Container/>
+           <Container></Container>
            <Size>REGULAR</Size>
-           <Width>${pkg.width}</Width>
-           <Length>${pkg.length}</Length>
-           <Height>${pkg.height}</Height>
+           <Width>${p.width}</Width>
+           <Length>${p.length}</Length>
+           <Height>${p.height}</Height>
            <Machinable>true</Machinable>
          </Package>
        </RateV4Request>`.replace(/\s+/g, ' ');
@@ -157,18 +157,18 @@ async function uspsQuote(from, dest, pkgs, diagnostics) {
       return [];
     }
 
-    // Simple parse: grab the <Rate> of the first returned service
-    const m = text.match(/<Rate>([\d.]+)<\/Rate>/);
-    if (!m) {
+    const rateMatch = text.match(/<Rate>([\d.]+)<\/Rate>/);
+    if (!rateMatch) {
       diag.errors.push('No <Rate> found in USPS response.');
       return [];
     }
-    const amount = Number(m[1]);
+    const amount = Number(rateMatch[1]);
+
     return [{
       carrier: 'USPS',
       service: 'Priority (est.)',
       amount,
-      currency: 'USD'
+      currency: 'USD',
     }];
   } catch (e) {
     diag.errors.push(String(e));
@@ -176,25 +176,27 @@ async function uspsQuote(from, dest, pkgs, diagnostics) {
   }
 }
 
-// ---- UPS quote (Client Credentials OAuth + Rate) ----
+// ---------------------------------------------------------------------------
+// UPS (OAuth + Rate Shop)
 async function upsQuote(from, dest, pkgs, diagnostics) {
   const diag = (diagnostics.ups = {
-    enabled: !!(ENV.UPS_CLIENT_ID && ENV.UPS_CLIENT_SECRET && ENV.UPS_SHIPPER_NUMBER),
-    clientIdPresent: !!ENV.UPS_CLIENT_ID,
-    secretPresent: !!ENV.UPS_CLIENT_SECRET,
-    shipperNumberPresent: !!ENV.UPS_SHIPPER_NUMBER,
+    enabled: mask(ENV.UPS_CLIENT_ID && ENV.UPS_CLIENT_SECRET && ENV.UPS_SHIPPER_NUMBER),
     env: ENV.UPS_ENV,
-    errors: []
+    errors: [],
   });
-
   if (!diag.enabled) return [];
+
+  if (!pkgs.length) {
+    diag.errors.push('No parcel packages available for UPS.');
+    return [];
+  }
 
   try {
     const base = ENV.UPS_ENV === 'test'
       ? 'https://wwwcie.ups.com'
       : 'https://onlinetools.ups.com';
 
-    // OAuth
+    // Get token
     const tokenResp = await fetch(`${base}/security/v1/oauth/token`, {
       method: 'POST',
       headers: {
@@ -204,68 +206,62 @@ async function upsQuote(from, dest, pkgs, diagnostics) {
       },
       body: 'grant_type=client_credentials',
     });
-
     const tok = await tokenResp.json().catch(() => ({}));
     if (!tokenResp.ok || !tok.access_token) {
-      diag.errors.push(`UPS OAuth failed: ${tokenResp.status} ${JSON.stringify(tok)}`);
+      diag.errors.push(`OAuth failed: ${tokenResp.status} ${JSON.stringify(tok)}`);
       return [];
     }
 
-    if (!pkgs.length) {
-      diag.errors.push('No parcel packages to rate.');
-      return [];
-    }
-
-    const pkg = pkgs[0]; // simple demo: first pkg
+    const p = pkgs[0]; // First pkg only, for a baseline
 
     const payload = {
       RateRequest: {
         Request: { SubVersion: '1707', TransactionReference: { CustomerContext: 'FD Rate' } },
         Shipment: {
           Shipper: {
-            Name: ENV.FROM.name || 'Force Dowels',
+            Name: ENV.FROM.name,
             ShipperNumber: ENV.UPS_SHIPPER_NUMBER,
             Address: {
               AddressLine: [ENV.FROM.street],
               City: ENV.FROM.city,
               StateProvinceCode: ENV.FROM.state,
-              PostalCode: ENV.FROM.postal,
-              CountryCode: ENV.FROM.country || 'US'
-            }
+              PostalCode: five(ENV.FROM.postal),
+              CountryCode: (ENV.FROM.country || 'US').toUpperCase(),
+            },
           },
           ShipTo: {
             Address: {
               AddressLine: [''],
               City: dest.city,
               StateProvinceCode: dest.state,
-              PostalCode: dest.postal,
+              PostalCode: five(dest.postal),
               CountryCode: (dest.country || 'US').toUpperCase(),
-            }
+            },
           },
           ShipFrom: {
             Address: {
               AddressLine: [ENV.FROM.street],
               City: ENV.FROM.city,
               StateProvinceCode: ENV.FROM.state,
-              PostalCode: ENV.FROM.postal,
-              CountryCode: ENV.FROM.country || 'US'
-            }
+              PostalCode: five(ENV.FROM.postal),
+              CountryCode: (ENV.FROM.country || 'US').toUpperCase(),
+            },
           },
           Package: [{
             PackagingType: { Code: '02' }, // Customer Supplied
             Dimensions: {
               UnitOfMeasurement: { Code: 'IN' },
-              Length: String(pkg.length),
-              Width: String(pkg.width),
-              Height: String(pkg.height),
+              Length: String(p.length),
+              Width: String(p.width),
+              Height: String(p.height),
             },
             PackageWeight: {
               UnitOfMeasurement: { Code: 'LBS' },
-              Weight: String(Math.max(1, Math.ceil(pkg.weight)))
-            }
-          }]
-        }
-      }
+              Weight: String(Math.max(1, Math.ceil(p.weight))),
+            },
+          }],
+        },
+      },
     };
 
     const rateResp = await fetch(`${base}/api/rating/v1/rates/shops`, {
@@ -274,80 +270,91 @@ async function upsQuote(from, dest, pkgs, diagnostics) {
         Accept: 'application/json',
         'Content-Type': 'application/json',
         Authorization: `Bearer ${tok.access_token}`,
-        'x-merchant-id': ENV.UPS_SHIPPER_NUMBER
+        'x-merchant-id': ENV.UPS_SHIPPER_NUMBER,
       },
       body: JSON.stringify(payload),
     });
 
-    const rateJson = await rateResp.json().catch(() => ({}));
+    const data = await rateResp.json().catch(() => ({}));
     if (!rateResp.ok) {
-      diag.errors.push(`UPS rate HTTP ${rateResp.status}: ${JSON.stringify(rateJson)}`);
+      diag.errors.push(`Rate HTTP ${rateResp.status}: ${JSON.stringify(data)}`);
       return [];
     }
 
-    const svcs = (rateJson?.RateResponse?.RatedShipment || []).map(s => ({
+    const items = (data?.RateResponse?.RatedShipment || []).map((s) => ({
       carrier: 'UPS',
       service: s?.Service?.Description || s?.Service?.Code || 'UPS',
       amount: Number(s?.TotalCharges?.MonetaryValue || s?.NegotiatedRateCharges?.TotalCharge?.MonetaryValue || 0),
-      currency: (s?.TotalCharges?.CurrencyCode || 'USD')
-    })).filter(x => x.amount > 0);
+      currency: s?.TotalCharges?.CurrencyCode || 'USD',
+    })).filter(r => Number.isFinite(r.amount) && r.amount > 0);
 
-    if (!svcs.length) diag.errors.push('No rated services returned.');
-    return svcs;
+    if (!items.length) diag.errors.push('No rated services returned by UPS.');
+
+    return items;
   } catch (e) {
     diagnostics.ups.errors.push(String(e));
     return [];
   }
 }
 
-// ---- TQL stub (you already see it working; we keep it minimal here) ----
-async function tqlQuote(freightUnits, diagnostics) {
-  const diag = (diagnostics.tql = { enabled: !!ENV.TQL_CLIENT_ID, errors: [] });
-  if (!freightUnits || freightUnits < 80000) return []; // pallet threshold in your logic
-  // For debug/demo, pretend $250 freight for now
+// ---------------------------------------------------------------------------
+// TQL – simple placeholder (you can wire real TQL next)
+async function tqlQuote(freightUnits /*>=80k*/, diagnostics) {
+  const diag = (diagnostics.tql = { enabled: mask(ENV.TQL_CLIENT_ID), errors: [] });
+  if (!freightUnits || freightUnits < 80000) return [];
+  // demo flat estimate for now
   return [{ carrier: 'TQL', service: 'LTL (est.)', amount: 250, currency: 'USD' }];
 }
 
+// ---------------------------------------------------------------------------
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Use POST' });
-  }
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
+
   try {
-    const { destination, items } = await req.json?.() || await req.body || {};
-    if (!items || !Array.isArray(items) || !destination) {
-      return res.status(400).json({ error: 'Missing items or destination' });
+    const { destination, items } = getJsonBody(req);
+    if (!destination || !Array.isArray(items)) {
+      return res.status(400).json({ error: 'missing_params' });
     }
 
     const diagnostics = {
       envSeen: {
         ups: {
-          clientId: !!ENV.UPS_CLIENT_ID, clientSecret: !!ENV.UPS_CLIENT_SECRET,
-          shipperNumber: !!ENV.UPS_SHIPPER_NUMBER, env: ENV.UPS_ENV
+          clientId: mask(ENV.UPS_CLIENT_ID),
+          clientSecret: mask(ENV.UPS_CLIENT_SECRET),
+          shipperNumber: mask(ENV.UPS_SHIPPER_NUMBER),
+          env: ENV.UPS_ENV,
         },
-        usps: { userId: !!ENV.USPS_USERID },
-        from: { ...ENV.FROM, // masked view
-          name: !!ENV.FROM.name, street: !!ENV.FROM.street, city: !!ENV.FROM.city,
-          state: !!ENV.FROM.state, postal: !!ENV.FROM.postal, country: ENV.FROM.country
-        }
-      }
+        usps: { userId: mask(ENV.USPS_USERID) },
+        fromValid: mask(ENV.FROM.city && ENV.FROM.state && ENV.FROM.postal),
+      },
+      usps: {},
+      ups: {},
+      tql: {},
+    };
+
+    // normalize destination bits carriers care about
+    const dest = {
+      country: (destination.country || 'US').toUpperCase(),
+      state: destination.state || '',
+      city: destination.city || '',
+      postal: five(destination.postal),
     };
 
     const { pkgs, freightUnits } = buildPackages(items);
 
-    // Call carriers
     const [uspsRates, upsRates, tqlRates] = await Promise.all([
-      uspsQuote(ENV.FROM, destination, pkgs, diagnostics),
-      upsQuote(ENV.FROM, destination, pkgs, diagnostics),
+      uspsQuote(ENV.FROM, dest, pkgs, diagnostics),
+      upsQuote(ENV.FROM, dest, pkgs, diagnostics),
       tqlQuote(freightUnits, diagnostics),
     ]);
 
     const rates = [...uspsRates, ...upsRates, ...tqlRates]
       .filter(r => r && Number.isFinite(r.amount))
-      .sort((a,b) => a.amount - b.amount);
+      .sort((a, b) => a.amount - b.amount);
 
-    res.status(200).json({ rates, diagnostics });
+    return res.status(200).json({ rates, diagnostics });
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'quote_failed', message: String(e) });
+    console.error('shipping/quote failed', e);
+    return res.status(500).json({ error: 'quote_failed', message: String(e) });
   }
 }
