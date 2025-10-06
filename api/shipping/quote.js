@@ -1,6 +1,7 @@
 // /api/shipping/quote.js
-// Live UPS + USPS rating with clear carrier status; TQL placeholder kept.
-// Vercel runtime
+// UPS + USPS quoting with robust state/province normalization.
+// If a carrier fails, a clear status message is returned and other carriers still work.
+
 export const config = { runtime: 'nodejs' };
 
 const asJSON = (res, code, obj) => {
@@ -9,11 +10,48 @@ const asJSON = (res, code, obj) => {
 };
 
 const toStr = (v) => (v ?? '').toString().trim();
+
+// ---------------- State/Province normalization ----------------
+const US_STATES = {
+  ALABAMA:'AL', ALASKA:'AK', ARIZONA:'AZ', ARKANSAS:'AR', CALIFORNIA:'CA', COLORADO:'CO',
+  CONNECTICUT:'CT', DELAWARE:'DE', 'DISTRICT OF COLUMBIA':'DC', FLORIDA:'FL', GEORGIA:'GA',
+  HAWAII:'HI', IDAHO:'ID', ILLINOIS:'IL', INDIANA:'IN', IOWA:'IA', KANSAS:'KS', KENTUCKY:'KY',
+  LOUISIANA:'LA', MAINE:'ME', MARYLAND:'MD', MASSACHUSETTS:'MA', MICHIGAN:'MI', MINNESOTA:'MN',
+  MISSISSIPPI:'MS', MISSOURI:'MO', MONTANA:'MT', NEBRASKA:'NE', NEVADA:'NV', 'NEW HAMPSHIRE':'NH',
+  'NEW JERSEY':'NJ', 'NEW MEXICO':'NM', 'NEW YORK':'NY', 'NORTH CAROLINA':'NC', 'NORTH DAKOTA':'ND',
+  OHIO:'OH', OKLAHOMA:'OK', OREGON:'OR', PENNSYLVANIA:'PA', 'RHODE ISLAND':'RI', 'SOUTH CAROLINA':'SC',
+  'SOUTH DAKOTA':'SD', TENNESSEE:'TN', TEXAS:'TX', UTAH:'UT', VERMONT:'VT', VIRGINIA:'VA',
+  WASHINGTON:'WA', 'WEST VIRGINIA':'WV', WISCONSIN:'WI', WYOMING:'WY',
+};
+
+const CA_PROVINCES = {
+  ALBERTA:'AB', 'BRITISH COLUMBIA':'BC', MANITOBA:'MB', 'NEW BRUNSWICK':'NB',
+  'NEWFOUNDLAND AND LABRADOR':'NL', 'NOVA SCOTIA':'NS', 'NORTHWEST TERRITORIES':'NT',
+  NUNAVUT:'NU', ONTARIO:'ON', 'PRINCE EDWARD ISLAND':'PE', QUEBEC:'QC', SASKATCHEWAN:'SK', YUKON:'YT',
+};
+
+function stateToCode(country, input) {
+  const s = toStr(input).toUpperCase();
+  if (!s) return '';
+  if (country === 'US') {
+    if (US_STATES[s]) return US_STATES[s];
+    if (Object.values(US_STATES).includes(s)) return s;
+    return ''; // don’t guess
+  }
+  if (country === 'CA') {
+    if (CA_PROVINCES[s]) return CA_PROVINCES[s];
+    if (Object.values(CA_PROVINCES).includes(s)) return s;
+    return '';
+  }
+  // For MX and others, UPS accepts empty state; omit field.
+  return '';
+}
+
 const hasAll = (obj) => Object.values(obj).every(Boolean);
 
-// ------------------------ Packaging rules (v1) ------------------------
-// Bulk: every 5,000 dowels = 1 parcel @ 19 lb, 15x15x12 in (rounded from 18.6)
-// Kits: 2 kits per parcel, each kit 1.7 lb, 9x11x2 in
+// ---------------- Packaging rules ----------------
+// Bulk: 5,000 units per parcel @ 19 lb; 15x15x12 in
+// Kits: 2 kits per parcel; 1.7 lb/kit; 9x11x2 in
 function buildParcels(items) {
   let bulkUnits = 0;
   let kits = 0;
@@ -24,7 +62,6 @@ function buildParcels(items) {
 
   const parcels = [];
 
-  // Bulk → 5k-per-parcel
   if (bulkUnits > 0) {
     const bags = Math.ceil(bulkUnits / 5000);
     for (let i = 0; i < bags; i++) {
@@ -36,7 +73,6 @@ function buildParcels(items) {
     }
   }
 
-  // Kits → 2 kits/parcel (9x11x2), 1.7 lb/kit
   let remainingKits = kits;
   while (remainingKits > 0) {
     const k = Math.min(2, remainingKits);
@@ -51,7 +87,7 @@ function buildParcels(items) {
   return parcels;
 }
 
-// ------------------------ TQL (placeholder) --------------------------
+// ---------------- Placeholder TQL ----------------
 function quoteTQLPlaceholder() {
   return [{
     carrier: 'TQL',
@@ -61,7 +97,7 @@ function quoteTQLPlaceholder() {
   }];
 }
 
-// ------------------------ UPS (OAuth + Shop) -------------------------
+// ---------------- UPS (OAuth + Shop) ----------------
 async function getUPSToken({ clientId, clientSecret, envBase }) {
   const url = `${envBase}/security/v1/oauth/token`;
   const body = new URLSearchParams({ grant_type: 'client_credentials' });
@@ -83,43 +119,42 @@ async function getUPSToken({ clientId, clientSecret, envBase }) {
 }
 
 function makeUPSBody({ shipFrom, dest, shipperNumber, parcels }) {
-  // Minimal "Shop Rates" request; UPS will return multiple services when possible
+  const shipToAddress = {
+    AddressLine: [toStr(dest.street)].filter(Boolean),
+    City: toStr(dest.city),
+    PostalCode: toStr(dest.postal),
+    CountryCode: dest.country,
+  };
+  const destState = stateToCode(dest.country, dest.state);
+  if (destState) shipToAddress.StateProvinceCode = destState;
+
+  const shipFromAddress = {
+    AddressLine: [toStr(shipFrom.street)].filter(Boolean),
+    City: toStr(shipFrom.city),
+    PostalCode: toStr(shipFrom.postal),
+    CountryCode: toStr(shipFrom.country) || 'US',
+  };
+  const fromState = stateToCode(shipFrom.country || 'US', shipFrom.state);
+  if (fromState) shipFromAddress.StateProvinceCode = fromState;
+
   return {
     RateRequest: {
       Shipment: {
         Shipper: {
           Name: shipFrom.name || 'Shipper',
           ShipperNumber: shipperNumber,
-          Address: {
-            AddressLine: [shipFrom.street].filter(Boolean),
-            City: shipFrom.city,
-            StateProvinceCode: shipFrom.state,
-            PostalCode: shipFrom.postal,
-            CountryCode: shipFrom.country || 'US',
-          },
+          Address: shipFromAddress,
         },
         ShipFrom: {
           Name: shipFrom.name || 'Ship From',
-          Address: {
-            AddressLine: [shipFrom.street].filter(Boolean),
-            City: shipFrom.city,
-            StateProvinceCode: shipFrom.state,
-            PostalCode: shipFrom.postal,
-            CountryCode: shipFrom.country || 'US',
-          },
+          Address: shipFromAddress,
         },
         ShipTo: {
           Name: 'Destination',
-          Address: {
-            AddressLine: [dest.street || ''].filter(Boolean), // optional
-            City: dest.city || '',
-            StateProvinceCode: (dest.state || '').toUpperCase().slice(0, 2),
-            PostalCode: dest.postal,
-            CountryCode: (dest.country || 'US').toUpperCase(),
-          },
+          Address: shipToAddress,
         },
         Package: parcels.map((p) => ({
-          PackagingType: { Code: '02' }, // Customer Supplied Package
+          PackagingType: { Code: '02' },
           Dimensions: {
             UnitOfMeasurement: { Code: 'IN' },
             Length: String(p.lengthIn),
@@ -139,7 +174,6 @@ function makeUPSBody({ shipFrom, dest, shipperNumber, parcels }) {
 async function quoteUPS({ envBase, token, shipperNumber, shipFrom, dest, parcels }) {
   const url = `${envBase}/api/rating/v1/Shop`;
   const body = makeUPSBody({ shipFrom, dest, shipperNumber, parcels });
-
   const r = await fetch(url, {
     method: 'POST',
     headers: {
@@ -155,26 +189,32 @@ async function quoteUPS({ envBase, token, shipperNumber, shipFrom, dest, parcels
   let j;
   try { j = JSON.parse(txt); } catch { throw new Error(`UPS parse error: ${txt}`); }
 
-  // The shape can vary; normalize a few common services to {carrier, service, amount}
-  // Look for RatedShipment / TotalCharges / MonetaryValue
   const out = [];
-  const rated = j?.RateResponse?.RatedShipment
-             || j?.RateResponse?.RateResults // alternate naming
-             || j?.RateResponse?.ShopResponse; // older
+  const rated =
+    j?.RateResponse?.RatedShipment ||
+    j?.RateResponse?.RateResults ||
+    j?.RateResponse?.ShopResponse;
   const list = Array.isArray(rated) ? rated : (rated ? [rated] : []);
 
   for (const rs of list) {
     const svc = rs?.Service?.Description || rs?.Service?.Code || 'UPS Service';
-    const total = Number(rs?.TotalCharges?.MonetaryValue ?? rs?.NegotiatedRateCharges?.TotalCharge?.MonetaryValue);
+    const total = Number(
+      rs?.TotalCharges?.MonetaryValue ??
+      rs?.NegotiatedRateCharges?.TotalCharge?.MonetaryValue
+    );
     if (Number.isFinite(total)) {
-      out.push({ carrier: 'UPS', service: String(svc), amount: total, currency: rs?.TotalCharges?.CurrencyCode || 'USD' });
+      out.push({
+        carrier: 'UPS',
+        service: String(svc),
+        amount: total,
+        currency: rs?.TotalCharges?.CurrencyCode || 'USD',
+      });
     }
   }
-
   return out;
 }
 
-// ------------------------ USPS (WebTools RateV4) ----------------------
+// ---------------- USPS (WebTools RateV4 DOMESTIC) ----------------
 function poundsAndOunces(weightLbs) {
   const lbs = Math.floor(weightLbs);
   const oz  = Math.round((weightLbs - lbs) * 16);
@@ -182,8 +222,6 @@ function poundsAndOunces(weightLbs) {
 }
 
 function buildUSPSRateV4XML({ userId, shipFromZip, destZip, parcels }) {
-  // We use PRIORITY as a sane default service for parcels.
-  // USPS requires one <Package> per parcel.
   const pkgs = parcels.map((p, i) => {
     const { lbs, oz } = poundsAndOunces(p.weightLbs);
     return `
@@ -216,17 +254,14 @@ async function quoteUSPS({ userId, shipFromZip, destZip, parcels }) {
   if (!r.ok) throw new Error(`USPS HTTP ${r.status}: ${xml}`);
   if (/Error/i.test(xml)) throw new Error(`USPS API error: ${xml}`);
 
-  // Parse a few "Postage/Rate" values and sum them by package.
-  // Keep it simple with regex extraction.
   const rates = [...xml.matchAll(/<Rate>([\d.]+)<\/Rate>/g)].map(m => Number(m[1]));
   if (!rates.length) throw new Error(`USPS: no <Rate> entries found`);
-
-  // Sum all package rates into one line
   const total = rates.reduce((a,b)=>a+b, 0);
+
   return [{ carrier: 'USPS', service: 'Priority Mail (sum of parcels)', amount: total, currency: 'USD' }];
 }
 
-// ------------------------ Handler ------------------------------------
+// ---------------- Handler ----------------
 export default async function handler(req, res) {
   if (req.method !== 'POST') return asJSON(res, 405, { error: 'Method not allowed' });
 
@@ -234,12 +269,18 @@ export default async function handler(req, res) {
   try { body = JSON.parse(req.body || '{}'); } catch { body = req.body || {}; }
 
   const destination = body.destination || {};
-  const items       = Array.isArray(body.items) ? body.items : [];
-
+  const items = Array.isArray(body.items) ? body.items : [];
   if (!items.length) return asJSON(res, 400, { error: 'Missing items[]' });
-  if (!toStr(destination.country) || !toStr(destination.postal)) {
-    return asJSON(res, 400, { error: 'Missing destination (country, postal)' });
-  }
+
+  const destCountry = toStr(destination.country).toUpperCase() || 'US';
+  const dest = {
+    country: destCountry,
+    state:   toStr(destination.state),
+    city:    toStr(destination.city),
+    postal:  toStr(destination.postal),
+    street:  toStr(destination.street),
+  };
+  if (!dest.postal) return asJSON(res, 400, { error: 'Missing destination.postal' });
 
   const shipFrom = {
     name:    process.env.SHIP_FROM_NAME,
@@ -266,22 +307,21 @@ export default async function handler(req, res) {
   };
 
   const uspsCreds = {
-    userId: process.env.USPS_WEBTOOLS_USERID, // IMPORTANT: WebTools USERID
+    userId: process.env.USPS_WEBTOOLS_USERID, // Must be USPS WebTools USERID
   };
 
   const parcels = buildParcels(items);
-
   const outRates = [];
-  const status   = {
+  const status = {
     ups:  { available: false, message: null },
     usps: { available: false, message: null },
     tql:  { available: true,  message: null },
   };
 
-  // Always keep TQL placeholder
+  // Always include TQL placeholder
   outRates.push(...quoteTQLPlaceholder());
 
-  // ---------------- UPS attempt ----------------
+  // ---------------- UPS ----------------
   try {
     if (!upsCreds.clientId || !upsCreds.clientSecret || !upsCreds.shipperNumber) {
       status.ups.message = 'Missing UPS env vars (UPS_CLIENT_ID / UPS_CLIENT_SECRET / UPS_ACCOUNT_NUMBER).';
@@ -294,13 +334,7 @@ export default async function handler(req, res) {
         token,
         shipperNumber: upsCreds.shipperNumber,
         shipFrom,
-        dest: {
-          country: (destination.country || 'US').toUpperCase(),
-          state: (destination.state || '').toUpperCase(),
-          city: destination.city || '',
-          postal: destination.postal || '',
-          street: destination.street || '',
-        },
+        dest: { ...dest }, // state is normalized inside makeUPSBody()
         parcels,
       });
       if (upsRates.length) {
@@ -315,12 +349,11 @@ export default async function handler(req, res) {
     status.ups.message = `Error: ${e.message.slice(0, 300)}`;
   }
 
-  // ---------------- USPS attempt (US→US only) ----------------
+  // ---------------- USPS (domestic only) ----------------
   try {
-    const isUSDomestic = (destination.country || 'US').toUpperCase() === 'US'
-                      && (shipFrom.country || 'US').toUpperCase() === 'US';
+    const isUSDomestic = dest.country === 'US' && (shipFrom.country || 'US').toUpperCase() === 'US';
     if (!isUSDomestic) {
-      status.usps.message = 'USPS step covers domestic (US→US) only.';
+      status.usps.message = 'USPS step covers US→US only.';
     } else if (!uspsCreds.userId) {
       status.usps.message = 'Missing USPS_WEBTOOLS_USERID env var.';
     } else if (!shipFromOK) {
@@ -329,7 +362,7 @@ export default async function handler(req, res) {
       const uspsRates = await quoteUSPS({
         userId: uspsCreds.userId,
         shipFromZip: shipFrom.postal,
-        destZip: destination.postal,
+        destZip: dest.postal,
         parcels,
       });
       if (uspsRates.length) {
