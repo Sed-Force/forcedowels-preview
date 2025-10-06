@@ -167,3 +167,33 @@ export default async function handler(req, res) {
     json(res, 500, { error: String(e) });
   }
 }
+
+// /api/shipping/selftest.js
+export const config = { runtime: 'nodejs' };
+
+const asJSON = (res, code, obj) => {
+  res.status(code).setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(obj, null, 2));
+};
+
+export default async function handler(req, res) {
+  const ups = {
+    clientId:      !!process.env.UPS_CLIENT_ID,
+    clientSecret:  !!process.env.UPS_CLIENT_SECRET,
+    shipperNumber: !!process.env.UPS_ACCOUNT_NUMBER,
+    env:           process.env.UPS_ENV || 'test',
+  };
+  const usps = {
+    webtoolsUserId: !!process.env.USPS_WEBTOOLS_USERID,
+  };
+  const shipFrom = {
+    name: !!process.env.SHIP_FROM_NAME,
+    street: !!process.env.SHIP_FROM_STREET,
+    city: !!process.env.SHIP_FROM_CITY,
+    state: !!process.env.SHIP_FROM_STATE,
+    postal: !!process.env.SHIP_FROM_ZIP,
+    country: !!process.env.SHIP_FROM_COUNTRY,
+  };
+
+  asJSON(res, 200, { ups, usps, shipFrom });
+}
