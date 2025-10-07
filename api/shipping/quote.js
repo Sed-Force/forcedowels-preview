@@ -1,6 +1,9 @@
 // /api/shipping/quote.js
-// UPS + USPS quoting with robust state/province normalization and USPS multi-parcel aggregation.
-// If a carrier fails, a clear status message is returned and other carriers still work.
+// UPS + USPS quoting with clean labels, parcel rules, and clear status.
+// Env vars expected (already in your Vercel project):
+// UPS_CLIENT_ID, UPS_CLIENT_SECRET, UPS_ACCOUNT_NUMBER, UPS_ENV ("test" or "prod")
+// USPS_WEBTOOLS_USERID
+// SHIP_FROM_NAME, SHIP_FROM_STREET, SHIP_FROM_CITY, SHIP_FROM_STATE, SHIP_FROM_ZIP, SHIP_FROM_COUNTRY
 
 export const config = { runtime: 'nodejs' };
 
@@ -10,8 +13,9 @@ const asJSON = (res, code, obj) => {
 };
 
 const toStr = (v) => (v ?? '').toString().trim();
+const hasAll = (obj) => Object.values(obj).every(Boolean);
 
-// ---------------- State/Province normalization ----------------
+// ---------- State/Province normalization ----------
 const US_STATES = {
   ALABAMA:'AL', ALASKA:'AK', ARIZONA:'AZ', ARKANSAS:'AR', CALIFORNIA:'CA', COLORADO:'CO',
   CONNECTICUT:'CT', DELAWARE:'DE', 'DISTRICT OF COLUMBIA':'DC', FLORIDA:'FL', GEORGIA:'GA',
@@ -36,68 +40,55 @@ function stateToCode(country, input) {
   if (country === 'US') {
     if (US_STATES[s]) return US_STATES[s];
     if (Object.values(US_STATES).includes(s)) return s;
-    return ''; // don’t guess
+    return '';
   }
   if (country === 'CA') {
     if (CA_PROVINCES[s]) return CA_PROVINCES[s];
     if (Object.values(CA_PROVINCES).includes(s)) return s;
     return '';
   }
-  // For MX and others, UPS accepts empty state; omit field.
-  return '';
+  return ''; // for MX/other, UPS accepts empty StateProvinceCode
 }
 
-const hasAll = (obj) => Object.values(obj).every(Boolean);
-
-// ---------------- Packaging rules (your spec) ----------------
+// ---------- Parcel rules ----------
 // Bulk: 5,000 units per parcel @ 19 lb; 15x15x12 in
-// Kits: 2 kits per parcel; 1.7 lb/kit; 9x11x2 in
+// Kit : 2 kits per parcel; 1.7 lb/kit; 9x11x2 in
 function buildParcels(items) {
-  let bulkUnits = 0;
-  let kits = 0;
+  let bulkUnits = 0, kits = 0;
   for (const it of Array.isArray(items) ? items : []) {
     if (it?.type === 'bulk') bulkUnits += Number(it.units || 0);
     if (it?.type === 'kit')  kits      += Number(it.qty   || 0);
   }
 
   const parcels = [];
-
   if (bulkUnits > 0) {
     const bags = Math.ceil(bulkUnits / 5000);
     for (let i = 0; i < bags; i++) {
-      parcels.push({
-        weightLbs: 19,
-        lengthIn: 15, widthIn: 15, heightIn: 12,
-        reference: 'bulk-5k',
-      });
+      parcels.push({ weightLbs: 19, lengthIn: 15, widthIn: 15, heightIn: 12, reference: 'bulk-5k' });
     }
   }
-
-  let remainingKits = kits;
-  while (remainingKits > 0) {
-    const k = Math.min(2, remainingKits);
-    parcels.push({
-      weightLbs: 1.7 * k,
-      lengthIn: 9, widthIn: 11, heightIn: 2,
-      reference: `kits-${k}`,
-    });
-    remainingKits -= k;
+  while (kits > 0) {
+    const k = Math.min(2, kits);
+    parcels.push({ weightLbs: 1.7 * k, lengthIn: 9, widthIn: 11, heightIn: 2, reference: `kits-${k}` });
+    kits -= k;
   }
-
   return parcels;
 }
 
-// ---------------- Placeholder TQL ----------------
+// ---------- TQL placeholder ----------
 function quoteTQLPlaceholder() {
-  return [{
-    carrier: 'TQL',
-    service: 'LTL Freight (placeholder)',
-    amount: 92.00,
-    currency: 'USD',
-  }];
+  return [{ carrier: 'TQL', service: 'LTL Freight (placeholder)', serviceLabel: 'LTL Freight (placeholder)', amount: 92.00, currency: 'USD' }];
 }
 
-// ---------------- UPS (OAuth + Shop) ----------------
+// ---------- UPS (OAuth + Shop) ----------
+const UPS_SERVICE_MAP = {
+  '03': 'UPS Ground',
+  '12': 'UPS 3 Day Select',
+  '02': 'UPS 2nd Day Air',
+  '01': 'UPS Next Day Air',
+  '14': 'UPS Next Day Air Early',
+};
+
 async function getUPSToken({ clientId, clientSecret, envBase }) {
   const url = `${envBase}/security/v1/oauth/token`;
   const body = new URLSearchParams({ grant_type: 'client_credentials' });
@@ -105,11 +96,7 @@ async function getUPSToken({ clientId, clientSecret, envBase }) {
 
   const r = await fetch(url, {
     method: 'POST',
-    headers: {
-      Authorization: `Basic ${basic}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Accept: 'application/json',
-    },
+    headers: { Authorization: `Basic ${basic}`, 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
     body,
   });
   if (!r.ok) throw new Error(`UPS OAuth failed: ${r.status} ${await r.text()}`);
@@ -140,32 +127,13 @@ function makeUPSBody({ shipFrom, dest, shipperNumber, parcels }) {
   return {
     RateRequest: {
       Shipment: {
-        Shipper: {
-          Name: shipFrom.name || 'Shipper',
-          ShipperNumber: shipperNumber,
-          Address: shipFromAddress,
-        },
-        ShipFrom: {
-          Name: shipFrom.name || 'Ship From',
-          Address: shipFromAddress,
-        },
-        ShipTo: {
-          Name: 'Destination',
-          Address: shipToAddress,
-        },
+        Shipper: { Name: shipFrom.name || 'Shipper', ShipperNumber: shipperNumber, Address: shipFromAddress },
+        ShipFrom: { Name: shipFrom.name || 'Ship From', Address: shipFromAddress },
+        ShipTo:   { Name: 'Destination', Address: shipToAddress },
         Package: parcels.map((p) => ({
-          PackagingType: { Code: '02' }, // customer-supplied
-          Dimensions: {
-            UnitOfMeasurement: { Code: 'IN' },
-            Length: String(p.lengthIn),
-            Width:  String(p.widthIn),
-            Height: String(p.heightIn),
-          },
-          PackageWeight: {
-            UnitOfMeasurement: { Code: 'LBS' },
-            // round up to whole lb (UPS wants integer weight)
-            Weight: String(Math.max(1, Math.ceil(p.weightLbs))),
-          },
+          PackagingType: { Code: '02' }, // Customer Supplied
+          Dimensions: { UnitOfMeasurement: { Code: 'IN' }, Length: String(p.lengthIn), Width: String(p.widthIn), Height: String(p.heightIn) },
+          PackageWeight: { UnitOfMeasurement: { Code: 'LBS' }, Weight: String(Math.max(1, Math.round(p.weightLbs))) },
         })),
       },
     },
@@ -177,28 +145,23 @@ async function quoteUPS({ envBase, token, shipperNumber, shipFrom, dest, parcels
   const body = makeUPSBody({ shipFrom, dest, shipperNumber, parcels });
   const r = await fetch(url, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify(body),
   });
   const txt = await r.text();
   if (!r.ok) throw new Error(`UPS rate error ${r.status}: ${txt}`);
 
-  let j;
-  try { j = JSON.parse(txt); } catch { throw new Error(`UPS parse error: ${txt}`); }
+  let j; try { j = JSON.parse(txt); } catch { throw new Error(`UPS parse error: ${txt}`); }
 
-  const out = [];
-  const rated =
-    j?.RateResponse?.RatedShipment ||
-    j?.RateResponse?.RateResults ||
-    j?.RateResponse?.ShopResponse;
+  const rated = j?.RateResponse?.RatedShipment ?? j?.RateResponse?.RateResults ?? j?.RateResponse?.ShopResponse;
   const list = Array.isArray(rated) ? rated : (rated ? [rated] : []);
+  const out = [];
 
   for (const rs of list) {
-    const svc = rs?.Service?.Description || rs?.Service?.Code || 'UPS Service';
+    const code  = (rs?.Service?.Code ?? '').toString();
+    const desc  = (rs?.Service?.Description ?? code || 'UPS Service').toString();
+    const label = UPS_SERVICE_MAP[code] || desc;
+
     const total = Number(
       rs?.TotalCharges?.MonetaryValue ??
       rs?.NegotiatedRateCharges?.TotalCharge?.MonetaryValue
@@ -206,7 +169,9 @@ async function quoteUPS({ envBase, token, shipperNumber, shipFrom, dest, parcels
     if (Number.isFinite(total)) {
       out.push({
         carrier: 'UPS',
-        service: String(svc),
+        service: desc,
+        serviceLabel: label,
+        serviceCode: code,
         amount: total,
         currency: rs?.TotalCharges?.CurrencyCode || 'USD',
       });
@@ -215,148 +180,68 @@ async function quoteUPS({ envBase, token, shipperNumber, shipFrom, dest, parcels
   return out;
 }
 
-// ---------------- USPS (WebTools RateV4, domestic only, multi-parcel aggregation) ----------------
-function resolveUspsUserId() {
-  // Accept common names; trim whitespace
-  const id =
-    process.env.USPS_WEBTOOLS_USERID ||
-    process.env.USPS_WEBTOOLS_ID ||
-    process.env.USPS_USERID ||
-    process.env.usps_webtools_id ||
-    process.env.USPS_CLIENT_ID || // if previously misnamed
-    process.env.usps_client_id ||
-    '';
-  return (id || '').trim();
-}
-
-function xmlEscape(s = '') {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/"/g, '&quot;');
-}
-
+// ---------- USPS (WebTools RateV4, domestic US→US) ----------
 function poundsAndOunces(weightLbs) {
   const lbs = Math.floor(weightLbs);
   const oz  = Math.round((weightLbs - lbs) * 16);
   return { lbs: Math.max(0, lbs), oz: Math.max(0, oz) };
 }
 
-async function uspsRateV4Single({ userId, shipFromZip, destZip, parcel }) {
-  // USPS RateV4 production endpoint
-  const ENDPOINT = 'https://secure.shippingapis.com/ShippingAPI.dll';
-  const { lbs, oz } = poundsAndOunces(parcel.weightLbs);
-
-  const xml = `
-    <RateV4Request USERID="${xmlEscape(userId)}">
-      <Revision>2</Revision>
-      <Package ID="1">
-        <Service>ALL</Service>
-        <ZipOrigination>${xmlEscape(shipFromZip)}</ZipOrigination>
-        <ZipDestination>${xmlEscape(destZip)}</ZipDestination>
+function buildUSPSRateV4XML({ userId, shipFromZip, destZip, parcels }) {
+  const pkgs = parcels.map((p, i) => {
+    const { lbs, oz } = poundsAndOunces(p.weightLbs);
+    return `
+      <Package ID="${i+1}">
+        <Service>PRIORITY</Service>
+        <ZipOrigination>${shipFromZip}</ZipOrigination>
+        <ZipDestination>${destZip}</ZipDestination>
         <Pounds>${lbs}</Pounds>
         <Ounces>${oz}</Ounces>
-        <Container></Container>
-        <Size>${(parcel.lengthIn > 12 || parcel.widthIn > 12 || parcel.heightIn > 12) ? 'LARGE' : 'REGULAR'}</Size>
-        <Width>${parcel.widthIn}</Width>
-        <Length>${parcel.lengthIn}</Length>
-        <Height>${parcel.heightIn}</Height>
-        <Machinable>TRUE</Machinable>
-      </Package>
-    </RateV4Request>
-  `.trim();
+        <Container>RECTANGULAR</Container>
+        <Width>${p.widthIn}</Width>
+        <Length>${p.lengthIn}</Length>
+        <Height>${p.heightIn}</Height>
+        <Machinable>true</Machinable>
+      </Package>`;
+  }).join('');
 
-  const url = `${ENDPOINT}?API=RateV4&XML=${encodeURIComponent(xml)}`;
+  return `API=RateV4&XML=${encodeURIComponent(`<RateV4Request USERID="${userId}">${pkgs}</RateV4Request>`)}`;
+}
+
+async function quoteUSPS({ userId, shipFromZip, destZip, parcels }) {
+  const query = buildUSPSRateV4XML({ userId, shipFromZip, destZip, parcels });
+  const url   = `https://secure.shippingapis.com/ShippingAPI.dll?${query}`;
   const r = await fetch(url, { method: 'GET' });
-  const text = await r.text();
+  const xml = await r.text();
+  if (!r.ok) throw new Error(`USPS HTTP ${r.status}: ${xml}`);
+  if (/Error/i.test(xml)) throw new Error(`USPS API error: ${xml}`);
 
-  if (!r.ok || /<Error>/i.test(text)) {
-    const code = (text.match(/<Number>([\s\S]*?)<\/Number>/i)?.[1] || '').trim();
-    const desc = (text.match(/<Description>([\s\S]*?)<\/Description>/i)?.[1] || '').trim();
-    throw new Error(`USPS API error: ${code}${desc}`);
-  }
+  const rates = [...xml.matchAll(/<Rate>([\d.]+)<\/Rate>/g)].map(m => Number(m[1]));
+  if (!rates.length) throw new Error(`USPS: no <Rate> entries found`);
+  const total = rates.reduce((a,b)=>a+b, 0);
 
-  // Parse <Postage><MailService>...<Rate>...
-  const services = [];
-  const blockRe = /<Postage[^>]*>([\s\S]*?)<\/Postage>/gi;
-  let m;
-  while ((m = blockRe.exec(text))) {
-    const block = m[1];
-    const name = (block.match(/<MailService>([\s\S]*?)<\/MailService>/i)?.[1] || '')
-      .replace(/&lt;.*?&gt;/g, '')
-      .replace(/&amp;/g, '&')
-      .trim();
-    const rate = parseFloat(block.match(/<Rate>([\s\S]*?)<\/Rate>/i)?.[1] || '0');
-    if (name && Number.isFinite(rate) && rate > 0) {
-      services.push({ name, rate });
-    }
-  }
-  return services; // [{name, rate}] for THIS parcel
+  return [{
+    carrier: 'USPS',
+    service: 'USPS_GROUND_ADVANTAGE',
+    serviceLabel: 'USPS Ground Advantage',
+    amount: total,
+    currency: 'USD',
+  }];
 }
 
-async function quoteUSPSAggregate({ userId, shipFromZip, destZip, parcels }) {
-  if (!parcels.length) return [];
-  // Aggregate by service across all parcels: only keep services present for every parcel
-  let serviceMap = null; // { serviceName: totalAmount }
-  for (const p of parcels) {
-    const svcList = await uspsRateV4Single({ userId, shipFromZip, destZip, parcel: p });
-    const mapThis = new Map();
-    for (const s of svcList) mapThis.set(s.name, s.rate);
-
-    if (serviceMap == null) {
-      // Initialize with first parcel’s services
-      serviceMap = new Map(mapThis);
-    } else {
-      // Intersect: keep only services present in both, sum amounts
-      for (const key of Array.from(serviceMap.keys())) {
-        if (!mapThis.has(key)) {
-          serviceMap.delete(key);
-        } else {
-          serviceMap.set(key, serviceMap.get(key) + mapThis.get(key));
-        }
-      }
-    }
-  }
-
-  if (!serviceMap || serviceMap.size === 0) return [];
-
-  const out = [];
-  for (const [service, amount] of serviceMap.entries()) {
-    out.push({ carrier: 'USPS', service, amount: Number(amount.toFixed(2)), currency: 'USD' });
-  }
-  out.sort((a, b) => a.amount - b.amount); // cheapest first
-  return out;
-}
-
-// ---------------- Handler ----------------
+// ---------- Handler ----------
 export default async function handler(req, res) {
   if (req.method !== 'POST') return asJSON(res, 405, { error: 'Method not allowed' });
 
-  // Parse JSON body (Vercel Node runtime gives string)
-  let bodyRaw = '';
-  if (typeof req.body === 'string') {
-    bodyRaw = req.body;
-  } else if (req.body && typeof req.body === 'object') {
-    bodyRaw = JSON.stringify(req.body);
-  } else {
-    // stream
-    bodyRaw = await new Promise((resolve) => {
-      let data = '';
-      req.on('data', (c) => (data += c));
-      req.on('end', () => resolve(data || '{}'));
-    });
-  }
-
   let body = {};
-  try { body = JSON.parse(bodyRaw || '{}'); } catch { body = {}; }
+  try { body = JSON.parse(req.body || '{}'); } catch { body = req.body || {}; }
 
   const destination = body.destination || {};
   const items = Array.isArray(body.items) ? body.items : [];
   if (!items.length) return asJSON(res, 400, { error: 'Missing items[]' });
 
-  const destCountry = toStr(destination.country).toUpperCase() || 'US';
   const dest = {
-    country: destCountry,
+    country: (toStr(destination.country).toUpperCase() || 'US'),
     state:   toStr(destination.state),
     city:    toStr(destination.city),
     postal:  toStr(destination.postal),
@@ -372,7 +257,6 @@ export default async function handler(req, res) {
     postal:  process.env.SHIP_FROM_ZIP,
     country: process.env.SHIP_FROM_COUNTRY || 'US',
   };
-
   const shipFromOK = hasAll({
     name: !!shipFrom.name, street: !!shipFrom.street, city: !!shipFrom.city,
     state: !!shipFrom.state, postal: !!shipFrom.postal, country: !!shipFrom.country,
@@ -382,84 +266,50 @@ export default async function handler(req, res) {
     clientId:      process.env.UPS_CLIENT_ID,
     clientSecret:  process.env.UPS_CLIENT_SECRET,
     shipperNumber: process.env.UPS_ACCOUNT_NUMBER,
-    envBase:
-      (process.env.UPS_ENV || 'test').toLowerCase().startsWith('prod')
-        ? 'https://onlinetools.ups.com'
-        : 'https://wwwcie.ups.com',
+    envBase: (process.env.UPS_ENV || 'test').toLowerCase().startsWith('prod')
+      ? 'https://onlinetools.ups.com'
+      : 'https://wwwcie.ups.com',
   };
 
-  const uspsUserId = resolveUspsUserId();
+  const uspsCreds = { userId: process.env.USPS_WEBTOOLS_USERID };
 
   const parcels = buildParcels(items);
-  const outRates = [];
-  const status = {
-    ups:  { available: false, message: null },
-    usps: { available: false, message: null },
-    tql:  { available: true,  message: null },
-  };
+  const outRates = [...quoteTQLPlaceholder()];
+  const status = { ups:{available:false,message:null}, usps:{available:false,message:null}, tql:{available:true,message:null} };
 
-  // Always include TQL placeholder
-  outRates.push(...quoteTQLPlaceholder());
-
-  // ---------------- UPS ----------------
+  // UPS
   try {
     if (!upsCreds.clientId || !upsCreds.clientSecret || !upsCreds.shipperNumber) {
-      status.ups.message = 'Missing UPS env vars (UPS_CLIENT_ID / UPS_CLIENT_SECRET / UPS_ACCOUNT_NUMBER).';
+      status.ups.message = 'Missing UPS env vars.';
     } else if (!shipFromOK) {
       status.ups.message = 'Missing SHIP_FROM_* env address.';
     } else {
       const token = await getUPSToken(upsCreds);
-      const upsRates = await quoteUPS({
-        envBase: upsCreds.envBase,
-        token,
-        shipperNumber: upsCreds.shipperNumber,
-        shipFrom,
-        dest: { ...dest }, // state normalized inside makeUPSBody()
-        parcels,
-      });
-      if (upsRates.length) {
-        outRates.push(...upsRates);
-        status.ups.available = true;
-        status.ups.message = `Returned ${upsRates.length} rate(s).`;
-      } else {
-        status.ups.message = 'No UPS services returned for this request.';
-      }
+      const upsRates = await quoteUPS({ envBase: upsCreds.envBase, token, shipperNumber: upsCreds.shipperNumber, shipFrom, dest, parcels });
+      if (upsRates.length) { outRates.push(...upsRates); status.ups.available = true; status.ups.message = `Returned ${upsRates.length} rate(s).`; }
+      else status.ups.message = 'No UPS services returned.';
     }
   } catch (e) {
-    status.ups.message = `Error: ${String(e.message || e).slice(0, 300)}`;
+    status.ups.message = `Error: ${e.message.slice(0,300)}`;
   }
 
-  // ---------------- USPS (domestic US only) ----------------
+  // USPS (US domestic)
   try {
-    const isUSDomestic =
-      (dest.country || 'US').toUpperCase() === 'US' &&
-      (shipFrom.country || 'US').toUpperCase() === 'US';
-
+    const isUSDomestic = dest.country === 'US' && (shipFrom.country || 'US').toUpperCase() === 'US';
     if (!isUSDomestic) {
       status.usps.message = 'USPS step covers US→US only.';
-    } else if (!uspsUserId) {
-      status.usps.message = 'Missing USPS_WEBTOOLS_USERID (or accepted alias) env var.';
+    } else if (!uspsCreds.userId) {
+      status.usps.message = 'Missing USPS_WEBTOOLS_USERID env var.';
     } else if (!shipFromOK) {
       status.usps.message = 'Missing SHIP_FROM_* env address.';
     } else {
-      const uspsRates = await quoteUSPSAggregate({
-        userId: uspsUserId,
-        shipFromZip: shipFrom.postal,
-        destZip: dest.postal,
-        parcels,
-      });
-      if (uspsRates.length) {
-        outRates.push(...uspsRates);
-        status.usps.available = true;
-        status.usps.message = `Returned ${uspsRates.length} rate(s).`;
-      } else {
-        status.usps.message = 'No USPS rates returned.';
-      }
+      const uspsRates = await quoteUSPS({ userId: uspsCreds.userId, shipFromZip: shipFrom.postal, destZip: dest.postal, parcels });
+      if (uspsRates.length) { outRates.push(...uspsRates); status.usps.available = true; status.usps.message = `Returned ${uspsRates.length} rate(s).`; }
+      else status.usps.message = 'No USPS rates returned.';
     }
   } catch (e) {
-    status.usps.message = `Error: ${String(e.message || e).slice(0, 300)}`;
+    status.usps.message = `Error: ${e.message.slice(0,300)}`;
   }
 
-  // Return combined list (UI sorts/filters/labels)
   return asJSON(res, 200, { rates: outRates, status });
 }
