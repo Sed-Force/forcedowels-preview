@@ -1,249 +1,347 @@
 /* MASTER: /public/script-checkout.js
    Checkout page logic:
-   - Reads 'fd_cart' items
-   - Shows tiered pricing correctly (dollars, not 100x)
-   - Gets rates from /api/shipping/quote
-   - Renders grouped carriers with friendly labels (UPS Ground, 3 Day Select, etc.)
-   - Stores chosen rate and proceeds to Stripe via /api/checkout
+   - Proper State/Province SELECT that updates per country (US/CA/MX)
+   - Live rates via /api/shipping/quote
+   - Subtotal computed from cart (fd_cart) using tiered pricing
+   - Persists destination in localStorage 'fd_dest'
+   - Persists chosen rate in localStorage 'fd_ship_quote'
 */
 
 (function () {
-  // ---------- Storage keys ----------
-  const K_CART  = 'fd_cart';
-  const K_DEST  = 'fd_dest';
-  const K_RATE  = 'fd_ship_quote';
+  // ---- Storage keys ----
+  const KEY_CART  = 'fd_cart';
+  const KEY_DEST  = 'fd_dest';
+  const KEY_RATE  = 'fd_ship_quote';
 
-  // ---------- Pricing tiers ----------
-  function unitPriceCentsFor(units) {
-    if (units >= 160000) return Math.round(0.063 * 100);
-    if (units >= 20000)  return Math.round(0.0675 * 100);
-    return Math.round(0.072 * 100);
+  // ---- Bulk pricing (match server + cart) ----
+  const BULK_MIN = 5000, BULK_MAX = 960000, BULK_STEP = 5000;
+  const unitPriceCentsFor = (units) => {
+    if (units >= 160000) return Math.round(0.063 * 100);   // $0.0630
+    if (units >= 20000)  return Math.round(0.0675 * 100);  // $0.0675
+    return Math.round(0.072 * 100);                        // $0.0720
+  };
+  const fmtMoney = (n) =>
+    (Number(n) || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+
+  // ---- DOM ----
+  const $  = (s, r=document) => r.querySelector(s);
+  const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+
+  const countrySel = $('#ship-country');
+  const stateSel   = $('#ship-state');
+  const cityInp    = $('#ship-city');
+  const postalInp  = $('#ship-postal');
+  const streetInp  = $('#ship-street');
+
+  const btnRates   = $('#btn-get-rates');
+  const ratesList  = $('#rates-list');
+
+  const subtotalEl = $('#summary-subtotal');
+  const shipEl     = $('#summary-shipping');
+  const grandEl    = $('#summary-grand');
+
+  const btnCheckout = $('#btn-checkout');
+  const badgeEl     = $('#cart-count');
+
+  // ---- Data: states/provinces ----
+  const US_STATES = [
+    'AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'
+  ];
+  const CA_PROV = ['AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT'];
+  // MX full list (UPS accepts empty but we provide a selector)
+  const MX_STATES = [
+    'AG','BC','BS','CM','CS','CH','CO','CL','DG','GJ','GR','HG','JA','MX','MC','MR','NA','NL','OA','PU','QE','QR','SL','SI','SO','TB','TM','TL','VE','YU','ZA'
+  ];
+
+  function populateStateOptions(country, selected) {
+    stateSel.innerHTML = ''; // clear
+    const frag = document.createDocumentFragment();
+    const first = document.createElement('option');
+    first.value = '';
+    first.textContent = 'Select…';
+    frag.appendChild(first);
+
+    let list = [];
+    if (country === 'US') list = US_STATES;
+    else if (country === 'CA') list = CA_PROV;
+    else if (country === 'MX') list = MX_STATES;
+
+    list.forEach(code => {
+      const opt = document.createElement('option');
+      opt.value = code;
+      opt.textContent = code;
+      frag.appendChild(opt);
+    });
+    stateSel.appendChild(frag);
+
+    if (selected && list.includes(selected)) {
+      stateSel.value = selected;
+    } else {
+      stateSel.value = '';
+    }
   }
 
-  function computeSubtotalDollars(items) {
+  // ---- Storage helpers ----
+  function loadCart() {
+    try {
+      const raw = localStorage.getItem(KEY_CART);
+      const arr = raw ? JSON.parse(raw) : [];
+      return arr.map(it => {
+        if (it?.type === 'bulk') {
+          let u = Number(it.units || 0);
+          if (!Number.isFinite(u) || u < BULK_MIN) u = BULK_MIN;
+          if (u > BULK_MAX) u = BULK_MAX;
+          u = Math.round(u / BULK_STEP) * BULK_STEP;
+          return { type:'bulk', units:u };
+        }
+        if (it?.type === 'kit') {
+          let q = Number(it.qty || 0);
+          if (!Number.isFinite(q) || q < 1) q = 1;
+          return { type:'kit', qty:q };
+        }
+        return null;
+      }).filter(Boolean);
+    } catch { return []; }
+  }
+
+  function updateBadge(items) {
+    if (!badgeEl) return;
+    let total = 0;
+    for (const it of items) {
+      if (it.type === 'bulk') total += it.units;
+      else if (it.type === 'kit') total += it.qty;
+    }
+    badgeEl.textContent = total > 0 ? String(total) : '';
+    badgeEl.style.display = total > 0 ? 'inline-block' : 'none';
+  }
+
+  function computeSubtotal(items) {
     let cents = 0;
     for (const it of items) {
       if (it.type === 'bulk') {
-        const u = Number(it.units || 0);
-        cents += unitPriceCentsFor(u) * u;
+        cents += unitPriceCentsFor(it.units) * it.units;
       } else if (it.type === 'kit') {
-        cents += 3600 * Number(it.qty || 0);
+        cents += 3600 * it.qty; // $36.00
       }
     }
     return cents / 100;
   }
 
-  // ---------- DOM ----------
-  const $ = (s, r=document) => r.querySelector(s);
-  const fmt = (n) => (Number(n)||0).toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2});
-
-  const elName    = $('#co-name');
-  const elStreet  = $('#co-street');
-  const elCity    = $('#co-city');
-  const elState   = $('#co-state');
-  const elPostal  = $('#co-postal');
-  const elCountry = $('#co-country');
-
-  const btnGet    = $('#btn-get-rates');
-  const btnUse    = $('#btn-use-saved');
-  const groupsEl  = $('#ship-groups');
-
-  const sumItems  = $('#sum-items');
-  const sumSub    = $('#sum-subtotal');
-  const sumShip   = $('#sum-shipping');
-  const sumTotal  = $('#sum-total');
-  const btnPay    = $('#btn-pay');
-
-  // ---------- Loaders ----------
-  function loadItems() {
-    try { return JSON.parse(localStorage.getItem(K_CART) || '[]'); } catch { return []; }
+  function getDest() {
+    try { return JSON.parse(localStorage.getItem(KEY_DEST) || '{}'); }
+    catch { return {}; }
   }
-  function loadDest() {
-    try { return JSON.parse(localStorage.getItem(K_DEST) || 'null'); } catch { return null; }
-  }
-  function saveDest(d) { localStorage.setItem(K_DEST, JSON.stringify(d||null)); }
-  function loadRate() {
-    try { return JSON.parse(localStorage.getItem(K_RATE) || 'null'); } catch { return null; }
-  }
-  function saveRate(r) { localStorage.setItem(K_RATE, JSON.stringify(r||null)); }
-
-  // ---------- UI: items & totals ----------
-  function renderSummary() {
-    const items = loadItems();
-    const units = items.filter(i=>i.type==='bulk').reduce((a,b)=>a+Number(b.units||0),0);
-    const kits  = items.filter(i=>i.type==='kit').reduce((a,b)=>a+Number(b.qty||0),0);
-
-    const parts = [];
-    if (units>0) parts.push(`${units.toLocaleString()} dowels`);
-    if (kits>0)  parts.push(`${kits} kit${kits>1?'s':''}`);
-    sumItems.textContent = parts.length?parts.join(' + '):'—';
-
-    const sub = computeSubtotalDollars(items);
-    const r   = loadRate();
-    sumSub.textContent  = fmt(sub);
-    sumShip.textContent = fmt(r?.amount||0);
-    sumTotal.textContent= fmt(sub + (r?.amount||0));
+  function setDest(dest) {
+    localStorage.setItem(KEY_DEST, JSON.stringify(dest || {}));
   }
 
-  // ---------- Prefill / use saved ----------
-  function prefillFromSaved() {
-    const d = loadDest();
-    if (!d) return;
-    if (elName)    elName.value    = d.name || '';
-    if (elStreet)  elStreet.value  = d.street || '';
-    if (elCity)    elCity.value    = d.city || '';
-    if (elState)   elState.value   = d.state || '';
-    if (elPostal)  elPostal.value  = d.postal || '';
-    if (elCountry) elCountry.value = d.country || 'US';
+  function getChosenRate() {
+    try { return JSON.parse(localStorage.getItem(KEY_RATE) || 'null'); }
+    catch { return null; }
+  }
+  function setChosenRate(rate) {
+    localStorage.setItem(KEY_RATE, JSON.stringify(rate || null));
   }
 
-  function gatherDest() {
-    return {
-      name:   elName?.value?.trim() || '',
-      street: elStreet?.value?.trim() || '',
-      city:   elCity?.value?.trim() || '',
-      state:  elState?.value?.trim() || '',
-      postal: elPostal?.value?.trim() || '',
-      country:(elCountry?.value || 'US').toUpperCase(),
-    };
+  // ---- Prefill & wire form ----
+  function prefillForm() {
+    const d = getDest();
+    const country = (d.country || 'US').toUpperCase();
+    countrySel.value = country;
+    populateStateOptions(country, (d.state || '').toUpperCase());
+    cityInp.value   = d.city   || '';
+    postalInp.value = d.postal || '';
+    streetInp.value = d.street || '';
   }
 
-  // ---------- Rates ----------
-  const UPS_LABELS = {
-    '03':'UPS Ground','12':'UPS 3 Day Select','02':'UPS 2nd Day Air','01':'UPS Next Day Air','14':'UPS Next Day Air Early'
-  };
+  countrySel.addEventListener('change', () => {
+    populateStateOptions(countrySel.value);
+    // clear previously chosen rate on country change
+    setChosenRate(null);
+    renderRates([]);
+    recalcTotals();
+  });
 
-  function groupByCarrier(rates) {
-    const g = {};
-    for (const r of rates||[]) {
-      const key = (r.carrier||'Other').toUpperCase();
-      (g[key] ||= []).push(r);
-    }
-    return g;
-  }
-
-  function makeRateRow(rate, checked) {
-    const li = document.createElement('label');
-    li.className = 'rate-line';
-    const display = rate.serviceLabel || UPS_LABELS[rate.serviceCode] || rate.service || 'Service';
-    li.innerHTML = `
-      <input type="radio" name="shiprate" ${checked?'checked':''}>
-      <span class="rate-name">${display}</span>
-      <span class="rate-price">${fmt(rate.amount||0)}</span>
-    `;
-    const radio = li.querySelector('input');
-    radio.addEventListener('change', () => {
-      saveRate(rate);
-      renderSummary();
+  [stateSel, cityInp, postalInp, streetInp].forEach(el => {
+    el.addEventListener('change', () => {
+      setChosenRate(null);
+      renderRates([]);
+      recalcTotals();
     });
-    return li;
-  }
+  });
 
-  function renderRates(rates, status) {
-    groupsEl.innerHTML = '';
-    const groups = groupByCarrier(rates);
-
-    const order = ['USPS','UPS','TQL','OTHER'];
-    for (const key of order) {
-      const list = groups[key] || (key==='OTHER' ? Object.entries(groups).filter(([k])=>!order.includes(k)).flatMap(([,v])=>v) : null);
-      if (!list || list.length===0) continue;
-
-      const box = document.createElement('div');
-      box.className = 'rate-group';
-      box.innerHTML = `<div class="rate-title">${key}</div>`;
-      const ul = document.createElement('div');
-      ul.className = 'rate-list';
-      list.forEach((r,i)=>ul.appendChild(makeRateRow(r,i===0)));
-      box.appendChild(ul);
-      groupsEl.appendChild(box);
-    }
-
-    // Auto-select first available
-    const first = groupsEl.querySelector('input[name="shiprate"]');
-    if (first && !loadRate()) {
-      first.click();
-    }
-
-    // Carrier status (optional)
-    const notes = document.createElement('div');
-    notes.className = 'carrier-notes';
-    notes.innerHTML = `
-      <div class="note">UPS: ${status?.ups?.available?'available — '+(status?.ups?.message||''):'unavailable — '+(status?.ups?.message||'')}</div>
-      <div class="note">USPS: ${status?.usps?.available?'available — '+(status?.usps?.message||''):'unavailable — '+(status?.usps?.message||'')}</div>
-      <div class="note">TQL: ${status?.tql?.available?'available':'unavailable'}</div>
-    `;
-    groupsEl.appendChild(notes);
-  }
-
-  async function fetchWithTimeout(url, opts = {}, ms = 20000) {
+  // ---- Rates ----
+  async function fetchWithTimeout(url, opts={}, ms=20000) {
     const ctl = new AbortController();
-    const id = setTimeout(()=>ctl.abort(), ms);
+    const id = setTimeout(() => ctl.abort(), ms);
     try { return await fetch(url, { ...opts, signal: ctl.signal }); }
     finally { clearTimeout(id); }
   }
 
-  async function getRates() {
-    const dest = gatherDest();
-    if (!dest.postal) { alert('Please enter ZIP / Postal.'); return; }
-    saveDest(dest);
-
-    const items = loadItems();
-    if (!items.length) { alert('Your cart is empty.'); return; }
-
-    btnGet.disabled = true;
-    const prev = btnGet.textContent; btnGet.textContent = 'Getting rates…';
-
-    try {
-      const res = await fetchWithTimeout('/api/shipping/quote', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ destination: dest, items })
-      });
-      if (!res.ok) { console.error(await res.text()); alert('Could not get rates.'); return; }
-      const data = await res.json();
-      renderRates(data.rates || [], data.status || {});
-      // default selected rate gets saved in renderRates via first.click()
-      renderSummary();
-    } catch (e) {
-      console.error(e);
-      alert(e.name==='AbortError' ? 'Timed out getting rates.' : 'Network error getting rates.');
-    } finally {
-      btnGet.disabled = false; btnGet.textContent = prev;
-    }
+  function currentDestFromForm() {
+    return {
+      country: countrySel.value || 'US',
+      state:   stateSel.value || '',
+      city:    cityInp.value.trim(),
+      postal:  postalInp.value.trim(),
+      street:  streetInp.value.trim(),
+    };
   }
 
-  // ---------- Proceed to payment ----------
-  async function goPay() {
-    const items = loadItems();
-    if (!items.length) { alert('Your cart is empty.'); return; }
-    const rate = loadRate(); // optional but recommended
-    btnPay.disabled = true;
-    const prev = btnPay.textContent; btnPay.textContent = 'Loading…';
-
-    try {
-      const res = await fetchWithTimeout('/api/checkout', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ items, shipping: rate ? {
-          carrier: rate.carrier, service: rate.service, amount: rate.amount, currency: rate.currency || 'USD'
-        } : null })
-      });
-      if (!res.ok) { console.error(await res.text()); alert('Checkout failed.'); return; }
-      const data = await res.json();
-      if (!data?.url) { alert('No checkout URL returned.'); return; }
-      window.location.assign(data.url);
-    } catch (e) {
-      console.error(e);
-      alert('Network error starting checkout.');
-    } finally {
-      btnPay.disabled = false; btnPay.textContent = prev;
-    }
+  function recalcTotals() {
+    const items = loadCart();
+    const sub = computeSubtotal(items);
+    const rate = getChosenRate();
+    if (subtotalEl) subtotalEl.textContent = fmtMoney(sub);
+    if (shipEl)     shipEl.textContent     = fmtMoney(rate?.amount || 0);
+    if (grandEl)    grandEl.textContent    = fmtMoney(sub + (rate?.amount || 0));
+    updateBadge(items);
   }
 
-  // ---------- Events ----------
-  if (btnGet) btnGet.addEventListener('click', getRates);
-  if (btnUse) btnUse.addEventListener('click', () => { prefillFromSaved(); });
-  if (btnPay) btnPay.addEventListener('click', goPay);
+  function renderRates(rates) {
+    ratesList.innerHTML = '';
+    if (!rates || rates.length === 0) {
+      const li = document.createElement('li');
+      li.className = 'muted';
+      li.textContent = 'No rates yet. Enter address and click “Get Rates”.';
+      ratesList.appendChild(li);
+      return;
+    }
 
-  // ---------- Init ----------
-  prefillFromSaved();
-  renderSummary();
+    rates.forEach((r, i) => {
+      const id = `rate-${i}`;
+      const li = document.createElement('li');
+      li.className = 'rate-row';
+
+      // Group-like label: CARRIER — service text — price
+      li.innerHTML = `
+        <label class="rate-option">
+          <input type="radio" name="shiprate" id="${id}" ${i===0 ? 'checked' : ''}>
+          <span class="rate-carrier">${r.carrier || 'Carrier'}</span>
+          <span class="rate-service">${r.service || ''}</span>
+          <span class="rate-price">${fmtMoney(r.amount || 0)}</span>
+        </label>
+      `;
+      ratesList.appendChild(li);
+
+      const radio = li.querySelector('input[type="radio"]');
+      radio.addEventListener('change', () => {
+        setChosenRate(r);
+        recalcTotals();
+      });
+    });
+
+    // Auto-select first (cheapest expected)
+    setChosenRate(rates[0]);
+    recalcTotals();
+  }
+
+  if (btnRates) {
+    btnRates.addEventListener('click', async () => {
+      const dest = currentDestFromForm();
+
+      // persist
+      setDest(dest);
+      setChosenRate(null);
+      renderRates([]);
+      recalcTotals();
+
+      // basic validation
+      if (!dest.city || !dest.postal || !dest.street) {
+        alert('Please complete street, city, and postal code.');
+        return;
+      }
+
+      const items = loadCart();
+      if (!items.length) {
+        alert('Your cart is empty.');
+        return;
+      }
+
+      // UI
+      const prev = btnRates.textContent;
+      btnRates.disabled = true;
+      btnRates.textContent = 'Getting rates…';
+
+      try {
+        const res = await fetchWithTimeout('/api/shipping/quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ destination: dest, items }),
+        }, 25000);
+
+        if (!res.ok) {
+          console.error('Quote error', await res.text());
+          alert('Could not get shipping rates. Please try again.');
+          return;
+        }
+
+        const data = await res.json();
+        renderRates(data?.rates || []);
+      } catch (e) {
+        console.error(e);
+        alert(e.name === 'AbortError' ? 'Timed out getting rates. Try again.' : 'Network error getting rates.');
+      } finally {
+        btnRates.disabled = false;
+        btnRates.textContent = prev;
+      }
+    });
+  }
+
+  // ---- Proceed to payment ----
+  if (btnCheckout) {
+    btnCheckout.addEventListener('click', async () => {
+      const items = loadCart();
+      if (!items.length) {
+        alert('Your cart is empty.');
+        return;
+      }
+      const rate = getChosenRate();
+      if (!rate) {
+        alert('Please choose a shipping option first.');
+        return;
+      }
+
+      // keep destination persisted
+      setDest(currentDestFromForm());
+
+      // UI
+      const prev = btnCheckout.textContent;
+      btnCheckout.disabled = true;
+      btnCheckout.textContent = 'Loading…';
+
+      try {
+        const res = await fetchWithTimeout('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items,
+            shipping: { carrier: rate.carrier, service: rate.service, amount: rate.amount, currency: rate.currency || 'USD' },
+          }),
+        }, 20000);
+
+        if (!res.ok) {
+          console.error('Checkout failed', await res.text());
+          alert('A server error occurred creating your checkout. Please try again.');
+          return;
+        }
+        const data = await res.json();
+        if (!data?.url) {
+          alert('Could not start checkout. Please try again.');
+          return;
+        }
+        window.location.assign(data.url);
+      } catch (e) {
+        console.error(e);
+        alert('Network error creating checkout. Please try again.');
+      } finally {
+        btnCheckout.disabled = false;
+        btnCheckout.textContent = prev;
+      }
+    });
+  }
+
+  // ---- Init ----
+  prefillForm();
+  recalcTotals();
 })();
