@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checkout — Force Dowels™</title>
+  <meta name="description" content="Checkout for Force Dowels™ orders." />
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=48" />
+  <style>
+    /* Page-specific light layout help (works with your existing styles.css) */
+    .checkout-wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:28px;align-items:start}
+    @media (max-width: 980px){.checkout-wrap{grid-template-columns:1fr}}
+    .card{background:#0e1522; border-radius:14px; padding:18px 18px 14px; box-shadow:0 2px 0 rgba(255,255,255,.05) inset; border:1px solid rgba(255,255,255,.08)}
+    .card h3{margin:0 0 10px}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+    .field{display:flex;flex-direction:column;gap:6px}
+    .field input,.field select{width:100%;height:42px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);color:#fff;padding:0 12px}
+    .muted{opacity:.72;font-size:.92rem}
+    .summary-card .row{display:flex;justify-content:space-between;margin:8px 0}
+    .summary-card hr{border:0;border-top:1px solid rgba(255,255,255,.12);margin:10px 0}
+    .btn-wide{width:100%}
+    .rates{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+    .rate-group{border:1px solid rgba(255,255,255,.12); border-radius:12px}
+    .rate-group .head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700}
+    .rate-row{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 12px}
+    .rate-row + .rate-row{border-top:1px dashed rgba(255,255,255,.08)}
+    .price{font-weight:800}
+    .rate-row label{display:flex;align-items:center;gap:10px;flex:1}
+    .kicker{font-size:.9rem;opacity:.72}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.08);font-size:.85rem}
+  </style>
+</head>
+<body>
+
+<!-- Header (reuse same as other pages) -->
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="/" aria-label="Force Dowel Company">
+      <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" />
+    </a>
+
+    <nav class="nav" aria-label="Primary">
+      <a href="/">Home</a>
+      <a href="/order.html">Order</a>
+      <a href="/videos.html">Videos</a>
+      <a href="/faq.html">FAQ</a>
+      <div class="nav-dropdown">
+        <button class="nav-dropbtn" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="nav-drop-label">Distributors</span>
+          <span class="nav-caret">▾</span>
+        </button>
+        <div class="nav-dropmenu" role="menu">
+          <a href="/distributors" role="menuitem">Find a Distributor</a>
+          <a href="/distributor-application" role="menuitem">Become a Distributor</a>
+        </div>
+      </div>
+      <a href="/contact.html" class="btn btn--accent">Contact</a>
+    </nav>
+
+    <div class="header-actions">
+      <a href="/cart.html" class="btn btn--ghost btn--invert" id="btn-cart" aria-label="Shopping cart">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 18a2 2 0 1 0 0 4a2 2 0 0 0 0-4m10 0a2 2 0 1 0 0 4a2 2 0 0 0 0-4M6.2 6l.3 2h12.3a1 1 0 0 1 1 1l-1.2 6a2 2 0 0 1-2 1.6H8.7a2 2 0 0 1-2-1.7L5.3 5H3V3h3a1 1 0 0 1 1 .9L7.2 6Z"/></svg>
+        <span class="hide-sm">Cart</span>
+        <span id="cart-count" class="badge"></span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main id="content">
+  <section class="section">
+    <div class="container">
+      <h1>Checkout</h1>
+      <p class="eyebrow eyebrow--accent">Enter your address to see live rates</p>
+    </div>
+  </section>
+
+  <section class="section pt-0">
+    <div class="container checkout-wrap">
+
+      <!-- Left: address form + rates -->
+      <div class="card">
+        <h3>Shipping Information</h3>
+
+        <div class="field" style="margin-bottom:8px">
+          <label for="ship-name">Full Name</label>
+          <input id="ship-name" type="text" autocomplete="name" placeholder="Jane Doe">
+        </div>
+
+        <div class="field">
+          <label for="ship-street">Address</label>
+          <input id="ship-street" type="text" autocomplete="address-line1" placeholder="Street address">
+        </div>
+
+        <div class="grid-3" style="margin-top:12px">
+          <div class="field">
+            <label for="ship-city">City</label>
+            <input id="ship-city" type="text" autocomplete="address-level2" placeholder="City">
+          </div>
+          <div class="field">
+            <label for="ship-state">State/Province</label>
+            <select id="ship-state"></select>
+          </div>
+          <div class="field">
+            <label for="ship-postal">ZIP / Postal</label>
+            <input id="ship-postal" type="text" autocomplete="postal-code" placeholder="ZIP / Postal">
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:12px">
+          <label for="ship-country">Country</label>
+          <select id="ship-country">
+            <option value="US">United States</option>
+            <option value="CA">Canada</option>
+            <option value="MX">Mexico</option>
+          </select>
+        </div>
+
+        <div class="grid-2" style="margin-top:14px">
+          <button id="btn-get-rates" class="btn btn--ghost">Get Rates</button>
+          <button id="btn-use-saved" class="btn btn--ghost" type="button">Use saved</button>
+        </div>
+
+        <div id="carrier-status" class="muted" style="margin-top:10px"></div>
+
+        <h3 style="margin-top:18px">Shipping Options</h3>
+        <div id="rates" class="rates">
+          <div class="muted">Click “Get Rates” to see UPS, USPS, and TQL options.</div>
+        </div>
+      </div>
+
+      <!-- Right: summary -->
+      <aside class="card summary-card">
+        <h3>Order Summary</h3>
+        <div class="row"><span>Items</span> <strong id="sum-items">—</strong></div>
+        <div class="row"><span>Subtotal</span> <strong id="sum-subtotal">$0.00</strong></div>
+        <div class="row"><span>Shipping</span> <strong id="sum-shipping">$0.00</strong></div>
+        <hr/>
+        <div class="row"><span>Total</span> <strong id="sum-total">$0.00</strong></div>
+        <button id="btn-checkout" class="btn btn--accent btn-wide" style="margin-top:12px">Proceed to Payment</button>
+        <p class="muted" style="margin-top:8px">Taxes are calculated during payment.</p>
+      </aside>
+
+    </div>
+  </section>
+</main>
+
+<!-- Footer (same as other pages) -->
+<footer class="site-footer">
+  <div class="container footer-main">
+    <section class="footer-sec footer-sec--brand">
+      <a href="/" aria-label="Force Dowels home" class="footer-brand-wrap">
+        <img src="/images/force-dowel-logo.jpg?v=4" alt="Force Dowels logo" class="footer-logo" />
+      </a>
+      <p class="footer-tagline">
+        Revolutionary cabinetry fasteners that deliver faster assembly, stronger connections, and flawless finishes.
+        Experience the next generation of cabinet construction.
+      </p>
+    </section>
+
+    <section class="footer-sec">
+      <h4>Quick Links</h4>
+      <ul class="footer-list">
+        <li><a href="/">Home</a></li>
+        <li><a href="/order.html">Order Now</a></li>
+        <li><a href="/videos.html">Product Videos</a></li>
+        <li><a href="/distributors">Find a Distributor</a></li>
+        <li><a href="/distributor-application">Become a Distributor</a></li>
+      </ul>
+    </section>
+
+    <section class="footer-sec">
+      <h4>Contact Us</h4>
+      <ul class="footer-list">
+        <li>(480)-581-7145</li>
+        <li>Hours: Mon–Thurs 7:30AM–4:30PM; Friday 7:30AM–11:30AM</li>
+        <li><a href="mailto:info@forcedowels.com">info@forcedowels.com</a></li>
+        <li>4455 E Nunneley Rd, Ste 103<br>Gilbert, AZ 85296</li>
+      </ul>
+    </section>
+
+    <section class="footer-sec">
+      <h4>Stay Updated</h4>
+      <p class="footer-note">Get the latest updates on our patent-pending technology and new product releases.</p>
+      <form class="footer-form" onsubmit="return false;">
+        <label class="sr-only" for="newsletter-email">Enter your email</label>
+        <input id="newsletter-email" type="email" placeholder="Enter your email" required>
+        <button type="submit" class="btn btn--accent">Subscribe</button>
+      </form>
+      <p class="footer-privacy-note">We respect your privacy. Unsubscribe at any time.</p>
+    </section>
+  </div>
+
+  <div class="footer-separator"></div>
+
+  <div class="container footer-bottom">
+    <div class="footer-bottom-left">
+      <p>© <span id="year"></span> Force Dowels. All rights reserved.</p>
+      <p class="footer-patent">Patent Pending Technology - Revolutionary Cabinetry Fasteners</p>
+    </div>
+    <nav class="footer-bottom-right">
+      <a href="/privacy.html">Privacy Policy</a>
+      <a href="/terms.html">Terms of Service</a>
+    </nav>
+  </div>
+</footer>
+
+<script> (function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})(); </script>
+<script defer src="/script.js?v=48"></script>
+<script defer src="/script-checkout.js?v=48"></script>
+</body>
+</html>
