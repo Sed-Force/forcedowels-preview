@@ -1,5 +1,5 @@
 /* MASTER: /public/script-checkout.js
-   Checkout page logic with cheapest-first sorting on the client as well.
+   Checkout page logic with cheapest-first sorting + styled selection state.
 */
 (function () {
   const KEY_CART='fd_cart', KEY_DEST='fd_dest', KEY_RATE='fd_ship_quote';
@@ -58,23 +58,31 @@
 
   function renderRates(rates,status){
     ratesList.innerHTML='';
-    // CHEAPEST FIRST (client-side safety)
     const sorted = Array.isArray(rates) ? [...rates].sort((a,b)=>Number(a.amount||0)-Number(b.amount||0)) : [];
 
     if(sorted.length){
       sorted.forEach((r,i)=>{
         const id=`rate-${i}`;
-        const li=document.createElement('li'); li.className='rate-row';
+        const li=document.createElement('li'); li.className='rate-row'+(i===0?' selected':'');
         li.innerHTML=`
           <label class="rate-option">
-            <input type="radio" name="shiprate" id="${id}" ${i===0?'checked':''}>
+            <input type="radio" name="shiprate" id="${id}" ${i===0?'checked':''} aria-label="${(r.carrier||'')+' '+(r.service||'')+' '+(r.amount!=null?fmtMoney(r.amount):'')}">
             <span class="rate-carrier">${r.carrier||'Carrier'}</span>
             <span class="rate-service">${r.service||''}</span>
             <span class="rate-price">${fmtMoney(r.amount||0)}</span>
           </label>`;
         ratesList.appendChild(li);
-        li.querySelector('input').addEventListener('change',()=>{ setChosenRate(r); recalcTotals(); });
+
+        const radio = li.querySelector('input');
+        radio.addEventListener('change', () => {
+          // toggle selected class for styling
+          $$('.rate-row', ratesList).forEach(n => n.classList.remove('selected'));
+          li.classList.add('selected');
+          setChosenRate(r);
+          recalcTotals();
+        });
       });
+      // choose cheapest initially
       setChosenRate(sorted[0]);
       recalcTotals();
     }else{
@@ -82,7 +90,7 @@
     }
 
     if(status && typeof status==='object'){
-      const s=document.createElement('li'); s.className='muted';
+      const s=document.createElement('li'); s.className='muted carrier-status';
       const ups=status.ups?(status.ups.available?`UPS: available — ${status.ups.message||''}`:`UPS: unavailable — ${status.ups.message||''}`):'';
       const usps=status.usps?(status.usps.available?`USPS: available — ${status.usps.message||''}`:`USPS: unavailable — ${status.usps.message||''}`):'';
       const tql=status.tql?(status.tql.available?`TQL: available`:`TQL: unavailable — ${status.tql.message||''}`):'';
