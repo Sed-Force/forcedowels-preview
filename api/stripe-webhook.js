@@ -1,153 +1,134 @@
 // /api/stripe-webhook.js
-// Sends order confirmation via Resend with a big logo aligned to the top-right corner (email-safe tables).
+// Sends a receipt that SEPARATES Subtotal and Shipping after a successful Checkout.
+// Requires env: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY,
+// ORDER_EMAIL_FROM (e.g. "Force Dowels <orders@forcedowels.com>"), optional ORDER_EMAIL_BCC,
+// optional BRAND_LOGO_URL
 
-import Stripe from 'stripe';
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' });
+export const config = { runtime: 'nodejs' };
 
-function readRaw(req) {
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const asJSON = (res, code, obj) => {
+  res.status(code).setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(obj, null, 2));
+};
+
+function readRawBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    req.on('data', c => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
+    req.on('data', (c) => chunks.push(c));
     req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
 }
-function sendJSON(res, code, body) {
-  res.statusCode = code;
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.end(JSON.stringify(body));
-}
+
+const fmt = (cents) =>
+  (Number(cents || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return sendJSON(res, 405, { error: 'method_not_allowed' });
+  if (req.method !== 'POST') return asJSON(res, 405, { error: 'Method not allowed' });
 
-  // Verify Stripe signature
+  const sig = req.headers['stripe-signature'];
+  if (!sig) return asJSON(res, 400, { error: 'Missing stripe-signature header' });
+
   let event;
   try {
-    const raw = await readRaw(req);
-    const sig = req.headers['stripe-signature'];
-    const wh = process.env.STRIPE_WEBHOOK_SECRET || '';
-    event = wh ? stripe.webhooks.constructEvent(raw, sig, wh) : JSON.parse(raw.toString('utf8'));
+    const raw = await readRawBody(req);
+    event = stripe.webhooks.constructEvent(
+      raw,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
   } catch (e) {
-    console.error('Invalid webhook:', e);
-    return sendJSON(res, 400, { error: 'invalid_webhook' });
-  }
-
-  if (event.type !== 'checkout.session.completed') {
-    return sendJSON(res, 200, { received: true, ignored: event.type });
+    console.error('Webhook signature error:', e.message);
+    return asJSON(res, 400, { error: 'Invalid signature' });
   }
 
   try {
-    const session = event.data.object;
+    if (event.type === 'checkout.session.completed') {
+      const sessionId = event.data.object.id;
 
-    // Absolute logo URL
-    const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/$/, '');
-    const logoUrl =
-      process.env.NEXT_PUBLIC_LOGO_URL
-      || (baseUrl ? `${baseUrl}/images/force-dowel-logo.jpg` : '')
-      || 'https://forcedowels.com/images/force-dowel-logo.jpg';
+      // Re-fetch with line items so we can split Subtotal vs Shipping
+      const session = await stripe.checkout.sessions.retrieve(sessionId, {
+        expand: ['line_items.data.price.product'],
+      });
 
-    // 2x size (adjust via EMAIL_LOGO_WIDTH env if needed)
-    const logoW = Number(process.env.EMAIL_LOGO_WIDTH || 240);
+      const email =
+        session.customer_details?.email ||
+        session.customer_email ||
+        null;
 
-    // Recipient & totals
-    const toEmail = session?.customer_details?.email || process.env.CONTACT_FALLBACK_TO || 'info@forcedowels.com';
-    const name = session?.customer_details?.name || 'Customer';
-    const total = Number(session.amount_total || 0) / 100;
-    const subtotal = Number(session.amount_subtotal || 0) / 100;
-    const shipping = Number(session.shipping_cost?.amount_total || 0) / 100;
-    const tax = Number(session.total_details?.amount_tax || (total - subtotal - shipping)) / 100;
+      // Compute shipping from a dedicated "Shipping" line or from metadata fallback
+      const items = session.line_items?.data || [];
+      let shippingCents = 0;
+      for (const li of items) {
+        const name =
+          li.description ||
+          li.price?.product?.name ||
+          '';
+        if (/shipping/i.test(name) || /^shipping/i.test(name)) {
+          shippingCents += Number(li.amount_total || 0);
+        }
+      }
+      if (shippingCents === 0 && session.metadata?.ship_amount_cents) {
+        shippingCents = Number(session.metadata.ship_amount_cents) || 0;
+      }
 
-    const subject = 'Your Force Dowels order is confirmed';
-    const text =
-`Hi ${name},
+      const totalCents = Number(session.amount_total || 0);
+      const subtotalCents = Math.max(0, totalCents - shippingCents);
+      const taxCents = Number(session.total_details?.amount_tax || 0);
 
-Thanks for your purchase! Your payment was received and your order is confirmed.
+      // Compose email
+      const html = `
+        <div style="font-family:Inter,system-ui,Arial,sans-serif;max-width:560px;margin:0 auto;color:#e6edf3;background:#0b1623;padding:24px;border-radius:14px">
+          <div style="text-align:center;margin-bottom:16px;">
+            <img src="${process.env.BRAND_LOGO_URL || 'https://forcedowels.com/images/force-dowel-logo.jpg'}" alt="Force Dowels" height="40" />
+          </div>
+          <h2 style="margin:0 0 8px 0;color:#fff;">Order confirmed</h2>
+          <p style="margin:0 0 16px 0;color:#b7c2cf;">Thanks for your purchase! Your payment was received and your order is confirmed.</p>
 
-Summary:
-Subtotal: $${subtotal.toFixed(2)}
-Shipping: $${shipping.toFixed(2)}
-Tax: $${tax.toFixed(2)}
-Total: $${total.toFixed(2)}
+          <div style="background:#0f2033;border:1px solid #1c3551;border-radius:10px;padding:16px;">
+            <div style="display:flex;justify-content:space-between;margin:6px 0;color:#b7c2cf">
+              <span>Subtotal</span><strong style="color:#fff">${fmt(subtotalCents)}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin:6px 0;color:#b7c2cf">
+              <span>Shipping</span><strong style="color:#fff">${fmt(shippingCents)}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin:6px 0;color:#b7c2cf">
+              <span>Tax</span><strong style="color:#fff">${fmt(taxCents)}</strong>
+            </div>
+            <hr style="border:none;border-top:1px solid #1c3551;margin:10px 0" />
+            <div style="display:flex;justify-content:space-between;margin:6px 0;color:#b7c2cf">
+              <span>Total</span><strong style="color:#fff">${fmt(totalCents)}</strong>
+            </div>
+          </div>
 
-We’ll email you tracking details when your order ships.
-Questions? Email info@forcedowels.com.
+          <p style="margin:16px 0 0 0;color:#99a6b5;font-size:14px;">
+            We'll email you tracking details when your order ships. Questions?
+            <a style="color:#ffd166" href="mailto:info@forcedowels.com">info@forcedowels.com</a>
+          </p>
+        </div>
+      `;
 
-— Force Dowels`;
-
-    // EMAIL-SAFE HEADER: left text + right-aligned logo with fixed cell width.
-    const html = `
-  <div style="font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#0b1220;color:#e5e7eb;border-radius:12px">
-    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse">
-      <tr>
-        <td style="font-weight:700;font-size:18px;padding:0 0 6px 0;text-align:left;">
-          Order confirmed
-        </td>
-        <td width="${logoW}" align="right" valign="top" style="padding:0;">
-          <table cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
-            <tr>
-              <td style="padding:0;">
-                <img
-                  src="${logoUrl}"
-                  alt="Force Dowels"
-                  width="${logoW}"
-                  style="display:block;border:0;outline:none;text-decoration:none;height:auto;border-radius:999px;"
-                >
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-
-    <p style="margin:16px 0 0">Hi ${escapeHtml(name)},</p>
-    <p style="margin:8px 0 16px">Thanks for your purchase! Your payment was received and your order is confirmed.</p>
-
-    <div style="background:#111827;border:1px solid #1f2937;border-radius:10px;padding:16px">
-      <div style="display:flex;justify-content:space-between;margin:4px 0"><span>Subtotal</span><strong>$${subtotal.toFixed(2)}</strong></div>
-      <div style="display:flex;justify-content:space-between;margin:4px 0"><span>Shipping</span><strong>$${shipping.toFixed(2)}</strong></div>
-      <div style="display:flex;justify-content:space-between;margin:4px 0"><span>Tax</span><strong>$${tax.toFixed(2)}</strong></div>
-      <div style="height:1px;background:#1f2937;margin:8px 0"></div>
-      <div style="display:flex;justify-content:space-between;margin:4px 0;font-size:16px"><span>Total</span><strong>$${total.toFixed(2)}</strong></div>
-    </div>
-
-    <p style="margin:16px 0 0">We’ll email you tracking details when your order ships.</p>
-    <p style="margin:8px 0 16px">Questions? Email <a href="mailto:info@forcedowels.com" style="color:#60a5fa">info@forcedowels.com</a>.</p>
-    <p style="font-size:12px;color:#9ca3af">If this was a test payment, this message confirms your test checkout completed.</p>
-  </div>`;
-
-    const ok = await sendWithResend({ to: toEmail, subject, text, html });
-    console.log('order email sent:', ok, 'to:', toEmail);
-    return sendJSON(res, 200, { received: true, email_sent: !!ok });
-  } catch (e) {
-    console.error('handler error:', e);
-    return sendJSON(res, 200, { received: true, email_sent: false, error: String(e) });
-  }
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-async function sendWithResend({ to, subject, text, html }) {
-  try {
-    const apiKey = process.env.RESEND_API_KEY || '';
-    if (!apiKey) { console.error('Missing RESEND_API_KEY'); return false; }
-    const from = process.env.CONFIRMATION_FROM_EMAIL || 'Force Dowels <orders@forcedowels.com>';
-
-    const r = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from, to: [to], subject, text, html, reply_to: 'info@forcedowels.com' })
-    });
-    if (!r.ok) {
-      const body = await r.text().catch(()=>'');
-      console.error('Resend failed', r.status, body);
-      return false;
+      if (email && process.env.RESEND_API_KEY && process.env.ORDER_EMAIL_FROM) {
+        await resend.emails.send({
+          from: process.env.ORDER_EMAIL_FROM,
+          to: email,
+          bcc: process.env.ORDER_EMAIL_BCC || undefined,
+          subject: 'Your Force Dowels order is confirmed',
+          html,
+        });
+      } else {
+        console.warn('Email not sent (missing email or RESEND envs).');
+      }
     }
-    return true;
+
+    // Respond 200 for all handled events
+    return asJSON(res, 200, { received: true });
   } catch (e) {
-    console.error('Resend error:', e);
-    return false;
+    console.error('stripe-webhook error:', e);
+    return asJSON(res, 500, { error: 'webhook_failed', detail: e.message });
   }
 }
