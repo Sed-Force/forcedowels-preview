@@ -1,6 +1,6 @@
 // /api/shipping/quote.js
 // UPS + USPS quoting with robust state/province normalization + TQL placeholder.
-// Returns { rates: [], status: {ups:{available,message}, usps:{...}, tql:{...}} }
+// Returns { rates: [sorted cheapest->highest], status: {ups:{available,message}, usps:{...}, tql:{...}} }
 
 export const config = { runtime: 'nodejs' };
 
@@ -395,5 +395,10 @@ export default async function handler(req, res) {
     status.usps.message = `Error: ${String(e.message||e).slice(0, 300)}`;
   }
 
-  return asJSON(res, 200, { rates: outRates, status });
+  // ---- FINAL: sort cheapest -> highest ----
+  const ratesSorted = outRates
+    .filter(r => Number.isFinite(Number(r.amount)))
+    .sort((a, b) => Number(a.amount) - Number(b.amount));
+
+  return asJSON(res, 200, { rates: ratesSorted, status });
 }
