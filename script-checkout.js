@@ -1,10 +1,9 @@
 /* MASTER: /public/script-checkout.js
    Checkout page logic:
-   - Proper State/Province SELECT that updates per country (US/CA/MX)
+   - State/Province SELECT per country (US/CA/MX)
    - Live rates via /api/shipping/quote
-   - Subtotal computed from cart (fd_cart) using tiered pricing
-   - Persists destination in localStorage 'fd_dest'
-   - Persists chosen rate in localStorage 'fd_ship_quote'
+   - Accurate subtotal using extended pricing (no per-unit rounding loss)
+   - Stores destination in localStorage 'fd_dest' and selected rate in 'fd_ship_quote'
 */
 
 (function () {
@@ -13,12 +12,12 @@
   const KEY_DEST  = 'fd_dest';
   const KEY_RATE  = 'fd_ship_quote';
 
-  // ---- Bulk pricing (match server + cart) ----
+  // ---- Bulk pricing (match server) ----
   const BULK_MIN = 5000, BULK_MAX = 960000, BULK_STEP = 5000;
-  const unitPriceCentsFor = (units) => {
-    if (units >= 160000) return Math.round(0.063 * 100);   // $0.0630
-    if (units >= 20000)  return Math.round(0.0675 * 100);  // $0.0675
-    return Math.round(0.072 * 100);                        // $0.0720
+  const unitPriceFor = (units) => {
+    if (units >= 160000) return 0.0630;
+    if (units >= 20000)  return 0.0675;
+    return 0.0720;
   };
   const fmtMoney = (n) =>
     (Number(n) || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
@@ -43,18 +42,17 @@
   const btnCheckout = $('#btn-checkout');
   const badgeEl     = $('#cart-count');
 
-  // ---- Data: states/provinces ----
+  // ---- States/Provinces ----
   const US_STATES = [
     'AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'
   ];
   const CA_PROV = ['AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT'];
-  // MX full list (UPS accepts empty but we provide a selector)
   const MX_STATES = [
     'AG','BC','BS','CM','CS','CH','CO','CL','DG','GJ','GR','HG','JA','MX','MC','MR','NA','NL','OA','PU','QE','QR','SL','SI','SO','TB','TM','TL','VE','YU','ZA'
   ];
 
   function populateStateOptions(country, selected) {
-    stateSel.innerHTML = ''; // clear
+    stateSel.innerHTML = '';
     const frag = document.createDocumentFragment();
     const first = document.createElement('option');
     first.value = '';
@@ -73,12 +71,7 @@
       frag.appendChild(opt);
     });
     stateSel.appendChild(frag);
-
-    if (selected && list.includes(selected)) {
-      stateSel.value = selected;
-    } else {
-      stateSel.value = '';
-    }
+    if (selected && list.includes(selected)) stateSel.value = selected;
   }
 
   // ---- Storage helpers ----
@@ -119,7 +112,7 @@
     let cents = 0;
     for (const it of items) {
       if (it.type === 'bulk') {
-        cents += unitPriceCentsFor(it.units) * it.units;
+        cents += Math.round(unitPriceFor(it.units) * it.units * 100);
       } else if (it.type === 'kit') {
         cents += 3600 * it.qty; // $36.00
       }
@@ -156,22 +149,21 @@
 
   countrySel.addEventListener('change', () => {
     populateStateOptions(countrySel.value);
-    // clear previously chosen rate on country change
     setChosenRate(null);
-    renderRates([]);
+    renderRates([], null);
     recalcTotals();
   });
 
   [stateSel, cityInp, postalInp, streetInp].forEach(el => {
     el.addEventListener('change', () => {
       setChosenRate(null);
-      renderRates([]);
+      renderRates([], null);
       recalcTotals();
     });
   });
 
   // ---- Rates ----
-  async function fetchWithTimeout(url, opts={}, ms=20000) {
+  async function fetchWithTimeout(url, opts={}, ms=25000) {
     const ctl = new AbortController();
     const id = setTimeout(() => ctl.abort(), ms);
     try { return await fetch(url, { ...opts, signal: ctl.signal }); }
@@ -184,7 +176,7 @@
       state:   stateSel.value || '',
       city:    cityInp.value.trim(),
       postal:  postalInp.value.trim(),
-      street:  streetInp.value.trim(),
+      street:  streetInp.value.trim(), // optional for quoting; backend tolerates empty
     };
   }
 
@@ -198,57 +190,66 @@
     updateBadge(items);
   }
 
-  function renderRates(rates) {
+  function renderRates(rates, status) {
     ratesList.innerHTML = '';
-    if (!rates || rates.length === 0) {
+
+    // If we have rates, render them
+    if (Array.isArray(rates) && rates.length) {
+      rates.forEach((r, i) => {
+        const id = `rate-${i}`;
+        const li = document.createElement('li');
+        li.className = 'rate-row';
+        li.innerHTML = `
+          <label class="rate-option">
+            <input type="radio" name="shiprate" id="${id}" ${i===0 ? 'checked' : ''}>
+            <span class="rate-carrier">${r.carrier || 'Carrier'}</span>
+            <span class="rate-service">${r.service || ''}</span>
+            <span class="rate-price">${fmtMoney(r.amount || 0)}</span>
+          </label>
+        `;
+        ratesList.appendChild(li);
+
+        const radio = li.querySelector('input[type="radio"]');
+        radio.addEventListener('change', () => {
+          setChosenRate(r);
+          recalcTotals();
+        });
+      });
+      setChosenRate(rates[0]);
+      recalcTotals();
+    } else {
+      // Graceful empty message
       const li = document.createElement('li');
       li.className = 'muted';
       li.textContent = 'No rates yet. Enter address and click “Get Rates”.';
       ratesList.appendChild(li);
-      return;
     }
 
-    rates.forEach((r, i) => {
-      const id = `rate-${i}`;
-      const li = document.createElement('li');
-      li.className = 'rate-row';
-
-      // Group-like label: CARRIER — service text — price
-      li.innerHTML = `
-        <label class="rate-option">
-          <input type="radio" name="shiprate" id="${id}" ${i===0 ? 'checked' : ''}>
-          <span class="rate-carrier">${r.carrier || 'Carrier'}</span>
-          <span class="rate-service">${r.service || ''}</span>
-          <span class="rate-price">${fmtMoney(r.amount || 0)}</span>
-        </label>
-      `;
-      ratesList.appendChild(li);
-
-      const radio = li.querySelector('input[type="radio"]');
-      radio.addEventListener('change', () => {
-        setChosenRate(r);
-        recalcTotals();
-      });
-    });
-
-    // Auto-select first (cheapest expected)
-    setChosenRate(rates[0]);
-    recalcTotals();
+    // Add a compact status block (helps diagnose when a carrier returns no rates)
+    if (status && typeof status === 'object') {
+      const s = document.createElement('li');
+      s.className = 'muted';
+      const ups  = status.ups  ? (status.ups.available ? `UPS: available — ${status.ups.message||''}` : `UPS: unavailable — ${status.ups.message||''}`) : '';
+      const usps = status.usps ? (status.usps.available ? `USPS: available — ${status.usps.message||''}` : `USPS: unavailable — ${status.usps.message||''}`) : '';
+      const tql  = status.tql  ? (status.tql.available ? `TQL: available` : `TQL: unavailable — ${status.tql.message||''}`) : '';
+      s.innerHTML = [ups, usps, tql].filter(Boolean).join('<br>');
+      ratesList.appendChild(s);
+    }
   }
 
   if (btnRates) {
     btnRates.addEventListener('click', async () => {
       const dest = currentDestFromForm();
 
-      // persist
+      // Persist whatever the user has entered
       setDest(dest);
       setChosenRate(null);
-      renderRates([]);
+      renderRates([], null);
       recalcTotals();
 
-      // basic validation
-      if (!dest.city || !dest.postal || !dest.street) {
-        alert('Please complete street, city, and postal code.');
+      // Minimal validation so we don't block UPS/TQL: require country + postal at least
+      if (!dest.country || !dest.postal) {
+        alert('Please enter a postal/ZIP code.');
         return;
       }
 
@@ -258,7 +259,6 @@
         return;
       }
 
-      // UI
       const prev = btnRates.textContent;
       btnRates.disabled = true;
       btnRates.textContent = 'Getting rates…';
@@ -268,7 +268,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ destination: dest, items }),
-        }, 25000);
+        });
 
         if (!res.ok) {
           console.error('Quote error', await res.text());
@@ -277,7 +277,7 @@
         }
 
         const data = await res.json();
-        renderRates(data?.rates || []);
+        renderRates(data?.rates || [], data?.status || null);
       } catch (e) {
         console.error(e);
         alert(e.name === 'AbortError' ? 'Timed out getting rates. Try again.' : 'Network error getting rates.');
@@ -301,24 +301,27 @@
         alert('Please choose a shipping option first.');
         return;
       }
+      setDest({
+        country: countrySel.value || 'US',
+        state:   stateSel.value || '',
+        city:    cityInp.value.trim(),
+        postal:  postalInp.value.trim(),
+        street:  streetInp.value.trim(),
+      });
 
-      // keep destination persisted
-      setDest(currentDestFromForm());
-
-      // UI
       const prev = btnCheckout.textContent;
       btnCheckout.disabled = true;
       btnCheckout.textContent = 'Loading…';
 
       try {
-        const res = await fetchWithTimeout('/api/checkout', {
+        const res = await fetch('/api/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             items,
             shipping: { carrier: rate.carrier, service: rate.service, amount: rate.amount, currency: rate.currency || 'USD' },
           }),
-        }, 20000);
+        });
 
         if (!res.ok) {
           console.error('Checkout failed', await res.text());
@@ -343,5 +346,12 @@
 
   // ---- Init ----
   prefillForm();
-  recalcTotals();
+  (function renderInitialTotals() {
+    const items = loadCart();
+    const sub = computeSubtotal(items);
+    if (subtotalEl) subtotalEl.textContent = fmtMoney(sub);
+    if (shipEl)     shipEl.textContent     = fmtMoney(getChosenRate()?.amount || 0);
+    if (grandEl)    grandEl.textContent    = fmtMoney(sub + (getChosenRate()?.amount || 0));
+    updateBadge(items);
+  })();
 })();
