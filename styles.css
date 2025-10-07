@@ -2218,3 +2218,118 @@ button,
   width: 100%;
   box-sizing: border-box;
 }
+
+/* ==== Shipping rate cards (Next.js-ish) ==== */
+:root{
+  --fd-bg-800:#0b1421;
+  --fd-bg-700:#0e1b2b;
+  --fd-bg-600:#122338;
+  --fd-stroke: rgba(255,255,255,.08);
+  --fd-soft: rgba(255,255,255,.06);
+  --fd-text-600: rgba(255,255,255,.65);
+  --fd-text-800: rgba(255,255,255,.92);
+  /* use your site accent here (same as .btn--accent) */
+  --accent: #f4a825;
+  --accent-rgb: 244,168,37;
+}
+
+.rates-list{
+  list-style:none;
+  margin:12px 0 8px;
+  padding:0;
+  display:grid;
+  gap:10px;
+}
+.rate-row{ margin:0; }
+
+.rate-option{
+  position:relative;
+  display:grid;
+  grid-template-columns: auto 1fr auto;
+  gap:12px;
+  align-items:center;
+  padding:14px 16px;
+  border-radius:14px;
+  background:
+    linear-gradient(180deg, var(--fd-bg-700), var(--fd-bg-800)) padding-box,
+    radial-gradient(120% 120% at 0% 0%, rgba(255,255,255,.12), rgba(255,255,255,0)) border-box;
+  border:1px solid transparent;
+  box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 6px 18px rgba(0,0,0,.35);
+  color: var(--fd-text-800);
+  cursor:pointer;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+}
+.rate-option:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 10px 24px rgba(0,0,0,.42);
+}
+.rate-row.selected .rate-option{
+  background:
+    linear-gradient(180deg, var(--fd-bg-600), var(--fd-bg-700)) padding-box,
+    linear-gradient(90deg, rgba(var(--accent-rgb),1), rgba(var(--accent-rgb),0) 65%) border-box;
+  border-color: transparent;
+  box-shadow:
+    0 0 0 1px rgba(var(--accent-rgb), .25) inset,
+    0 0 0 2px rgba(var(--accent-rgb), .16),
+    0 14px 32px rgba(0,0,0,.55);
+}
+
+/* hide native radio but keep accessible */
+.rate-option input[type="radio"]{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+}
+
+/* tiny selection dot at far left */
+.rate-option::before{
+  content:'';
+  width:10px; height:10px;
+  border-radius:50%;
+  background: rgba(255,255,255,.12);
+  border: 2px solid rgba(255,255,255,.25);
+  box-shadow: 0 0 0 3px rgba(0,0,0,.35) inset;
+}
+.rate-row.selected .rate-option::before{
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 5px rgba(var(--accent-rgb), .18);
+}
+
+/* left label group spacing */
+.rate-option > span.rate-carrier{ margin-left:4px; }
+
+/* carrier chip */
+.rate-carrier{
+  font-size:12px;
+  line-height:1;
+  padding:.25rem .5rem;
+  border-radius:999px;
+  background: var(--fd-soft);
+  border:1px solid var(--fd-stroke);
+  color: var(--fd-text-600);
+  text-transform:uppercase;
+  letter-spacing:.02em;
+}
+
+/* service text */
+.rate-service{
+  font-weight:600;
+  color: var(--fd-text-800);
+}
+
+/* price on the right */
+.rate-price{
+  justify-self:end;
+  font-weight:800;
+  font-size:1.05rem;
+}
+
+/* status line under rates */
+.rates-list .carrier-status{
+  margin-top:6px;
+  padding:8px 2px 0;
+  border-top:1px dashed var(--fd-stroke);
+  color: var(--fd-text-600);
+  font-size:.9rem;
+}
