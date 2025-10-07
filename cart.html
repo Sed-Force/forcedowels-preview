@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Your Cart — Force Dowels™</title>
-  <meta name="description" content="Review your cart, get shipping rates (UPS/USPS/LTL), and proceed to checkout." />
+  <meta name="description" content="Review your cart and proceed to checkout." />
   <link rel="icon" href="/favicon.ico" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -62,9 +62,9 @@
             <thead>
               <tr>
                 <th class="col-item">Item</th>
-                <th class="col-qty">Quantity</th>
+                <th class="col-qty">Units / Qty</th>
                 <th class="col-unitprice">Unit Price</th>
-                <th class="col-total">Total</th>
+                <th class="col-total">Line Total</th>
               </tr>
             </thead>
             <tbody id="cart-body">
@@ -80,49 +80,25 @@
           </div>
         </div>
 
-        <!-- Right: sticky summary -->
+        <!-- Right: simple summary -->
         <aside class="cart-summary">
           <div class="summary-card">
-            <h3>Shipping</h3>
-
-            <div class="ship-form">
-              <label class="field">
-                <span>Country</span>
-                <select id="ship-country" class="select">
-                  <option value="US">United States</option>
-                  <option value="CA">Canada</option>
-                  <option value="MX">Mexico</option>
-                </select>
-              </label>
-
-              <div class="grid-2">
-                <label class="field">
-                  <span>State/Province</span>
-                  <input id="ship-state" class="input" placeholder="e.g., AZ" maxlength="40">
-                </label>
-                <label class="field">
-                  <span>City</span>
-                  <input id="ship-city" class="input" placeholder="e.g., Queen Creek" maxlength="60">
-                </label>
-              </div>
-
-              <label class="field">
-                <span>ZIP / Postal</span>
-                <input id="ship-postal" class="input" inputmode="numeric" placeholder="85142" maxlength="12">
-              </label>
-
-              <button id="btn-get-rates" type="button" class="btn btn--ghost btn-wide">Get Rates</button>
-            </div>
-
-            <ul id="rates-list" class="rates-list"></ul>
-
+            <h3>Order Summary</h3>
             <div class="summary-rows">
-              <div class="summary-row"><span>Subtotal</span><strong id="cart-subtotal">$0.00</strong></div>
-              <div class="summary-row"><span>Shipping</span><strong id="summary-shipping">$0.00</strong></div>
-              <div class="summary-row total"><span>Grand Total</span><strong id="summary-grand">$0.00</strong></div>
+              <div class="summary-row">
+                <span>Subtotal</span>
+                <strong id="cart-subtotal">$0.00</strong>
+              </div>
             </div>
+            <p class="muted" style="margin:8px 0 12px">Shipping &amp; taxes calculated on the next step.</p>
 
-            <button id="btn-checkout" class="btn btn--accent btn-wide" type="button">Proceed to Checkout</button>
+            <!-- Route to the new checkout page -->
+            <button id="btn-checkout"
+                    class="btn btn--accent btn-wide"
+                    type="button"
+                    onclick="window.location.href='/checkout.html'">
+              Proceed to Checkout
+            </button>
           </div>
         </aside>
       </div>
@@ -189,9 +165,8 @@
   </div>
 </footer>
 
-<script>
-  (function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})();
-</script>
+<script> (function(){var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})(); </script>
+<!-- Keep your existing cart logic; it only updates subtotal and rows here -->
 <script defer src="/script-cart.js?v=48"></script>
 </body>
 </html>
