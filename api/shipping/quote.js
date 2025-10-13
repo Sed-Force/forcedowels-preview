@@ -254,31 +254,41 @@ export default async function handler(req, res) {
     status.ups.message = `Error: ${String(e.message||e).slice(0, 300)}`;
   }
 
-  // USPS
+  // USPS - Simple estimated rates
   try {
-    const mode = (process.env.USPS_MODE || 'webtools').toLowerCase();
     const isUSDomestic = dest.country === 'US' && (shipFrom.country || 'US').toUpperCase() === 'US';
 
     if (!isUSDomestic) {
       status.usps.message = 'USPS covers US→US only in this handler.';
-    } else if (mode === 'portal') {
-      // Portal (OAuth2 REST)
-      if (!shipFromOK) status.usps.message = 'Missing SHIP_FROM_* env address.';
-      else {
-        const uspsRates = await quoteUSPS_Portal({ shipFrom, dest, parcels });
-        if (uspsRates.length) { outRates.push(...uspsRates); status.usps.available = true; status.usps.message = `Portal: returned ${uspsRates.length} rate(s).`; }
-        else status.usps.message = 'Portal: no USPS rates returned.';
-      }
     } else {
-      // WebTools (RateV4)
-      const userId = process.env.USPS_WEBTOOLS_USERID;
-      if (!userId) status.usps.message = 'Missing USPS_WEBTOOLS_USERID env var.';
-      else if (!shipFromOK) status.usps.message = 'Missing SHIP_FROM_* env address.';
-      else {
-        const uspsRates = await quoteUSPS_WebTools({ userId, shipFromZip: shipFrom.postal, destZip: dest.postal, parcels });
-        if (uspsRates.length) { outRates.push(...uspsRates); status.usps.available = true; status.usps.message = `WebTools: returned ${uspsRates.length} rate(s).`; }
-        else status.usps.message = 'WebTools: no USPS rates returned.';
+      // Calculate simple estimated rates
+      let totalWeight = 0;
+      for (const parcel of parcels) {
+        totalWeight += parcel.weightLbs || 1;
       }
+
+      let estimatedRate;
+      if (totalWeight <= 1) estimatedRate = 9.50;
+      else if (totalWeight <= 2) estimatedRate = 11.50;
+      else if (totalWeight <= 3) estimatedRate = 13.50;
+      else if (totalWeight <= 5) estimatedRate = 16.50;
+      else if (totalWeight <= 10) estimatedRate = 22.00;
+      else if (totalWeight <= 20) estimatedRate = 35.00;
+      else if (totalWeight <= 30) estimatedRate = 45.00;
+      else if (totalWeight <= 50) estimatedRate = 65.00;
+      else if (totalWeight <= 70) estimatedRate = 85.00;
+      else estimatedRate = Math.max(85, totalWeight * 1.25);
+
+      const uspsRate = {
+        carrier: 'USPS',
+        service: 'Priority Mail (estimated)',
+        amount: estimatedRate,
+        currency: 'USD'
+      };
+
+      outRates.push(uspsRate);
+      status.usps.available = true;
+      status.usps.message = `Estimated: $${estimatedRate.toFixed(2)} (${totalWeight} lbs total)`;
     }
   } catch (e) {
     status.usps.message = `Error: ${String(e.message||e).slice(0, 300)}`;
