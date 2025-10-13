@@ -219,8 +219,10 @@ a { color: inherit; text-decoration: none; }
   display: none;
   position: absolute; top: 120%; left: 0;
   min-width: 220px;
-  background: #fff; color: #1b2540;
-  border: 1px solid #e6ebf3; border-radius: 12px;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,.15);
   padding: 8px; z-index: 30;
 }
@@ -305,16 +307,21 @@ a { color: inherit; text-decoration: none; }
   margin-top: 16px; padding: 0; list-style: none;
 }
 .hero--apd .badges li {
-  background: #fff; border: 1px solid #e5eaf2;
-  padding: 10px 14px; border-radius: 999px;
-  font-weight: 700; box-shadow: var(--shadow-xs);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  box-shadow: var(--shadow-xs);
+  color: var(--text);
 }
 
 /* ── Cards / grids ──────────────────────────────────────────────────────── */
 .grid-2 { display: grid; grid-template-columns: 1.15fr .85fr; gap: 28px; align-items: center; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 18px; }
 .card {
-  background: #fff; border: 1px solid #e9eef5;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-4);
   box-shadow: var(--shadow-xs);
@@ -324,14 +331,19 @@ a { color: inherit; text-decoration: none; }
 /* ── Forms ───────────────────────────────────────────────────────────────── */
 .form {
   display: grid; gap: var(--space-3);
-  background: #fff; border: 1px solid #e9eef5;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-4);
 }
-.form label { display: grid; gap: 6px; font-weight: 700; color: #23314f; }
+.form label { display: grid; gap: 6px; font-weight: 700; color: var(--text); }
 .form input, .form textarea {
-  border: 1px solid #d9e2ef; border-radius: 12px;
-  padding: 12px 14px; font: inherit; background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  background: var(--bg-card);
+  color: var(--text);
 }
 .form input:focus, .form textarea:focus {
   outline: 2px solid var(--ring); border-color: var(--brand);
@@ -508,8 +520,8 @@ a { color: inherit; text-decoration: none; }
   height: 44px;
   width: 44px;
   border-radius: 999px;
-  border: 1px solid rgba(0,0,0,.08);
-  background: #fff;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
   color: var(--brand);
   font-size: 26px;
   font-weight: 700;
@@ -543,15 +555,15 @@ a { color: inherit; text-decoration: none; }
 .dot {
   height: 10px; width: 10px;
   border-radius: 999px;
-  border: 1px solid rgba(0,0,0,.15);
-  background: #fff;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
   cursor: pointer;
   padding: 0;
 }
 .dot.is-active { background: var(--brand); border-color: var(--brand); }
 
 /* Hover/pause hint */
-.slider:hover .slider-arrow { background: #fff; }
+.slider:hover .slider-arrow { background: var(--bg-card); }
 
 /* Mobile tweaks */
 @media (max-width: 560px) {
@@ -741,8 +753,8 @@ a { color: inherit; text-decoration: none; }
   gap: 18px;
 }
 .product {
-  background: #fff;
-  border: 1px solid #e9eef5;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-xs);
   display: flex;
