@@ -254,44 +254,75 @@ export default async function handler(req, res) {
     status.ups.message = `Error: ${String(e.message||e).slice(0, 300)}`;
   }
 
-  // USPS - Simple estimated rates
+  // USPS - Try real API first, fallback to estimated
   try {
     const isUSDomestic = dest.country === 'US' && (shipFrom.country || 'US').toUpperCase() === 'US';
 
     if (!isUSDomestic) {
       status.usps.message = 'USPS covers US→US only in this handler.';
     } else {
-      // Calculate simple estimated rates
-      let totalWeight = 0;
-      for (const parcel of parcels) {
-        totalWeight += parcel.weightLbs || 1;
+      // Try real USPS API first
+      const consumerKey = process.env.USPS_CONSUMER_KEY;
+      const consumerSecret = process.env.USPS_CONSUMER_SECRET;
+
+      if (consumerKey && consumerSecret) {
+        try {
+          const uspsRates = await quoteUSPS_Portal({ shipFrom, dest, parcels });
+          if (uspsRates.length) {
+            outRates.push(...uspsRates);
+            status.usps.available = true;
+            status.usps.message = `Real API: returned ${uspsRates.length} rate(s).`;
+          } else {
+            throw new Error('No rates returned from API');
+          }
+        } catch (apiError) {
+          console.log('[USPS] API failed, using estimated rates:', apiError.message);
+          // Fall back to estimated rates
+          const estimatedRate = calculateEstimatedUSPSRate(parcels);
+          const uspsRate = {
+            carrier: 'USPS',
+            service: 'Priority Mail (estimated)',
+            amount: estimatedRate,
+            currency: 'USD'
+          };
+          outRates.push(uspsRate);
+          status.usps.available = true;
+          status.usps.message = `API failed, using estimated: $${estimatedRate.toFixed(2)}`;
+        }
+      } else {
+        // No credentials, use estimated rates
+        const estimatedRate = calculateEstimatedUSPSRate(parcels);
+        const uspsRate = {
+          carrier: 'USPS',
+          service: 'Priority Mail (estimated)',
+          amount: estimatedRate,
+          currency: 'USD'
+        };
+        outRates.push(uspsRate);
+        status.usps.available = true;
+        status.usps.message = `No credentials, using estimated: $${estimatedRate.toFixed(2)}`;
       }
-
-      let estimatedRate;
-      if (totalWeight <= 1) estimatedRate = 9.50;
-      else if (totalWeight <= 2) estimatedRate = 11.50;
-      else if (totalWeight <= 3) estimatedRate = 13.50;
-      else if (totalWeight <= 5) estimatedRate = 16.50;
-      else if (totalWeight <= 10) estimatedRate = 22.00;
-      else if (totalWeight <= 20) estimatedRate = 35.00;
-      else if (totalWeight <= 30) estimatedRate = 45.00;
-      else if (totalWeight <= 50) estimatedRate = 65.00;
-      else if (totalWeight <= 70) estimatedRate = 85.00;
-      else estimatedRate = Math.max(85, totalWeight * 1.25);
-
-      const uspsRate = {
-        carrier: 'USPS',
-        service: 'Priority Mail (estimated)',
-        amount: estimatedRate,
-        currency: 'USD'
-      };
-
-      outRates.push(uspsRate);
-      status.usps.available = true;
-      status.usps.message = `Estimated: $${estimatedRate.toFixed(2)} (${totalWeight} lbs total)`;
     }
   } catch (e) {
     status.usps.message = `Error: ${String(e.message||e).slice(0, 300)}`;
+  }
+
+  function calculateEstimatedUSPSRate(parcels) {
+    let totalWeight = 0;
+    for (const parcel of parcels) {
+      totalWeight += parcel.weightLbs || 1;
+    }
+
+    if (totalWeight <= 1) return 9.50;
+    else if (totalWeight <= 2) return 11.50;
+    else if (totalWeight <= 3) return 13.50;
+    else if (totalWeight <= 5) return 16.50;
+    else if (totalWeight <= 10) return 22.00;
+    else if (totalWeight <= 20) return 35.00;
+    else if (totalWeight <= 30) return 45.00;
+    else if (totalWeight <= 50) return 65.00;
+    else if (totalWeight <= 70) return 85.00;
+    else return Math.max(85, totalWeight * 1.25);
   }
 
   const ratesSorted = outRates.filter(r => Number.isFinite(Number(r.amount))).sort((a, b) => Number(a.amount) - Number(b.amount));
