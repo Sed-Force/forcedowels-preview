@@ -12,6 +12,9 @@ const UPS_ACCOUNT       = process.env.UPS_ACCOUNT_NUMBER;
 const UPS_ENV           = (process.env.UPS_ENV || 'test').toLowerCase(); // 'test' | 'production'
 const UPS_BASE          = UPS_ENV === 'production' ? 'https://onlinetools.ups.com' : 'https://wwwcie.ups.com';
 
+const USPS_CLIENT_ID    = process.env.USPS_CLIENT_ID;
+const USPS_CLIENT_SECRET = process.env.USPS_CLIENT_SECRET;
+
 // Optional: origin address pieces (already in your env)
 const ORIGIN = {
   name: process.env.SHIP_FROM_NAME || 'Force Dowels',
@@ -150,14 +153,133 @@ async function getUpsRates({ to, parcels, pallets }) {
   return results;
 }
 
-// ---- USPS / TQL placeholders (enable later) ----
-async function getUspsRates(/* { to, parcels, kitsMeta } */) {
-  // Return [] for now. When ready:
-  // - Use your USPS API (or ShipEngine) to quote parcels
-  // - If only kits and qty<=5 per box, also add a "USPS Medium Flat Rate" option
-  return [];
+// ---- USPS ----
+let _uspsToken = null;
+let _uspsTokenExp = 0;
+
+async function getUspsAccessToken() {
+  if (!USPS_CLIENT_ID || !USPS_CLIENT_SECRET) return null;
+
+  // Use cached token if still valid (>60s left)
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (_uspsToken && nowSec < _uspsTokenExp - 60) return _uspsToken;
+
+  try {
+    const response = await fetch('https://api.usps.com/oauth2/v3/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: USPS_CLIENT_ID,
+        client_secret: USPS_CLIENT_SECRET,
+        grant_type: 'client_credentials',
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('USPS OAuth failed:', response.status, await response.text().catch(() => ''));
+      return null;
+    }
+
+    const data = await response.json();
+    _uspsToken = data.access_token;
+    _uspsTokenExp = nowSec + (data.expires_in || 3600);
+    return _uspsToken;
+  } catch (error) {
+    console.error('USPS OAuth error:', error.message);
+    return null;
+  }
 }
 
+async function getUspsRates({ to, parcels }) {
+  // Only process US domestic shipments
+  if (!USPS_CLIENT_ID || !USPS_CLIENT_SECRET || to.country !== 'US') {
+    return [];
+  }
+
+  console.log('[USPS] Getting rates for', parcels.length, 'parcels');
+
+  const token = await getUspsAccessToken();
+  if (!token) {
+    console.log('[USPS] No token obtained');
+    return [];
+  }
+
+  const results = [];
+
+  for (const parcel of parcels) {
+    try {
+      // Convert weight from lbs to ounces for USPS API
+      const weightOz = Math.ceil((parcel.weightLb || 1) * 16);
+
+      const body = {
+        originZIPCode: ORIGIN.zip,
+        destinationZIPCode: to.postal || to.zip,
+        weight: weightOz,
+        length: parcel.length || 12,
+        width: parcel.width || 12,
+        height: parcel.height || 6,
+        mailClass: 'PRIORITY_MAIL',
+        processingCategory: 'MACHINABLE',
+        destinationEntryFacilityType: 'NONE',
+        rateIndicator: 'DR',
+      };
+
+      const response = await fetch('https://api.usps.com/prices/v3/base-rates/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        console.error('USPS rate request failed:', response.status);
+        continue;
+      }
+
+      const data = await response.json();
+      const rate = data?.totalBasePrice;
+
+      if (rate) {
+        results.push({
+          carrier: 'USPS',
+          service: 'Priority Mail',
+          serviceCode: 'PRIORITY',
+          priceCents: Math.round(Number(rate) * 100),
+          estDays: 2,
+          detail: { uspsResponse: data },
+        });
+      }
+    } catch (error) {
+      console.error('USPS rate error for parcel:', error.message);
+      continue;
+    }
+  }
+
+  if (!results.length) {
+    console.log('[USPS] No rates returned');
+    return [];
+  }
+
+  // Combine all parcel rates into a single USPS option
+  const totalCents = results.reduce((sum, rate) => sum + rate.priceCents, 0);
+
+  console.log('[USPS] Combined rate:', totalCents / 100);
+
+  return [{
+    carrier: 'USPS',
+    service: 'Priority Mail',
+    serviceCode: 'PRIORITY',
+    priceCents: totalCents,
+    estDays: 2,
+    detail: { parcels: results.length, totalRate: totalCents / 100 },
+  }];
+}
+
+// ---- TQL placeholder (enable later) ----
 async function getTqlRates(/* { to, pallets } */) {
   // Return [] for now. When you enable:
   // - Call your TQL quote endpoint with pallet dims/weight and addresses
