@@ -29,12 +29,15 @@ export default async function handler(req, res) {
       });
     }
     
-    // Try to get OAuth token
+    // Try multiple OAuth approaches
     console.log('[TEST-OAUTH] Attempting OAuth request...');
-    
+
     const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-    
-    const oauthResponse = await fetch(tokenUrl, {
+    const attempts = [];
+
+    // Attempt 1: Basic auth with scope=prices
+    console.log('[TEST-OAUTH] Attempt 1: Basic auth with scope=prices');
+    let oauthResponse = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${authString}`,
@@ -43,34 +46,87 @@ export default async function handler(req, res) {
       },
       body: 'grant_type=client_credentials&scope=prices'
     });
-    
-    console.log('[TEST-OAUTH] OAuth response status:', oauthResponse.status);
-    
-    const responseText = await oauthResponse.text();
-    console.log('[TEST-OAUTH] OAuth response text:', responseText);
-    
+
+    let responseText = await oauthResponse.text();
     let responseData;
     try {
       responseData = JSON.parse(responseText);
     } catch (e) {
       responseData = { raw: responseText };
     }
-    
+
+    attempts.push({
+      attempt: 1,
+      method: 'Basic auth with scope=prices',
+      status: oauthResponse.status,
+      success: oauthResponse.ok,
+      response: responseData
+    });
+
+    // If first attempt failed, try without scope
+    if (!oauthResponse.ok) {
+      console.log('[TEST-OAUTH] Attempt 2: Basic auth without scope');
+      oauthResponse = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${authString}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json'
+        },
+        body: 'grant_type=client_credentials'
+      });
+
+      responseText = await oauthResponse.text();
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        responseData = { raw: responseText };
+      }
+
+      attempts.push({
+        attempt: 2,
+        method: 'Basic auth without scope',
+        status: oauthResponse.status,
+        success: oauthResponse.ok,
+        response: responseData
+      });
+    }
+
+    // If still failed, try credentials in body
+    if (!oauthResponse.ok) {
+      console.log('[TEST-OAUTH] Attempt 3: Credentials in body');
+      oauthResponse = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json'
+        },
+        body: `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`
+      });
+
+      responseText = await oauthResponse.text();
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        responseData = { raw: responseText };
+      }
+
+      attempts.push({
+        attempt: 3,
+        method: 'Credentials in body',
+        status: oauthResponse.status,
+        success: oauthResponse.ok,
+        response: responseData
+      });
+    }
+
     if (!oauthResponse.ok) {
       return res.status(200).json({
         success: false,
-        error: 'OAuth request failed',
-        status: oauthResponse.status,
-        response: responseData,
-        requestDetails: {
-          url: tokenUrl,
-          method: 'POST',
-          headers: {
-            'Authorization': `Basic ${authString.substring(0, 20)}...`,
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          body: 'grant_type=client_credentials&scope=prices'
-        }
+        error: 'All OAuth attempts failed',
+        attempts: attempts,
+        finalStatus: oauthResponse.status,
+        finalResponse: responseData
       });
     }
     
@@ -78,6 +134,8 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       message: 'OAuth token obtained successfully',
+      attempts: attempts,
+      successfulAttempt: attempts.find(a => a.success),
       tokenLength: responseData.access_token?.length,
       expiresIn: responseData.expires_in,
       tokenType: responseData.token_type,
