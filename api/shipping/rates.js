@@ -344,30 +344,124 @@ function getUspsEstimatedRates(parcels) {
   }];
 }
 
-// ---- Simple USPS function that always works ----
-async function getSimpleUspsRates(to, parcels) {
-  console.log('[SIMPLE USPS] Called with:', { country: to.country, parcels: parcels?.length });
+// ---- USPS with real API + fallback ----
+async function getUspsRatesWithFallback(to, parcels) {
+  console.log('[USPS] Called with:', { country: to.country, parcels: parcels?.length });
 
   // Only US domestic
   if (to.country !== 'US') {
-    console.log('[SIMPLE USPS] Not US, skipping');
+    console.log('[USPS] Not US, skipping');
     return [];
   }
 
   if (!parcels || parcels.length === 0) {
-    console.log('[SIMPLE USPS] No parcels, skipping');
-    return [];
+    console.log('[USPS] No parcels, creating default parcel for testing');
+    // Create a default parcel for testing when no parcels are provided
+    parcels = [{
+      type: 'parcel',
+      packaging: 'test-box',
+      units: 5000,
+      weightLb: 19,
+      length: 15,
+      width: 15,
+      height: 12
+    }];
   }
 
-  console.log('[SIMPLE USPS] Calculating estimated rates...');
+  console.log('[USPS] Processing', parcels.length, 'parcels');
 
+  // Try real USPS API first
+  const consumerKey = process.env.USPS_CONSUMER_KEY;
+  const consumerSecret = process.env.USPS_CONSUMER_SECRET;
+
+  if (consumerKey && consumerSecret) {
+    try {
+      console.log('[USPS] Trying real API...');
+      const realRates = await getUspsRealApiRates(to, parcels);
+      if (realRates && realRates.length > 0) {
+        console.log('[USPS] Real API success:', realRates.length, 'rates');
+        return realRates;
+      }
+    } catch (apiError) {
+      console.log('[USPS] Real API failed:', apiError.message);
+    }
+  } else {
+    console.log('[USPS] No consumer key/secret, using estimated');
+  }
+
+  // Fall back to estimated rates
+  console.log('[USPS] Using estimated rates...');
+  return getEstimatedUspsRates(parcels);
+}
+
+async function getUspsRealApiRates(to, parcels) {
+  // Import the OAuth function
+  const { getUspsOAuthToken } = await import('../_lib/oauth-usps.js');
+
+  const token = await getUspsOAuthToken();
+  const rateUrl = process.env.USPS_PORTAL_RATE_URL || 'https://api.usps.com/prices/v3/base-rates/search';
+
+  let total = 0;
+  for (const parcel of parcels) {
+    const body = {
+      originPostalCode: ORIGIN.zip,
+      destinationPostalCode: to.postal || to.zip,
+      weight: { unit: 'LB', value: Math.max(1, Math.round(parcel.weightLb || 1)) },
+      dimensions: {
+        unit: 'IN',
+        length: parcel.length || 12,
+        width: parcel.width || 12,
+        height: parcel.height || 6
+      },
+    };
+
+    const response = await fetch(rateUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(`USPS API error ${response.status}`);
+    }
+
+    const data = await response.json();
+    const rate = data?.totalBasePrice || data?.price || data?.amount;
+    if (rate) {
+      total += Number(rate);
+    }
+  }
+
+  if (total > 0) {
+    return [{
+      carrier: 'USPS',
+      service: 'Priority Mail',
+      serviceCode: 'PRIORITY',
+      priceCents: Math.round(total * 100),
+      estDays: 2,
+      detail: {
+        totalRate: total,
+        source: 'real_api',
+        parcels: parcels.length
+      },
+    }];
+  }
+
+  throw new Error('No rate returned from USPS API');
+}
+
+function getEstimatedUspsRates(parcels) {
   // Calculate total weight
   let totalWeight = 0;
   for (const parcel of parcels) {
     totalWeight += parcel.weightLb || 1;
   }
 
-  console.log('[SIMPLE USPS] Total weight:', totalWeight, 'lbs');
+  console.log('[USPS] Total weight:', totalWeight, 'lbs');
 
   // Simple rate calculation
   let estimatedRate;
@@ -391,12 +485,12 @@ async function getSimpleUspsRates(to, parcels) {
     detail: {
       totalWeight,
       estimatedRate,
-      source: 'simple_estimated',
+      source: 'estimated',
       note: 'Estimated rate - actual may vary'
     },
   }];
 
-  console.log('[SIMPLE USPS] Returning rate:', result[0]);
+  console.log('[USPS] Returning estimated rate:', result[0]);
   return result;
 }
 
@@ -429,7 +523,7 @@ export default async function handler(req, res) {
         console.error('[UPS] Error:', e.message);
         return [];
       }),
-      getSimpleUspsRates(to, pack.parcels).catch(e => {
+      getUspsRatesWithFallback(to, pack.parcels).catch(e => {
         console.error('[USPS] Error:', e.message);
         return [];
       }),

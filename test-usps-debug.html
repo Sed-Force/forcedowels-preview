@@ -57,10 +57,10 @@
                 addLog('Sending request to /api/shipping/rates...', 'info');
                 
                 const testData = {
-                    items: [{ sku: 'FORCE-500', qty: 1 }],
+                    items: [{ type: 'bulk', units: 5000 }],
                     to: {
                         street: '123 Test St',
-                        city: 'Los Angeles', 
+                        city: 'Los Angeles',
                         state: 'CA',
                         postal: '90210',
                         country: 'US'
