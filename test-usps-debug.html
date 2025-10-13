@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>USPS Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
+        button { background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0; }
+        button:disabled { background: #ccc; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
+        .log { font-family: monospace; font-size: 12px; background: #f8f9fa; padding: 5px; margin: 2px 0; border-radius: 2px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 USPS Debug Test</h1>
+    <p>This will test the shipping rates API and show detailed debugging info.</p>
+    
+    <button onclick="testRates()">Test Shipping Rates API</button>
+    <button onclick="clearResults()">Clear Results</button>
+    
+    <div id="results"></div>
+
+    <script>
+        let logCount = 0;
+        
+        function addLog(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = 'log';
+            div.style.color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'blue';
+            div.textContent = `[${++logCount}] ${message}`;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            logCount = 0;
+        }
+        
+        async function testRates() {
+            const button = event.target;
+            const results = document.getElementById('results');
+            
+            button.disabled = true;
+            button.textContent = 'Testing...';
+            
+            clearResults();
+            addLog('Starting USPS debug test...', 'info');
+            
+            try {
+                addLog('Sending request to /api/shipping/rates...', 'info');
+                
+                const testData = {
+                    items: [{ sku: 'FORCE-500', qty: 1 }],
+                    to: {
+                        street: '123 Test St',
+                        city: 'Los Angeles', 
+                        state: 'CA',
+                        postal: '90210',
+                        country: 'US'
+                    }
+                };
+                
+                addLog(`Request data: ${JSON.stringify(testData)}`, 'info');
+                
+                const response = await fetch('/api/shipping/rates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testData)
+                });
+                
+                addLog(`Response status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    addLog(`Error response: ${errorText}`, 'error');
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                addLog('Response received successfully', 'success');
+                
+                // Analyze the response
+                const totalRates = data.rates?.length || 0;
+                const uspsRates = data.rates?.filter(r => r.carrier === 'USPS') || [];
+                const upsRates = data.rates?.filter(r => r.carrier === 'UPS') || [];
+                
+                addLog(`Total rates returned: ${totalRates}`, 'info');
+                addLog(`USPS rates: ${uspsRates.length}`, uspsRates.length > 0 ? 'success' : 'error');
+                addLog(`UPS rates: ${upsRates.length}`, upsRates.length > 0 ? 'success' : 'error');
+                
+                if (uspsRates.length > 0) {
+                    uspsRates.forEach((rate, i) => {
+                        addLog(`USPS Rate ${i+1}: ${rate.service} - $${(rate.priceCents / 100).toFixed(2)} (${rate.estDays} days)`, 'success');
+                        if (rate.detail) {
+                            addLog(`  Detail: ${JSON.stringify(rate.detail)}`, 'info');
+                        }
+                    });
+                } else {
+                    addLog('❌ NO USPS RATES FOUND - This is the problem!', 'error');
+                }
+                
+                if (upsRates.length > 0) {
+                    upsRates.forEach((rate, i) => {
+                        addLog(`UPS Rate ${i+1}: ${rate.service} - $${(rate.priceCents / 100).toFixed(2)}`, 'success');
+                    });
+                }
+                
+                // Show full response for debugging
+                const resultsDiv = document.createElement('div');
+                resultsDiv.className = 'result info';
+                resultsDiv.innerHTML = `
+                    <h3>Full API Response:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                results.appendChild(resultsDiv);
+                
+            } catch (error) {
+                addLog(`Test failed: ${error.message}`, 'error');
+                
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'result error';
+                errorDiv.innerHTML = `<h3>❌ Error</h3><p>${error.message}</p>`;
+                results.appendChild(errorDiv);
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Test Shipping Rates API';
+            }
+        }
+    </script>
+</body>
+</html>
