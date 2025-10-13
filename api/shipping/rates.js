@@ -194,7 +194,12 @@ async function getUspsAccessToken() {
 
 async function getUspsRates({ to, parcels }) {
   // Only process US domestic shipments
-  if (!USPS_CLIENT_ID || !USPS_CLIENT_SECRET || to.country !== 'US') {
+  if (to.country !== 'US') {
+    return [];
+  }
+
+  if (!USPS_CLIENT_ID || !USPS_CLIENT_SECRET) {
+    console.log('[USPS] Missing credentials - skipping USPS rates');
     return [];
   }
 
@@ -202,7 +207,7 @@ async function getUspsRates({ to, parcels }) {
 
   const token = await getUspsAccessToken();
   if (!token) {
-    console.log('[USPS] No token obtained');
+    console.log('[USPS] No token obtained - USPS credentials may be invalid or expired');
     return [];
   }
 
@@ -302,11 +307,20 @@ export default async function handler(req, res) {
     });
     const pack = await packResp.json();
 
-    // Fan out to carriers
+    // Fan out to carriers with error handling
     const [ups, usps, tql] = await Promise.all([
-      getUpsRates({ to, parcels: pack.parcels, pallets: pack.pallets }),
-      getUspsRates({ to, parcels: pack.parcels, kitsMeta: pack.meta }),
-      getTqlRates({ to, pallets: pack.pallets }),
+      getUpsRates({ to, parcels: pack.parcels, pallets: pack.pallets }).catch(e => {
+        console.error('[UPS] Error:', e.message);
+        return [];
+      }),
+      getUspsRates({ to, parcels: pack.parcels, kitsMeta: pack.meta }).catch(e => {
+        console.error('[USPS] Error:', e.message);
+        return [];
+      }),
+      getTqlRates({ to, pallets: pack.pallets }).catch(e => {
+        console.error('[TQL] Error:', e.message);
+        return [];
+      }),
     ]);
 
     const rates = [...ups, ...usps, ...tql].sort((a, b) => a.priceCents - b.priceCents);
