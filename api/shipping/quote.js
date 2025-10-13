@@ -146,16 +146,36 @@ function buildUSPSRateV4XML({ userId, shipFromZip, destZip, parcels }) {
   return `API=RateV4&XML=${encodeURIComponent(`<RateV4Request USERID="${userId}">${pkgs}</RateV4Request>`)}`;
 }
 async function quoteUSPS_WebTools({ userId, shipFromZip, destZip, parcels }) {
+  console.log('[USPS WebTools] Starting request...', { userId: userId?.substring(0, 8) + '...', shipFromZip, destZip, parcels: parcels?.length });
+
   const query = buildUSPSRateV4XML({ userId, shipFromZip, destZip, parcels });
   const url   = `https://secure.shippingapis.com/ShippingAPI.dll?${query}`;
+
+  console.log('[USPS WebTools] Calling:', url.substring(0, 100) + '...');
+
   const r = await fetch(url, { method: 'GET' });
   const xml = await r.text();
+
+  console.log('[USPS WebTools] Response status:', r.status);
+  console.log('[USPS WebTools] Response XML:', xml.substring(0, 500) + '...');
+
   if (!r.ok) throw new Error(`USPS HTTP ${r.status}: ${xml}`);
   if (/Error/i.test(xml)) throw new Error(`USPS API error: ${xml}`);
+
   const rates = [...xml.matchAll(/<Rate>([\d.]+)<\/Rate>/g)].map(m => Number(m[1]));
-  if (!rates.length) throw new Error(`USPS: no <Rate> entries found`);
+  console.log('[USPS WebTools] Extracted rates:', rates);
+
+  if (!rates.length) throw new Error(`USPS: no <Rate> entries found in XML`);
+
   const total = rates.reduce((a,b)=>a+b, 0);
-  return [{ carrier: 'USPS', service: 'USPS Priority (sum of parcels)', amount: total, currency: 'USD' }];
+  console.log('[USPS WebTools] Total rate:', total);
+
+  return [{
+    carrier: 'USPS',
+    service: 'Priority Mail',
+    amount: total,
+    currency: 'USD'
+  }];
 }
 
 // ---------------- USPS (B) Developer Portal (OAuth2 REST) ----------------
@@ -254,29 +274,35 @@ export default async function handler(req, res) {
     status.ups.message = `Error: ${String(e.message||e).slice(0, 300)}`;
   }
 
-  // USPS - Try real API first, fallback to estimated
+  // USPS - WebTools (real rates)
   try {
     const isUSDomestic = dest.country === 'US' && (shipFrom.country || 'US').toUpperCase() === 'US';
 
     if (!isUSDomestic) {
       status.usps.message = 'USPS covers US→US only in this handler.';
     } else {
-      // Try real USPS API first
-      const consumerKey = process.env.USPS_CONSUMER_KEY;
-      const consumerSecret = process.env.USPS_CONSUMER_SECRET;
+      // Try USPS WebTools first
+      const webToolsUserId = process.env.USPS_WEBTOOLS_USERID;
 
-      if (consumerKey && consumerSecret) {
+      if (webToolsUserId) {
         try {
-          const uspsRates = await quoteUSPS_Portal({ shipFrom, dest, parcels });
+          console.log('[USPS] Using WebTools for real rates...');
+          const uspsRates = await quoteUSPS_WebTools({
+            userId: webToolsUserId,
+            shipFromZip: shipFrom.postal,
+            destZip: dest.postal,
+            parcels
+          });
+
           if (uspsRates.length) {
             outRates.push(...uspsRates);
             status.usps.available = true;
-            status.usps.message = `Real API: returned ${uspsRates.length} rate(s).`;
+            status.usps.message = `WebTools: returned ${uspsRates.length} real rate(s).`;
           } else {
-            throw new Error('No rates returned from API');
+            throw new Error('No rates returned from WebTools');
           }
         } catch (apiError) {
-          console.log('[USPS] API failed, using estimated rates:', apiError.message);
+          console.log('[USPS] WebTools failed, using estimated rates:', apiError.message);
           // Fall back to estimated rates
           const estimatedRate = calculateEstimatedUSPSRate(parcels);
           const uspsRate = {
@@ -287,7 +313,7 @@ export default async function handler(req, res) {
           };
           outRates.push(uspsRate);
           status.usps.available = true;
-          status.usps.message = `API failed, using estimated: $${estimatedRate.toFixed(2)}`;
+          status.usps.message = `WebTools failed, using estimated: $${estimatedRate.toFixed(2)}`;
         }
       } else {
         // No credentials, use estimated rates
@@ -300,7 +326,7 @@ export default async function handler(req, res) {
         };
         outRates.push(uspsRate);
         status.usps.available = true;
-        status.usps.message = `No credentials, using estimated: $${estimatedRate.toFixed(2)}`;
+        status.usps.message = `No WebTools credentials, using estimated: $${estimatedRate.toFixed(2)}`;
       }
     }
   } catch (e) {
