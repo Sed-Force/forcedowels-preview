@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Order Page</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
+        .debug { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 4px; border-left: 4px solid #007cba; }
+        .error { background: #f8d7da; border-left-color: #dc3545; color: #721c24; }
+        .success { background: #d4edda; border-left-color: #28a745; color: #155724; }
+        button { background: #007cba; color: white; padding: 8px 16px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+        input { padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        .qtywrap { display: flex; align-items: center; gap: 5px; margin: 10px 0; }
+        .step { width: 40px; height: 40px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Debug Order Page Elements</h1>
+    
+    <div class="debug">
+        <h3>Element Check</h3>
+        <div id="element-check">Checking elements...</div>
+    </div>
+    
+    <div class="debug">
+        <h3>Test Quantity Controls</h3>
+        <div class="qtywrap">
+            <button id="qty-minus" class="step" type="button">–</button>
+            <input id="qty-units" type="number" step="5000" min="5000" max="960000" value="5000" />
+            <button id="qty-plus" class="step" type="button">+</button>
+        </div>
+        <div>
+            <strong>Price per unit: <span id="price-per-unit">$0.0720</span></strong><br>
+            <strong>Total price: <span id="price-total">$360.00</span></strong>
+        </div>
+        <button id="btn-add-to-cart">Add to Cart</button>
+    </div>
+    
+    <div class="debug">
+        <h3>Tier Buttons</h3>
+        <button class="tier active" type="button" data-min="5000">5,000–20,000 ($0.0720/Unit)</button>
+        <button class="tier" type="button" data-min="25000">20,000–160,000 ($0.0675/Unit)</button>
+        <button class="tier" type="button" data-min="165000">160,000–960,000 ($0.0630/Unit)</button>
+    </div>
+    
+    <div class="debug">
+        <h3>Console Log</h3>
+        <div id="console-log"></div>
+    </div>
+
+    <script>
+        // Debug logging
+        const logDiv = document.getElementById('console-log');
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        function addLog(message, type = 'log') {
+            const div = document.createElement('div');
+            div.textContent = `[${type.toUpperCase()}] ${message}`;
+            div.style.color = type === 'error' ? 'red' : 'blue';
+            div.style.fontFamily = 'monospace';
+            div.style.fontSize = '12px';
+            div.style.margin = '2px 0';
+            logDiv.appendChild(div);
+        }
+        
+        console.log = function(...args) {
+            addLog(args.join(' '), 'log');
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            addLog(args.join(' '), 'error');
+            originalError.apply(console, args);
+        };
+        
+        // Check elements
+        function checkElements() {
+            const elements = {
+                'qty-units': document.getElementById('qty-units'),
+                'qty-minus': document.getElementById('qty-minus'),
+                'qty-plus': document.getElementById('qty-plus'),
+                'price-per-unit': document.getElementById('price-per-unit'),
+                'price-total': document.getElementById('price-total'),
+                'btn-add-to-cart': document.getElementById('btn-add-to-cart'),
+                '.tier': document.querySelectorAll('.tier')
+            };
+            
+            let html = '<ul>';
+            for (const [name, element] of Object.entries(elements)) {
+                const found = element && (element.length !== undefined ? element.length > 0 : true);
+                const status = found ? '✅' : '❌';
+                const count = element && element.length !== undefined ? ` (${element.length} found)` : '';
+                html += `<li>${status} ${name}${count}</li>`;
+            }
+            html += '</ul>';
+            
+            document.getElementById('element-check').innerHTML = html;
+        }
+        
+        // Test the script manually
+        function testScript() {
+            console.log('Testing script functionality...');
+            
+            const qtyInput = document.getElementById('qty-units');
+            const minusBtn = document.getElementById('qty-minus');
+            const plusBtn = document.getElementById('qty-plus');
+            const perUnitEl = document.getElementById('price-per-unit');
+            const totalEl = document.getElementById('price-total');
+            const addBtn = document.getElementById('btn-add-to-cart');
+            const tierButtons = document.querySelectorAll('.tier');
+            
+            console.log('Elements found:', {
+                qtyInput: !!qtyInput,
+                minusBtn: !!minusBtn,
+                plusBtn: !!plusBtn,
+                perUnitEl: !!perUnitEl,
+                totalEl: !!totalEl,
+                addBtn: !!addBtn,
+                tierButtons: tierButtons.length
+            });
+            
+            if (minusBtn && plusBtn && qtyInput) {
+                minusBtn.addEventListener('click', () => {
+                    console.log('Minus button clicked');
+                    const current = parseInt(qtyInput.value) || 5000;
+                    const newValue = Math.max(5000, current - 5000);
+                    qtyInput.value = newValue;
+                    console.log('New value:', newValue);
+                    updatePrices(newValue);
+                });
+                
+                plusBtn.addEventListener('click', () => {
+                    console.log('Plus button clicked');
+                    const current = parseInt(qtyInput.value) || 5000;
+                    const newValue = Math.min(960000, current + 5000);
+                    qtyInput.value = newValue;
+                    console.log('New value:', newValue);
+                    updatePrices(newValue);
+                });
+                
+                console.log('Event listeners attached successfully');
+            } else {
+                console.error('Missing required elements for event listeners');
+            }
+        }
+        
+        function updatePrices(qty) {
+            const perUnitEl = document.getElementById('price-per-unit');
+            const totalEl = document.getElementById('price-total');
+            
+            let pricePerUnit;
+            if (qty >= 160000) pricePerUnit = 0.0630;
+            else if (qty > 20000) pricePerUnit = 0.0675;
+            else pricePerUnit = 0.0720;
+            
+            const total = qty * pricePerUnit;
+            
+            if (perUnitEl) perUnitEl.textContent = `$${pricePerUnit.toFixed(4)}`;
+            if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
+            
+            console.log('Prices updated:', { qty, pricePerUnit, total });
+        }
+        
+        // Run checks when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, running checks...');
+            checkElements();
+            testScript();
+        });
+        
+        // Also run immediately in case DOM is already loaded
+        if (document.readyState === 'loading') {
+            console.log('DOM still loading...');
+        } else {
+            console.log('DOM already loaded, running checks immediately...');
+            checkElements();
+            testScript();
+        }
+    </script>
+</body>
+</html>

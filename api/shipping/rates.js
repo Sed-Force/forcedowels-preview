@@ -158,7 +158,10 @@ let _uspsToken = null;
 let _uspsTokenExp = 0;
 
 async function getUspsAccessToken() {
-  if (!USPS_CLIENT_ID || !USPS_CLIENT_SECRET) return null;
+  if (!USPS_CLIENT_ID || !USPS_CLIENT_SECRET) {
+    console.log('[USPS] Missing credentials');
+    return null;
+  }
 
   // Use cached token if still valid (>60s left)
   const nowSec = Math.floor(Date.now() / 1000);
@@ -178,16 +181,20 @@ async function getUspsAccessToken() {
     });
 
     if (!response.ok) {
-      console.error('USPS OAuth failed:', response.status, await response.text().catch(() => ''));
+      const errorText = await response.text().catch(() => '');
+      console.log('[USPS] OAuth failed:', response.status, errorText);
+      // Don't throw error - return null to trigger fallback
       return null;
     }
 
     const data = await response.json();
     _uspsToken = data.access_token;
     _uspsTokenExp = nowSec + (data.expires_in || 3600);
+    console.log('[USPS] OAuth successful');
     return _uspsToken;
   } catch (error) {
-    console.error('USPS OAuth error:', error.message);
+    console.log('[USPS] OAuth error:', error.message);
+    // Don't throw error - return null to trigger fallback
     return null;
   }
 }
@@ -195,6 +202,7 @@ async function getUspsAccessToken() {
 async function getUspsRates({ to, parcels }) {
   // Only process US domestic shipments
   if (to.country !== 'US') {
+    console.log('[USPS] Skipping non-US destination');
     return [];
   }
 
@@ -202,14 +210,22 @@ async function getUspsRates({ to, parcels }) {
 
   // Try API first, fall back to estimated rates if credentials fail
   if (USPS_CLIENT_ID && USPS_CLIENT_SECRET) {
-    const token = await getUspsAccessToken();
-    if (token) {
-      return await getUspsApiRates(token, parcels, to);
+    try {
+      const token = await getUspsAccessToken();
+      if (token) {
+        const apiRates = await getUspsApiRates(token, parcels, to);
+        if (apiRates && apiRates.length > 0) {
+          console.log('[USPS] API rates successful');
+          return apiRates;
+        }
+      }
+    } catch (error) {
+      console.log('[USPS] API failed, using fallback:', error.message);
     }
   }
 
   // Fallback: Use estimated USPS rates based on weight
-  console.log('[USPS] Using estimated rates (API credentials unavailable)');
+  console.log('[USPS] Using estimated rates (API unavailable)');
   return getUspsEstimatedRates(parcels);
 }
 
