@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Shipping Rates API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        button {
+            background-color: #007cba;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin: 10px 0;
+        }
+        button:hover {
+            background-color: #005a87;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #007cba;
+        }
+        .rate-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .rate-carrier {
+            font-weight: bold;
+            color: #007cba;
+        }
+        .rate-service {
+            color: #666;
+            margin-left: 10px;
+        }
+        .rate-price {
+            font-size: 18px;
+            font-weight: bold;
+            color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .success {
+            color: #155724;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚚 Test Shipping Rates API</h1>
+        
+        <button onclick="testRates()">Test Shipping Rates (CA Destination)</button>
+        <button onclick="testRatesNY()">Test Shipping Rates (NY Destination)</button>
+        <button onclick="testRatesInternational()">Test International Rates (Canada)</button>
+
+        <div id="results" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function testRates(destination = 'CA') {
+            const button = event.target;
+            const results = document.getElementById('results');
+            
+            // Test data
+            const testData = {
+                items: [{ sku: 'FORCE-500', qty: 1 }],
+                to: destination === 'CA' ? {
+                    street: '123 Test Street',
+                    city: 'Los Angeles',
+                    state: 'CA',
+                    postal: '90210',
+                    country: 'US'
+                } : destination === 'NY' ? {
+                    street: '456 Broadway',
+                    city: 'New York',
+                    state: 'NY',
+                    postal: '10001',
+                    country: 'US'
+                } : {
+                    street: '789 Main St',
+                    city: 'Toronto',
+                    state: 'ON',
+                    postal: 'M5V 3A8',
+                    country: 'CA'
+                }
+            };
+
+            // Show loading state
+            button.disabled = true;
+            const originalText = button.textContent;
+            button.textContent = 'Testing...';
+            results.style.display = 'block';
+            results.innerHTML = '<div class="loading">🔄 Testing shipping rates API...</div>';
+
+            try {
+                console.log('Testing rates API with:', testData);
+                
+                const response = await fetch('/api/shipping/rates', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const data = await response.json();
+                console.log('API Response:', data);
+                
+                displayResults(data, testData.to);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                results.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            } finally {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+
+        function testRatesNY() {
+            testRates('NY');
+        }
+
+        function testRatesInternational() {
+            testRates('INTL');
+        }
+
+        function displayResults(data, destination) {
+            const results = document.getElementById('results');
+            
+            if (!data.rates || data.rates.length === 0) {
+                results.innerHTML = '<div class="error">❌ No shipping rates returned</div>';
+                return;
+            }
+
+            const uspsRates = data.rates.filter(r => r.carrier === 'USPS');
+            const upsRates = data.rates.filter(r => r.carrier === 'UPS');
+            
+            let html = `<h3>📦 Shipping Rates to ${destination.city}, ${destination.state}</h3>`;
+            
+            // Status summary
+            if (uspsRates.length > 0) {
+                html += '<div class="success">✅ USPS rates working!</div>';
+            } else {
+                html += '<div class="error">❌ No USPS rates returned</div>';
+            }
+            
+            if (upsRates.length > 0) {
+                html += '<div class="success">✅ UPS rates working!</div>';
+            } else {
+                html += '<div class="error">❌ No UPS rates returned</div>';
+            }
+            
+            html += `<p><strong>Total rates found:</strong> ${data.rates.length} (${uspsRates.length} USPS, ${upsRates.length} UPS)</p>`;
+            
+            // Display rates
+            data.rates.forEach(rate => {
+                const price = (rate.priceCents / 100).toFixed(2);
+                const estDays = rate.estDays ? ` (${rate.estDays} days)` : '';
+                
+                html += `
+                    <div class="rate-item">
+                        <div>
+                            <span class="rate-carrier">${rate.carrier}</span>
+                            <span class="rate-service">${rate.service}${estDays}</span>
+                        </div>
+                        <div class="rate-price">$${price}</div>
+                    </div>
+                `;
+            });
+            
+            // Show raw response for debugging
+            html += `
+                <details style="margin-top: 20px;">
+                    <summary>🔍 Raw API Response (for debugging)</summary>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </details>
+            `;
+            
+            results.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
