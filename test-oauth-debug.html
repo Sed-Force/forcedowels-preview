@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>USPS OAuth Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffe6e6; border: 1px solid #ff9999; }
+        .success { background: #e6ffe6; border: 1px solid #99ff99; }
+        button { padding: 10px 20px; font-size: 16px; margin: 10px 0; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <h1>🔍 USPS OAuth Debug Test</h1>
+    <p>This will test the USPS OAuth token generation directly.</p>
+    
+    <button onclick="testOAuth()">Test USPS OAuth Token</button>
+    
+    <div id="results"></div>
+
+    <script>
+        async function testOAuth() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="result">🔄 Testing USPS OAuth...</div>';
+            
+            try {
+                console.log('[1] Starting OAuth test...');
+                
+                const response = await fetch('/api/test-oauth', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                console.log('[2] Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                console.log('[3] Response data:', data);
+                
+                let html = '<div class="result success">';
+                html += '<h3>✅ OAuth Test Results</h3>';
+                html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                html += '</div>';
+                
+                results.innerHTML = html;
+                
+            } catch (error) {
+                console.error('OAuth test error:', error);
+                
+                let html = '<div class="result error">';
+                html += '<h3>❌ OAuth Test Failed</h3>';
+                html += '<p><strong>Error:</strong> ' + error.message + '</p>';
+                html += '</div>';
+                
+                results.innerHTML = html;
+            }
+        }
+    </script>
+</body>
+</html>
