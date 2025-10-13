@@ -43,7 +43,36 @@
   --space-7: 72px;
 }
 
-/* Dark mode - auto (system preference) */
+/* Manual theme overrides - these take priority */
+[data-theme="light"] {
+  --bg: #ffffff !important;
+  --bg-alt: #f7f9fc !important;
+  --bg-card: #ffffff !important;
+  --bg-card-alt: #f8fafc !important;
+  --text: #101828 !important;
+  --text-muted: #667085 !important;
+  --text-light: #9ca3af !important;
+  --border: #e5e7eb !important;
+  --border-light: #f3f4f6 !important;
+  --shadow-xs: 0 2px 6px rgba(0,0,0,.05) !important;
+  --shadow: 0 10px 30px rgba(0,0,0,.06) !important;
+}
+
+[data-theme="dark"] {
+  --bg: #0f1420 !important;
+  --bg-alt: #1a2332 !important;
+  --bg-card: #1e2a3f !important;
+  --bg-card-alt: #243042 !important;
+  --text: #f8fafc !important;
+  --text-muted: #94a3b8 !important;
+  --text-light: #64748b !important;
+  --border: #334155 !important;
+  --border-light: #475569 !important;
+  --shadow-xs: 0 2px 6px rgba(0,0,0,.3) !important;
+  --shadow: 0 10px 30px rgba(0,0,0,.4) !important;
+}
+
+/* Dark mode - auto (system preference) - only when no manual theme set */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     --bg: #0f1420;
@@ -58,35 +87,6 @@
     --shadow-xs: 0 2px 6px rgba(0,0,0,.3);
     --shadow: 0 10px 30px rgba(0,0,0,.4);
   }
-}
-
-/* Manual theme overrides */
-[data-theme="light"] {
-  --bg: #ffffff;
-  --bg-alt: #f7f9fc;
-  --bg-card: #ffffff;
-  --bg-card-alt: #f8fafc;
-  --text: #101828;
-  --text-muted: #667085;
-  --text-light: #9ca3af;
-  --border: #e5e7eb;
-  --border-light: #f3f4f6;
-  --shadow-xs: 0 2px 6px rgba(0,0,0,.05);
-  --shadow: 0 10px 30px rgba(0,0,0,.06);
-}
-
-[data-theme="dark"] {
-  --bg: #0f1420;
-  --bg-alt: #1a2332;
-  --bg-card: #1e2a3f;
-  --bg-card-alt: #243042;
-  --text: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-light: #64748b;
-  --border: #334155;
-  --border-light: #475569;
-  --shadow-xs: 0 2px 6px rgba(0,0,0,.3);
-  --shadow: 0 10px 30px rgba(0,0,0,.4);
 }
 
 /* Theme toggle button */
@@ -2345,9 +2345,21 @@ button,
   --accent-rgb: 238,173,26;
 }
 
+[data-theme="dark"] {
+  /* Dark mode shipping card colors */
+  --fd-bg-800: #0b1421 !important;
+  --fd-bg-700: #0e1b2b !important;
+  --fd-bg-600: #122338 !important;
+  --fd-stroke: rgba(255,255,255,.08) !important;
+  --fd-soft: rgba(255,255,255,.06) !important;
+  --fd-text-600: rgba(255,255,255,.65) !important;
+  --fd-text-800: rgba(255,255,255,.92) !important;
+  --accent-rgb: 244,168,37 !important;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
-    /* Dark mode shipping card colors */
+  :root:not([data-theme]) {
+    /* Dark mode shipping card colors - auto only */
     --fd-bg-800: #0b1421;
     --fd-bg-700: #0e1b2b;
     --fd-bg-600: #122338;
