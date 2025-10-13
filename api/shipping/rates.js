@@ -198,19 +198,22 @@ async function getUspsRates({ to, parcels }) {
     return [];
   }
 
-  if (!USPS_CLIENT_ID || !USPS_CLIENT_SECRET) {
-    console.log('[USPS] Missing credentials - skipping USPS rates');
-    return [];
-  }
-
   console.log('[USPS] Getting rates for', parcels.length, 'parcels');
 
-  const token = await getUspsAccessToken();
-  if (!token) {
-    console.log('[USPS] No token obtained - USPS credentials may be invalid or expired');
-    return [];
+  // Try API first, fall back to estimated rates if credentials fail
+  if (USPS_CLIENT_ID && USPS_CLIENT_SECRET) {
+    const token = await getUspsAccessToken();
+    if (token) {
+      return await getUspsApiRates(token, parcels, to);
+    }
   }
 
+  // Fallback: Use estimated USPS rates based on weight
+  console.log('[USPS] Using estimated rates (API credentials unavailable)');
+  return getUspsEstimatedRates(parcels);
+}
+
+async function getUspsApiRates(token, parcels, to) {
   const results = [];
 
   for (const parcel of parcels) {
@@ -265,14 +268,14 @@ async function getUspsRates({ to, parcels }) {
   }
 
   if (!results.length) {
-    console.log('[USPS] No rates returned');
+    console.log('[USPS] No API rates returned');
     return [];
   }
 
   // Combine all parcel rates into a single USPS option
   const totalCents = results.reduce((sum, rate) => sum + rate.priceCents, 0);
 
-  console.log('[USPS] Combined rate:', totalCents / 100);
+  console.log('[USPS] API combined rate:', totalCents / 100);
 
   return [{
     carrier: 'USPS',
@@ -280,7 +283,48 @@ async function getUspsRates({ to, parcels }) {
     serviceCode: 'PRIORITY',
     priceCents: totalCents,
     estDays: 2,
-    detail: { parcels: results.length, totalRate: totalCents / 100 },
+    detail: { parcels: results.length, totalRate: totalCents / 100, source: 'api' },
+  }];
+}
+
+function getUspsEstimatedRates(parcels) {
+  // Estimated USPS Priority Mail rates based on weight
+  // These are conservative estimates based on typical USPS Priority Mail pricing
+  let totalCents = 0;
+
+  for (const parcel of parcels) {
+    const weightLb = parcel.weightLb || 1;
+    let estimatedRate;
+
+    // USPS Priority Mail rate estimates (conservative)
+    if (weightLb <= 1) estimatedRate = 9.50;
+    else if (weightLb <= 2) estimatedRate = 11.50;
+    else if (weightLb <= 3) estimatedRate = 13.50;
+    else if (weightLb <= 5) estimatedRate = 16.50;
+    else if (weightLb <= 10) estimatedRate = 22.00;
+    else if (weightLb <= 20) estimatedRate = 35.00;
+    else if (weightLb <= 30) estimatedRate = 45.00;
+    else if (weightLb <= 50) estimatedRate = 65.00;
+    else if (weightLb <= 70) estimatedRate = 85.00;
+    else estimatedRate = Math.max(85, weightLb * 1.25); // $1.25/lb for heavy items
+
+    totalCents += Math.round(estimatedRate * 100);
+  }
+
+  console.log('[USPS] Estimated rate:', totalCents / 100);
+
+  return [{
+    carrier: 'USPS',
+    service: 'Priority Mail (estimated)',
+    serviceCode: 'PRIORITY_EST',
+    priceCents: totalCents,
+    estDays: 2,
+    detail: {
+      parcels: parcels.length,
+      totalRate: totalCents / 100,
+      source: 'estimated',
+      note: 'Estimated rate - actual rate may vary'
+    },
   }];
 }
 
