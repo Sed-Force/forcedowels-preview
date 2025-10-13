@@ -44,19 +44,21 @@ export default async function handler(req, res) {
     const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
     const attempts = [];
 
-    // Try each possible token URL
+    // Try each possible token URL with multiple auth methods
     for (let i = 0; i < possibleTokenUrls.length; i++) {
       const testTokenUrl = possibleTokenUrls[i];
       console.log(`[TEST-OAUTH] Trying token URL ${i + 1}: ${testTokenUrl}`);
 
-      // Try credentials in body (this got furthest before)
-      const testResponse = await fetch(testTokenUrl, {
+      // Method 1: Basic Auth with grant_type in body
+      console.log(`[TEST-OAUTH] Method 1: Basic Auth`);
+      let testResponse = await fetch(testTokenUrl, {
         method: 'POST',
         headers: {
+          'Authorization': `Basic ${authString}`,
           'Content-Type': 'application/x-www-form-urlencoded',
           'Accept': 'application/json'
         },
-        body: `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`
+        body: 'grant_type=client_credentials'
       });
 
       let testResponseText = await testResponse.text();
@@ -68,19 +70,65 @@ export default async function handler(req, res) {
       }
 
       attempts.push({
-        attempt: i + 1,
+        attempt: `${i + 1}a`,
+        method: `Basic Auth - URL: ${testTokenUrl}`,
+        status: testResponse.status,
+        success: testResponse.ok,
+        response: testResponseData
+      });
+
+      // If this worked, return success
+      if (testResponse.ok) {
+        return res.status(200).json({
+          success: true,
+          message: 'OAuth token obtained successfully',
+          workingUrl: testTokenUrl,
+          workingMethod: 'Basic Auth',
+          attempts: attempts,
+          tokenLength: testResponseData.access_token?.length,
+          expiresIn: testResponseData.expires_in,
+          tokenType: testResponseData.token_type,
+          scope: testResponseData.scope,
+          response: {
+            ...testResponseData,
+            access_token: testResponseData.access_token ? `${testResponseData.access_token.substring(0, 10)}...` : null
+          }
+        });
+      }
+
+      // Method 2: Credentials in body (fallback)
+      console.log(`[TEST-OAUTH] Method 2: Credentials in body`);
+      testResponse = await fetch(testTokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json'
+        },
+        body: `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`
+      });
+
+      testResponseText = await testResponse.text();
+      try {
+        testResponseData = JSON.parse(testResponseText);
+      } catch (e) {
+        testResponseData = { raw: testResponseText };
+      }
+
+      attempts.push({
+        attempt: `${i + 1}b`,
         method: `Credentials in body - URL: ${testTokenUrl}`,
         status: testResponse.status,
         success: testResponse.ok,
         response: testResponseData
       });
 
-      // If this one worked, use it for the final response
+      // If this worked, return success
       if (testResponse.ok) {
         return res.status(200).json({
           success: true,
           message: 'OAuth token obtained successfully',
           workingUrl: testTokenUrl,
+          workingMethod: 'Credentials in body',
           attempts: attempts,
           tokenLength: testResponseData.access_token?.length,
           expiresIn: testResponseData.expires_in,
