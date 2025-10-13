@@ -9,6 +9,15 @@ export default async function handler(req, res) {
     const clientId = process.env.USPS_CONSUMER_KEY;
     const clientSecret = process.env.USPS_CONSUMER_SECRET;
     const tokenUrl = process.env.USPS_PORTAL_TOKEN_URL;
+
+    // Try different possible token URLs
+    const possibleTokenUrls = [
+      tokenUrl, // Current: https://api.usps.com/oauth2/v3/token
+      'https://api.usps.com/oauth2/v1/token',
+      'https://api.usps.com/oauth/v1/token',
+      'https://api.usps.com/oauth/token',
+      'https://api.usps.com/token'
+    ].filter(Boolean);
     
     console.log('[TEST-OAUTH] Environment check:', {
       hasClientId: !!clientId,
@@ -29,73 +38,19 @@ export default async function handler(req, res) {
       });
     }
     
-    // Try multiple OAuth approaches
+    // Try multiple OAuth approaches with different URLs
     console.log('[TEST-OAUTH] Attempting OAuth request...');
 
     const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
     const attempts = [];
 
-    // Attempt 1: Basic auth with scope=prices
-    console.log('[TEST-OAUTH] Attempt 1: Basic auth with scope=prices');
-    let oauthResponse = await fetch(tokenUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${authString}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json'
-      },
-      body: 'grant_type=client_credentials&scope=prices'
-    });
+    // Try each possible token URL
+    for (let i = 0; i < possibleTokenUrls.length; i++) {
+      const testTokenUrl = possibleTokenUrls[i];
+      console.log(`[TEST-OAUTH] Trying token URL ${i + 1}: ${testTokenUrl}`);
 
-    let responseText = await oauthResponse.text();
-    let responseData;
-    try {
-      responseData = JSON.parse(responseText);
-    } catch (e) {
-      responseData = { raw: responseText };
-    }
-
-    attempts.push({
-      attempt: 1,
-      method: 'Basic auth with scope=prices',
-      status: oauthResponse.status,
-      success: oauthResponse.ok,
-      response: responseData
-    });
-
-    // If first attempt failed, try without scope
-    if (!oauthResponse.ok) {
-      console.log('[TEST-OAUTH] Attempt 2: Basic auth without scope');
-      oauthResponse = await fetch(tokenUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${authString}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json'
-        },
-        body: 'grant_type=client_credentials'
-      });
-
-      responseText = await oauthResponse.text();
-      try {
-        responseData = JSON.parse(responseText);
-      } catch (e) {
-        responseData = { raw: responseText };
-      }
-
-      attempts.push({
-        attempt: 2,
-        method: 'Basic auth without scope',
-        status: oauthResponse.status,
-        success: oauthResponse.ok,
-        response: responseData
-      });
-    }
-
-    // If still failed, try credentials in body
-    if (!oauthResponse.ok) {
-      console.log('[TEST-OAUTH] Attempt 3: Credentials in body');
-      oauthResponse = await fetch(tokenUrl, {
+      // Try credentials in body (this got furthest before)
+      const testResponse = await fetch(testTokenUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -104,47 +59,48 @@ export default async function handler(req, res) {
         body: `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`
       });
 
-      responseText = await oauthResponse.text();
+      let testResponseText = await testResponse.text();
+      let testResponseData;
       try {
-        responseData = JSON.parse(responseText);
+        testResponseData = JSON.parse(testResponseText);
       } catch (e) {
-        responseData = { raw: responseText };
+        testResponseData = { raw: testResponseText };
       }
 
       attempts.push({
-        attempt: 3,
-        method: 'Credentials in body',
-        status: oauthResponse.status,
-        success: oauthResponse.ok,
-        response: responseData
+        attempt: i + 1,
+        method: `Credentials in body - URL: ${testTokenUrl}`,
+        status: testResponse.status,
+        success: testResponse.ok,
+        response: testResponseData
       });
+
+      // If this one worked, use it for the final response
+      if (testResponse.ok) {
+        return res.status(200).json({
+          success: true,
+          message: 'OAuth token obtained successfully',
+          workingUrl: testTokenUrl,
+          attempts: attempts,
+          tokenLength: testResponseData.access_token?.length,
+          expiresIn: testResponseData.expires_in,
+          tokenType: testResponseData.token_type,
+          scope: testResponseData.scope,
+          response: {
+            ...testResponseData,
+            access_token: testResponseData.access_token ? `${testResponseData.access_token.substring(0, 10)}...` : null
+          }
+        });
+      }
     }
 
-    if (!oauthResponse.ok) {
-      return res.status(200).json({
-        success: false,
-        error: 'All OAuth attempts failed',
-        attempts: attempts,
-        finalStatus: oauthResponse.status,
-        finalResponse: responseData
-      });
-    }
-    
-    // Success
+    // If we get here, none of the URLs worked
     return res.status(200).json({
-      success: true,
-      message: 'OAuth token obtained successfully',
+      success: false,
+      error: 'All OAuth URLs and methods failed',
       attempts: attempts,
-      successfulAttempt: attempts.find(a => a.success),
-      tokenLength: responseData.access_token?.length,
-      expiresIn: responseData.expires_in,
-      tokenType: responseData.token_type,
-      scope: responseData.scope,
-      // Don't return the actual token for security
-      response: {
-        ...responseData,
-        access_token: responseData.access_token ? `${responseData.access_token.substring(0, 10)}...` : null
-      }
+      testedUrls: possibleTokenUrls,
+      recommendation: 'Check your USPS Developer Portal for the correct OAuth endpoint URL'
     });
     
   } catch (error) {
