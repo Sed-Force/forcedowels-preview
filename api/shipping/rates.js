@@ -344,6 +344,62 @@ function getUspsEstimatedRates(parcels) {
   }];
 }
 
+// ---- Simple USPS function that always works ----
+async function getSimpleUspsRates(to, parcels) {
+  console.log('[SIMPLE USPS] Called with:', { country: to.country, parcels: parcels?.length });
+
+  // Only US domestic
+  if (to.country !== 'US') {
+    console.log('[SIMPLE USPS] Not US, skipping');
+    return [];
+  }
+
+  if (!parcels || parcels.length === 0) {
+    console.log('[SIMPLE USPS] No parcels, skipping');
+    return [];
+  }
+
+  console.log('[SIMPLE USPS] Calculating estimated rates...');
+
+  // Calculate total weight
+  let totalWeight = 0;
+  for (const parcel of parcels) {
+    totalWeight += parcel.weightLb || 1;
+  }
+
+  console.log('[SIMPLE USPS] Total weight:', totalWeight, 'lbs');
+
+  // Simple rate calculation
+  let estimatedRate;
+  if (totalWeight <= 1) estimatedRate = 9.50;
+  else if (totalWeight <= 2) estimatedRate = 11.50;
+  else if (totalWeight <= 3) estimatedRate = 13.50;
+  else if (totalWeight <= 5) estimatedRate = 16.50;
+  else if (totalWeight <= 10) estimatedRate = 22.00;
+  else if (totalWeight <= 20) estimatedRate = 35.00;
+  else if (totalWeight <= 30) estimatedRate = 45.00;
+  else if (totalWeight <= 50) estimatedRate = 65.00;
+  else if (totalWeight <= 70) estimatedRate = 85.00;
+  else estimatedRate = Math.max(85, totalWeight * 1.25);
+
+  const result = [{
+    carrier: 'USPS',
+    service: 'Priority Mail (estimated)',
+    serviceCode: 'PRIORITY_EST',
+    priceCents: Math.round(estimatedRate * 100),
+    estDays: 2,
+    detail: {
+      totalWeight,
+      estimatedRate,
+      source: 'simple_estimated',
+      note: 'Estimated rate - actual may vary'
+    },
+  }];
+
+  console.log('[SIMPLE USPS] Returning rate:', result[0]);
+  return result;
+}
+
 // ---- TQL placeholder (enable later) ----
 async function getTqlRates(/* { to, pallets } */) {
   // Return [] for now. When you enable:
@@ -373,7 +429,7 @@ export default async function handler(req, res) {
         console.error('[UPS] Error:', e.message);
         return [];
       }),
-      getUspsRates({ to, parcels: pack.parcels, kitsMeta: pack.meta }).catch(e => {
+      getSimpleUspsRates(to, pack.parcels).catch(e => {
         console.error('[USPS] Error:', e.message);
         return [];
       }),
