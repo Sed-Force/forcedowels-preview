@@ -4,10 +4,16 @@
 
 /* ── Design tokens ───────────────────────────────────────────────────────── */
 :root {
+  /* Light mode (default) */
   --bg: #ffffff;
   --bg-alt: #f7f9fc;
+  --bg-card: #ffffff;
+  --bg-card-alt: #f8fafc;
   --text: #101828;
-  --muted: #667085;
+  --text-muted: #667085;
+  --text-light: #9ca3af;
+  --border: #e5e7eb;
+  --border-light: #f3f4f6;
 
   /* Brand */
   --brand: #224d8f;
@@ -35,6 +41,93 @@
   --space-5: 32px;
   --space-6: 56px;
   --space-7: 72px;
+}
+
+/* Dark mode - auto (system preference) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: #0f1420;
+    --bg-alt: #1a2332;
+    --bg-card: #1e2a3f;
+    --bg-card-alt: #243042;
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-light: #64748b;
+    --border: #334155;
+    --border-light: #475569;
+    --shadow-xs: 0 2px 6px rgba(0,0,0,.3);
+    --shadow: 0 10px 30px rgba(0,0,0,.4);
+  }
+}
+
+/* Manual theme overrides */
+[data-theme="light"] {
+  --bg: #ffffff;
+  --bg-alt: #f7f9fc;
+  --bg-card: #ffffff;
+  --bg-card-alt: #f8fafc;
+  --text: #101828;
+  --text-muted: #667085;
+  --text-light: #9ca3af;
+  --border: #e5e7eb;
+  --border-light: #f3f4f6;
+  --shadow-xs: 0 2px 6px rgba(0,0,0,.05);
+  --shadow: 0 10px 30px rgba(0,0,0,.06);
+}
+
+[data-theme="dark"] {
+  --bg: #0f1420;
+  --bg-alt: #1a2332;
+  --bg-card: #1e2a3f;
+  --bg-card-alt: #243042;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-light: #64748b;
+  --border: #334155;
+  --border-light: #475569;
+  --shadow-xs: 0 2px 6px rgba(0,0,0,.3);
+  --shadow: 0 10px 30px rgba(0,0,0,.4);
+}
+
+/* Theme toggle button */
+#theme-toggle {
+  position: relative;
+}
+
+.theme-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.2s ease;
+}
+
+[data-theme="light"] .theme-icon-light,
+:root:not([data-theme]) .theme-icon-light {
+  opacity: 1;
+}
+
+[data-theme="light"] .theme-icon-dark,
+:root:not([data-theme]) .theme-icon-dark {
+  opacity: 0;
+}
+
+[data-theme="dark"] .theme-icon-light {
+  opacity: 0;
+}
+
+[data-theme="dark"] .theme-icon-dark {
+  opacity: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .theme-icon-light {
+    opacity: 0;
+  }
+
+  :root:not([data-theme]) .theme-icon-dark {
+    opacity: 1;
+  }
 }
 
 /* ── Base ────────────────────────────────────────────────────────────────── */
@@ -162,8 +255,15 @@ a { color: inherit; text-decoration: none; }
   box-shadow: 0 12px 24px rgba(34,77,143,.25);
   background: var(--brand-ink);
 }
-.btn--ghost { background: transparent; border-color: #e4e9f2; color: #1b2540; }
-.btn--ghost:hover { border-color: var(--brand); color: var(--brand); }
+.btn--ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text);
+}
+.btn--ghost:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
 .btn--invert { color: #fff; border-color: rgba(255,255,255,.45); }
 .btn--invert:hover { border-color: #fff; }
 .site-header .nav .btn {
@@ -908,8 +1008,8 @@ a { color: inherit; text-decoration: none; }
 }
 
 .video-card {
-  background: #0f1420;               /* dark card to match theme */
-  border: 1px solid #20273a;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 12px;
   box-shadow: var(--shadow-xs);
@@ -923,8 +1023,8 @@ a { color: inherit; text-decoration: none; }
   display: block;
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid #1d2435;
-  background: #0b0f1a;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
 }
 .video-thumb img {
   display: block;
@@ -987,11 +1087,11 @@ a { color: inherit; text-decoration: none; }
 
 /* Video card border color update */
 .video-card {
-  border: 2px solid var(--brand); /* uses your new blue (#224d8f) */
+  border: 2px solid var(--brand);
   border-radius: 12px;
-  background: #111; /* keeps dark background */
+  background: var(--bg-card);
   padding: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,.25);
+  box-shadow: var(--shadow);
 }
 
 .video-thumb img {
@@ -1207,9 +1307,9 @@ a { color: inherit; text-decoration: none; }
 .pt-0 { padding-top: 0 !important; }
 
 .finder-card{
-  background:#0f1420;
-  border:1px solid #1e2942;
-  border-radius:16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
   box-shadow: var(--shadow);
   padding: 18px;
 }
@@ -2094,16 +2194,29 @@ button,
   border-color: #ffb34d; box-shadow: 0 0 0 3px rgba(255,179,77,.2);
 }
 
-/* Buttons (secondary = dark ghost style) */
-.btn.btn--secondary { background:#152236; border:1px solid #2c3d5a; color:#e9eef8; }
-.btn.btn--secondary:hover{ border-color:#425b87; transform: translateY(-1px); }
+/* Buttons (secondary = adaptive ghost style) */
+.btn.btn--secondary {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.btn.btn--secondary:hover{
+  border-color: var(--brand);
+  transform: translateY(-1px);
+}
 .btn.btn--secondary.btn-wide, .btn.btn--accent.btn-wide { width:100%; }
 
 /* ===== Rates list ===== */
 .rates{ list-style:none; margin:8px 0 12px; padding:0; display:flex; flex-direction:column; gap:8px; }
 .rate-option{
-  display:flex; align-items:center; gap:10px; padding:10px 12px;
-  border:1px solid #1d2a3f; background:#0a1321; border-radius:10px; cursor:pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  border-radius: 10px;
+  cursor: pointer;
 }
 .rate-option:hover{ border-color:#2f4264; }
 .rate-option input{ accent-color:#ffb34d; }
@@ -2219,18 +2332,31 @@ button,
   box-sizing: border-box;
 }
 
-/* ==== Shipping rate cards (Next.js-ish) ==== */
+/* ==== Shipping rate cards (adaptive) ==== */
 :root{
-  --fd-bg-800:#0b1421;
-  --fd-bg-700:#0e1b2b;
-  --fd-bg-600:#122338;
-  --fd-stroke: rgba(255,255,255,.08);
-  --fd-soft: rgba(255,255,255,.06);
-  --fd-text-600: rgba(255,255,255,.65);
-  --fd-text-800: rgba(255,255,255,.92);
-  /* use your site accent here (same as .btn--accent) */
-  --accent: #f4a825;
-  --accent-rgb: 244,168,37;
+  /* Light mode shipping card colors */
+  --fd-bg-800: var(--bg-card);
+  --fd-bg-700: var(--bg-card-alt);
+  --fd-bg-600: var(--bg-alt);
+  --fd-stroke: var(--border);
+  --fd-soft: var(--border-light);
+  --fd-text-600: var(--text-muted);
+  --fd-text-800: var(--text);
+  --accent-rgb: 238,173,26;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark mode shipping card colors */
+    --fd-bg-800: #0b1421;
+    --fd-bg-700: #0e1b2b;
+    --fd-bg-600: #122338;
+    --fd-stroke: rgba(255,255,255,.08);
+    --fd-soft: rgba(255,255,255,.06);
+    --fd-text-600: rgba(255,255,255,.65);
+    --fd-text-800: rgba(255,255,255,.92);
+    --accent-rgb: 244,168,37;
+  }
 }
 
 .rates-list{

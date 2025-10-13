@@ -1,3 +1,56 @@
+/* Theme Management */
+(function initTheme() {
+  // Get saved theme or default to system preference
+  const savedTheme = localStorage.getItem('theme');
+  const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  // Apply theme
+  function applyTheme(theme) {
+    if (theme === 'auto') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+    localStorage.setItem('theme', theme);
+  }
+
+  // Initialize theme
+  if (savedTheme) {
+    applyTheme(savedTheme);
+  }
+
+  // Theme toggle functionality
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+      let newTheme;
+      if (!currentTheme) {
+        // Currently auto, switch to opposite of system
+        newTheme = systemPrefersDark ? 'light' : 'dark';
+      } else if (currentTheme === 'light') {
+        newTheme = 'dark';
+      } else {
+        newTheme = 'light';
+      }
+
+      applyTheme(newTheme);
+    });
+  }
+
+  // Listen for system theme changes
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    // Only update if using auto theme
+    if (!document.documentElement.hasAttribute('data-theme')) {
+      // Force a repaint by toggling a class
+      document.body.classList.add('theme-transition');
+      setTimeout(() => document.body.classList.remove('theme-transition'), 100);
+    }
+  });
+})();
+
 /* Clerk mount (kept safe) */
 window.addEventListener('load', async () => {
   try {
