@@ -10,7 +10,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css?v=45" />
-  <script defer src="/script.js"></script>
 </head>
 <body>
 
@@ -274,5 +273,44 @@
 <!-- your page scripts -->
 <script defer src="/script.js?v=48"></script>
 <script defer src="/script-order.js?v=48"></script>
+
+<!-- Ensure theme toggle works on order page -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Wait a bit to ensure all scripts are loaded
+  setTimeout(function() {
+    const themeToggle = document.getElementById('theme-toggle');
+    if (themeToggle && !themeToggle.hasAttribute('data-initialized')) {
+      console.log('[Order Page] Initializing theme toggle');
+      themeToggle.setAttribute('data-initialized', 'true');
+
+      // Apply saved theme
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme && savedTheme !== 'auto') {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+
+      // Add click handler
+      themeToggle.addEventListener('click', function() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        let newTheme;
+        if (!currentTheme) {
+          newTheme = systemPrefersDark ? 'light' : 'dark';
+        } else if (currentTheme === 'light') {
+          newTheme = 'dark';
+        } else {
+          newTheme = 'light';
+        }
+
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        console.log('[Order Page] Theme switched to:', newTheme);
+      });
+    }
+  }, 100);
+});
+</script>
 </body>
 </html>
