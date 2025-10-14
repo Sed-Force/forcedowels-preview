@@ -2,11 +2,14 @@
   "name": "forcedowels-preview",
   "private": true,
   "version": "1.0.0",
-  "engines": { "node": "22.x" },
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "build": "echo \"static build\""
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
     "stripe": "^16.6.0"
   }
 }
