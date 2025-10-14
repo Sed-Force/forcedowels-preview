@@ -5,15 +5,15 @@
 /* ── Design tokens ───────────────────────────────────────────────────────── */
 :root {
   /* Light mode (default) */
-  --bg: #f8fafc;
-  --bg-alt: #f1f5f9;
-  --bg-card: #ffffff;
-  --bg-card-alt: #f8fafc;
+  --bg: #f1f5f9;
+  --bg-alt: #e2e8f0;
+  --bg-card: #f8fafc;
+  --bg-card-alt: #f1f5f9;
   --text: #0f172a;
-  --text-muted: #475569;
-  --text-light: #64748b;
-  --border: #cbd5e1;
-  --border-light: #e2e8f0;
+  --text-muted: #374151;
+  --text-light: #4b5563;
+  --border: #9ca3af;
+  --border-light: #d1d5db;
 
   /* Brand */
   --brand: #224d8f;
@@ -45,17 +45,17 @@
 
 /* Manual theme overrides - these take priority */
 [data-theme="light"] {
-  --bg: #f8fafc !important;
-  --bg-alt: #f1f5f9 !important;
-  --bg-card: #ffffff !important;
-  --bg-card-alt: #f8fafc !important;
+  --bg: #f1f5f9 !important;
+  --bg-alt: #e2e8f0 !important;
+  --bg-card: #f8fafc !important;
+  --bg-card-alt: #f1f5f9 !important;
   --text: #0f172a !important;
-  --text-muted: #475569 !important;
-  --text-light: #64748b !important;
-  --border: #cbd5e1 !important;
-  --border-light: #e2e8f0 !important;
-  --shadow-xs: 0 2px 6px rgba(0,0,0,.08) !important;
-  --shadow: 0 10px 30px rgba(0,0,0,.1) !important;
+  --text-muted: #374151 !important;
+  --text-light: #4b5563 !important;
+  --border: #9ca3af !important;
+  --border-light: #d1d5db !important;
+  --shadow-xs: 0 2px 6px rgba(0,0,0,.12) !important;
+  --shadow: 0 10px 30px rgba(0,0,0,.15) !important;
 }
 
 [data-theme="dark"] {
@@ -1580,24 +1580,23 @@ a { color: inherit; text-decoration: none; }
 }
 
 .dist-form .group {
-  margin: 24px 0;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 24px;
-  background: var(--bg-card);
+  margin: 20px 0;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 20px;
+  background: var(--bg-card-alt);
   position: relative;
 }
 .dist-form .group legend {
   font-weight: 800;
   color: var(--text);
-  padding: 8px 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  position: absolute;
-  top: -12px;
-  left: 16px;
-  margin: 0;
+  padding: 0 8px;
+  background: var(--bg-card-alt);
+  margin: 0 0 16px 0;
+  border: none;
+  border-radius: 0;
+  position: static;
+  font-size: 18px;
 }
 
 .dist-form .form-grid {
@@ -1682,26 +1681,24 @@ a { color: inherit; text-decoration: none; }
 
 /* Card groups on distributor application */
 .dist-form .group {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 24px;
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
   position: relative;
 }
 
 .dist-form .group > legend {
   font-weight: 800;
-  font-size: 16px;
+  font-size: 18px;
   color: var(--text);
-  margin: 0;
-  padding: 8px 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  position: absolute;
-  top: -12px;
-  left: 16px;
+  margin: 0 0 16px 0;
+  padding: 0 8px;
+  background: var(--bg-card-alt);
+  border: none;
+  border-radius: 0;
+  position: static;
 }
 
 /* 2–3 column adaptive grid for fields */
@@ -2586,17 +2583,38 @@ button,
   color: #ffffff !important;
 }
 
-/* Enhanced legend positioning for both themes */
-[data-theme="dark"] .dist-form .group legend {
-  background: var(--bg-card) !important;
-  border-color: var(--border) !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+/* Enhanced distributor form styling for better contrast */
+[data-theme="light"] .dist-form {
+  background: #f8fafc !important;
+  border-color: #9ca3af !important;
 }
 
-[data-theme="light"] .dist-form .group legend {
-  background: var(--bg-card) !important;
-  border-color: var(--border) !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+[data-theme="light"] .dist-form .group {
+  background: #ffffff !important;
+  border-color: #d1d5db !important;
+}
+
+[data-theme="light"] .dist-form input,
+[data-theme="light"] .dist-form select,
+[data-theme="light"] .dist-form textarea {
+  background: #ffffff !important;
+  border-color: #9ca3af !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .dist-form .agree,
+[data-theme="light"] .dist-form .agree span {
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+/* Fix agreement text visibility in light mode */
+.dist-form .agree {
+  color: var(--text) !important;
+}
+
+.dist-form .agree span {
+  color: var(--text) !important;
 }
 
 [data-theme="dark"] .dist-form input,
