@@ -349,42 +349,92 @@
 <script defer src="/script.js?v=48"></script>
 <script defer src="/script-order.js?v=48"></script>
 
-<!-- Ensure theme toggle works on order page -->
+<!-- Enhanced theme toggle with debugging for order page -->
 <script>
+console.log('=== ORDER PAGE THEME DEBUG ===');
+
+// Immediate theme application
+function applyThemeImmediate() {
+  const savedTheme = localStorage.getItem('theme');
+  console.log('Saved theme from localStorage:', savedTheme);
+
+  if (savedTheme && savedTheme !== 'auto') {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    console.log('Applied saved theme:', savedTheme);
+  }
+}
+
+// Apply theme immediately
+applyThemeImmediate();
+
 document.addEventListener('DOMContentLoaded', function() {
-  // Wait a bit to ensure all scripts are loaded
-  setTimeout(function() {
+  console.log('DOM loaded on order page');
+
+  // Multiple attempts to find and initialize the theme toggle
+  function initThemeToggle() {
     const themeToggle = document.getElementById('theme-toggle');
-    if (themeToggle && !themeToggle.hasAttribute('data-initialized')) {
-      console.log('[Order Page] Initializing theme toggle');
-      themeToggle.setAttribute('data-initialized', 'true');
+    console.log('Theme toggle button found:', !!themeToggle);
 
-      // Apply saved theme
-      const savedTheme = localStorage.getItem('theme');
-      if (savedTheme && savedTheme !== 'auto') {
-        document.documentElement.setAttribute('data-theme', savedTheme);
-      }
+    if (themeToggle) {
+      console.log('Theme toggle button element:', themeToggle);
 
-      // Add click handler
-      themeToggle.addEventListener('click', function() {
+      // Remove any existing listeners
+      const newButton = themeToggle.cloneNode(true);
+      themeToggle.parentNode.replaceChild(newButton, themeToggle);
+
+      // Add fresh click handler
+      newButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        console.log('=== THEME TOGGLE CLICKED ===');
         const currentTheme = document.documentElement.getAttribute('data-theme');
-        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        console.log('Current theme before switch:', currentTheme);
 
         let newTheme;
-        if (!currentTheme) {
-          newTheme = systemPrefersDark ? 'light' : 'dark';
-        } else if (currentTheme === 'light') {
+        if (!currentTheme || currentTheme === 'light') {
           newTheme = 'dark';
         } else {
           newTheme = 'light';
         }
 
+        console.log('Switching to theme:', newTheme);
         document.documentElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
-        console.log('[Order Page] Theme switched to:', newTheme);
+
+        // Force a visual update
+        document.body.style.transition = 'none';
+        document.body.offsetHeight; // Trigger reflow
+        document.body.style.transition = '';
+
+        console.log('Theme switched! New data-theme:', document.documentElement.getAttribute('data-theme'));
+        console.log('LocalStorage updated:', localStorage.getItem('theme'));
       });
+
+      console.log('Theme toggle initialized successfully');
+      return true;
     }
-  }, 100);
+    return false;
+  }
+
+  // Try multiple times with delays
+  if (!initThemeToggle()) {
+    setTimeout(() => {
+      console.log('Retry 1: Looking for theme toggle...');
+      if (!initThemeToggle()) {
+        setTimeout(() => {
+          console.log('Retry 2: Looking for theme toggle...');
+          initThemeToggle();
+        }, 500);
+      }
+    }, 100);
+  }
+
+  // Debug current state every 2 seconds
+  setInterval(() => {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    console.log('Current theme state:', currentTheme || 'auto');
+  }, 2000);
 });
 </script>
 </body>
