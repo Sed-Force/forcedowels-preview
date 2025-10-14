@@ -61,6 +61,188 @@ function tierLabel(units) {
   return '5,000–20,000';
 }
 
+// Internal notification email for Force Dowels team
+function buildInternalNotificationHTML({ orderId, customerName, customerEmail, orderDate, sessionId, items, subtotalCents, shippingCents, taxCents, totalCents, metaSummary, shippingMethod, shippingAddress, billingAddress }) {
+  const { bulkUnits = 0, kits = 0 } = metaSummary || {};
+
+  // Build order items table rows
+  let itemRows = '';
+  if (bulkUnits > 0) {
+    const unitPrice = bulkTotalCents(bulkUnits) / bulkUnits / 100;
+    const tierName = tierLabel(bulkUnits);
+    itemRows += `
+      <tr>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;">Force Dowels</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;">${tierName}</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:center;">${bulkUnits.toLocaleString()}</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$${unitPrice.toFixed(4)}</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(bulkTotalCents(bulkUnits))}</td>
+      </tr>`;
+  }
+
+  if (kits > 0) {
+    itemRows += `
+      <tr>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;">Force Dowels</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;">Kit - 300 units</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:center;">300</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$0.12</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$36.00</td>
+      </tr>`;
+  }
+
+  const logoUrl = process.env.EMAIL_LOGO_URL || `${(process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels.com').replace(/\/$/, '')}/images/force-dowel-logo.jpg`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>New Order Received</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" style="width:100%;border-collapse:collapse;background:#f3f4f6;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" style="max-width:680px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background:#1C4A99;padding:24px;text-align:center;">
+              <img src="${logoUrl}" alt="Force Dowels" style="height:60px;margin:0 auto;border-radius:8px;">
+              <h1 style="margin:16px 0 0;color:#ffffff;font-size:24px;font-weight:700;">New Order Received!</h1>
+              <p style="margin:8px 0 0;color:#e0e7ff;font-size:14px;">Force Dowels Order Notification</p>
+            </td>
+          </tr>
+
+          <!-- Success Message -->
+          <tr>
+            <td style="padding:24px;background:#f0fdf4;border-bottom:1px solid #e5e7eb;">
+              <h2 style="margin:0 0 8px;color:#166534;font-size:18px;font-weight:600;">Payment Successful!</h2>
+              <p style="margin:0;color:#15803d;font-size:14px;">A new order has been placed and payment has been confirmed.</p>
+            </td>
+          </tr>
+
+          <!-- Customer Information -->
+          <tr>
+            <td style="padding:24px;">
+              <h3 style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;border-bottom:2px solid #1C4A99;padding-bottom:8px;">Customer Information</h3>
+              <table role="presentation" style="width:100%;border-collapse:collapse;">
+                <tr>
+                  <td style="padding:8px 0;color:#6b7280;font-size:14px;width:120px;"><strong>Name:</strong></td>
+                  <td style="padding:8px 0;color:#111827;font-size:14px;">${customerName || 'N/A'}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;color:#6b7280;font-size:14px;"><strong>Email:</strong></td>
+                  <td style="padding:8px 0;color:#111827;font-size:14px;">${customerEmail || 'N/A'}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;color:#6b7280;font-size:14px;"><strong>Order Date:</strong></td>
+                  <td style="padding:8px 0;color:#111827;font-size:14px;">${orderDate}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;color:#6b7280;font-size:14px;"><strong>Stripe Session:</strong></td>
+                  <td style="padding:8px 0;color:#111827;font-size:14px;font-family:monospace;font-size:12px;">${sessionId}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Order Items -->
+          <tr>
+            <td style="padding:24px;background:#f9fafb;">
+              <h3 style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;border-bottom:2px solid #1C4A99;padding-bottom:8px;">Order Items</h3>
+              <table role="presentation" style="width:100%;border-collapse:collapse;background:#ffffff;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
+                <thead>
+                  <tr style="background:#f3f4f6;">
+                    <th style="padding:12px;text-align:left;color:#374151;font-size:13px;font-weight:600;border-bottom:2px solid #e5e7eb;">Product</th>
+                    <th style="padding:12px;text-align:left;color:#374151;font-size:13px;font-weight:600;border-bottom:2px solid #e5e7eb;">Tier</th>
+                    <th style="padding:12px;text-align:center;color:#374151;font-size:13px;font-weight:600;border-bottom:2px solid #e5e7eb;">Qty</th>
+                    <th style="padding:12px;text-align:right;color:#374151;font-size:13px;font-weight:600;border-bottom:2px solid #e5e7eb;">Unit Price</th>
+                    <th style="padding:12px;text-align:right;color:#374151;font-size:13px;font-weight:600;border-bottom:2px solid #e5e7eb;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemRows}
+                </tbody>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Order Summary -->
+          <tr>
+            <td style="padding:24px;">
+              <h3 style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;border-bottom:2px solid #1C4A99;padding-bottom:8px;">Order Summary</h3>
+              <table role="presentation" style="width:100%;border-collapse:collapse;">
+                <tr>
+                  <td style="padding:8px 0;color:#6b7280;font-size:14px;"><strong>Subtotal:</strong></td>
+                  <td style="padding:8px 0;text-align:right;color:#111827;font-size:14px;">${formatMoney(subtotalCents)}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;color:#6b7280;font-size:14px;"><strong>Shipping${shippingMethod ? ` (${shippingMethod})` : ''}:</strong></td>
+                  <td style="padding:8px 0;text-align:right;color:#111827;font-size:14px;">${formatMoney(shippingCents)}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;color:#6b7280;font-size:14px;"><strong>Tax:</strong></td>
+                  <td style="padding:8px 0;text-align:right;color:#111827;font-size:14px;">${formatMoney(taxCents)}</td>
+                </tr>
+                <tr style="border-top:2px solid #e5e7eb;">
+                  <td style="padding:12px 0 0;color:#111827;font-size:16px;font-weight:700;"><strong>Total:</strong></td>
+                  <td style="padding:12px 0 0;text-align:right;color:#1C4A99;font-size:18px;font-weight:700;">${formatMoney(totalCents)}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Shipping Information -->
+          <tr>
+            <td style="padding:24px;background:#f9fafb;">
+              <h3 style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;border-bottom:2px solid #1C4A99;padding-bottom:8px;">Shipping Information</h3>
+              <p style="margin:0;color:#111827;font-size:14px;line-height:1.6;">
+                ${shippingAddress.name || ''}<br>
+                ${shippingAddress.line1 || ''}<br>
+                ${shippingAddress.line2 ? `${shippingAddress.line2}<br>` : ''}
+                ${shippingAddress.city || ''}, ${shippingAddress.state || ''} ${shippingAddress.postal_code || ''}<br>
+                ${shippingAddress.country || ''}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Billing Information -->
+          <tr>
+            <td style="padding:24px;">
+              <h3 style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;border-bottom:2px solid #1C4A99;padding-bottom:8px;">Billing Information</h3>
+              <p style="margin:0;color:#111827;font-size:14px;line-height:1.6;">
+                ${billingAddress.line1 || ''},<br>
+                ${billingAddress.line2 ? `${billingAddress.line2}<br>` : ''}
+                ${billingAddress.country || 'US'}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Action Required -->
+          <tr>
+            <td style="padding:24px;background:#fef3c7;border-top:1px solid #e5e7eb;">
+              <h3 style="margin:0 0 8px;color:#92400e;font-size:16px;font-weight:600;">Action Required</h3>
+              <p style="margin:0;color:#78350f;font-size:14px;">Please process this order and prepare it for shipment. The customer has been notified of their successful purchase.</p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px;text-align:center;background:#f9fafb;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;color:#6b7280;font-size:12px;">This is an automated notification from your Force Dowels order system.</p>
+              <p style="margin:8px 0 0;color:#9ca3af;font-size:11px;">© 2025 Force Dowels. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+// Customer-facing email
 function buildEmailHTML({ orderId, email, items, subtotalCents, shippingCents, totalCents, metaSummary, shippingMethod }) {
   const { bulkUnits = 0, kits = 0 } = metaSummary || {};
   let bulkLine = '';
@@ -238,6 +420,23 @@ export default async function handler(req, res) {
     const shipService = session.metadata?.ship_service || '';
     const shippingMethod = [shipCarrier, shipService].filter(Boolean).join(' ');
 
+    // Extract customer and address information
+    const customerName = session.customer_details?.name || session.shipping?.name || '';
+    const shippingAddress = session.shipping?.address || session.customer_details?.address || {};
+    const billingAddress = session.customer_details?.address || {};
+    const taxCents = Number(session.total_details?.amount_tax || 0);
+
+    // Format order date
+    const orderDate = new Date(session.created * 1000).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'UTC',
+      timeZoneName: 'short'
+    });
+
     // Build + send email
     const shortId = `#${sessionId.slice(-8)}`;
     const subject = `Force Dowels Order ${shortId}`;
@@ -269,13 +468,30 @@ export default async function handler(req, res) {
       return asJSON(res, 200, { received: true, email: 'failed', detail: sent });
     }
 
-    // Also send a copy directly to Force Dowels (not just BCC)
-    if (EMAIL_BCC && customerEmail && customerEmail !== EMAIL_BCC) {
-      const internalSubject = `[New Order] ${subject}`;
+    // Send internal notification to Force Dowels with different template
+    if (EMAIL_BCC) {
+      const internalSubject = `New Order Received - ${shortId}`;
+      const internalHtml = buildInternalNotificationHTML({
+        orderId: shortId,
+        customerName,
+        customerEmail,
+        orderDate,
+        sessionId,
+        items: lineItems,
+        subtotalCents,
+        shippingCents,
+        taxCents,
+        totalCents,
+        metaSummary,
+        shippingMethod,
+        shippingAddress,
+        billingAddress
+      });
+
       if (RESEND_API_KEY) {
-        await sendViaResend({ to: EMAIL_BCC, subject: internalSubject, html });
+        await sendViaResend({ to: EMAIL_BCC, subject: internalSubject, html: internalHtml });
       } else if (SENDGRID_API_KEY) {
-        await sendViaSendgrid({ to: EMAIL_BCC, subject: internalSubject, html });
+        await sendViaSendgrid({ to: EMAIL_BCC, subject: internalSubject, html: internalHtml });
       }
     }
 
