@@ -9,7 +9,82 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=45" />
+  <link rel="stylesheet" href="/styles.css?v=99" />
+
+  <!-- Force theme override for order page -->
+  <style>
+    /* Aggressive theme override - force theme variables to work */
+    [data-theme="dark"] .tier,
+    [data-theme="dark"] .kit {
+      background: #1e2a3f !important;
+      color: #f8fafc !important;
+      border-color: #334155 !important;
+    }
+
+    [data-theme="dark"] .tier.active {
+      background: #243042 !important;
+      border-color: #eead1a !important;
+    }
+
+    [data-theme="dark"] .calc {
+      background: #1e2a3f !important;
+      border-color: #334155 !important;
+      color: #f8fafc !important;
+    }
+
+    [data-theme="dark"] .tier-price {
+      color: #eead1a !important;
+    }
+
+    [data-theme="dark"] .tier-lock,
+    [data-theme="dark"] .kit .muted {
+      color: #94a3b8 !important;
+    }
+
+    [data-theme="light"] .tier,
+    [data-theme="light"] .kit {
+      background: #ffffff !important;
+      color: #101828 !important;
+      border-color: #e5e7eb !important;
+    }
+
+    [data-theme="light"] .tier.active {
+      background: #f8fafc !important;
+      border-color: #eead1a !important;
+    }
+
+    [data-theme="light"] .calc {
+      background: #ffffff !important;
+      border-color: #e5e7eb !important;
+      color: #101828 !important;
+    }
+
+    [data-theme="light"] .tier-price {
+      color: #eead1a !important;
+    }
+
+    [data-theme="light"] .tier-lock,
+    [data-theme="light"] .kit .muted {
+      color: #667085 !important;
+    }
+
+    /* Debug indicator */
+    [data-theme="dark"] .calc::before {
+      content: "🌙 DARK MODE ACTIVE";
+      display: block;
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 10px;
+    }
+
+    [data-theme="light"] .calc::before {
+      content: "☀️ LIGHT MODE ACTIVE";
+      display: block;
+      font-size: 12px;
+      color: #667085;
+      margin-bottom: 10px;
+    }
+  </style>
 </head>
 <body>
 
