@@ -868,12 +868,12 @@ a { color: inherit; text-decoration: none; }
 
 .calc-callout {
   background: rgba(34,77,143,.12);
-  border: 1px solid #24365a;
+  border: 1px solid var(--border);
   border-left: 4px solid var(--brand);
   padding: 10px 12px;
   border-radius: 10px;
   font-size: 14px;
-  color: #d7e0f3;
+  color: var(--text);
   margin-bottom: 16px;
 }
 
@@ -1001,6 +1001,61 @@ a { color: inherit; text-decoration: none; }
 
 @media (max-width: 980px) {
   .order-grid { grid-template-columns: 1fr; }
+}
+
+/* === Order Page Theme Override (Force theme variables) === */
+[data-theme="dark"] .tier,
+[data-theme="dark"] .kit {
+  background: var(--bg-card) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="dark"] .tier.active {
+  background: var(--bg-card-alt) !important;
+  border-color: var(--accent) !important;
+}
+
+[data-theme="dark"] .calc {
+  background: var(--bg-card) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+[data-theme="dark"] .tier-price {
+  color: var(--accent) !important;
+}
+
+[data-theme="dark"] .tier-lock,
+[data-theme="dark"] .kit .muted {
+  color: var(--text-muted) !important;
+}
+
+[data-theme="light"] .tier,
+[data-theme="light"] .kit {
+  background: var(--bg-card) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="light"] .tier.active {
+  background: var(--bg-card-alt) !important;
+  border-color: var(--accent) !important;
+}
+
+[data-theme="light"] .calc {
+  background: var(--bg-card) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+[data-theme="light"] .tier-price {
+  color: var(--accent) !important;
+}
+
+[data-theme="light"] .tier-lock,
+[data-theme="light"] .kit .muted {
+  color: var(--text-muted) !important;
 }
 
 /* === Video gallery layout ================================================= */
