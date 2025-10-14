@@ -68,22 +68,7 @@
       color: #667085 !important;
     }
 
-    /* Debug indicator */
-    [data-theme="dark"] .calc::before {
-      content: "🌙 DARK MODE ACTIVE";
-      display: block;
-      font-size: 12px;
-      color: #94a3b8;
-      margin-bottom: 10px;
-    }
 
-    [data-theme="light"] .calc::before {
-      content: "☀️ LIGHT MODE ACTIVE";
-      display: block;
-      font-size: 12px;
-      color: #667085;
-      margin-bottom: 10px;
-    }
   </style>
 </head>
 <body>
@@ -349,18 +334,13 @@
 <script defer src="/script.js?v=48"></script>
 <script defer src="/script-order.js?v=48"></script>
 
-<!-- Enhanced theme toggle with debugging for order page -->
+<!-- Clean theme toggle for order page -->
 <script>
-console.log('=== ORDER PAGE THEME DEBUG ===');
-
 // Immediate theme application
 function applyThemeImmediate() {
   const savedTheme = localStorage.getItem('theme');
-  console.log('Saved theme from localStorage:', savedTheme);
-
   if (savedTheme && savedTheme !== 'auto') {
     document.documentElement.setAttribute('data-theme', savedTheme);
-    console.log('Applied saved theme:', savedTheme);
   }
 }
 
@@ -368,16 +348,11 @@ function applyThemeImmediate() {
 applyThemeImmediate();
 
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('DOM loaded on order page');
-
   // Multiple attempts to find and initialize the theme toggle
   function initThemeToggle() {
     const themeToggle = document.getElementById('theme-toggle');
-    console.log('Theme toggle button found:', !!themeToggle);
 
     if (themeToggle) {
-      console.log('Theme toggle button element:', themeToggle);
-
       // Remove any existing listeners
       const newButton = themeToggle.cloneNode(true);
       themeToggle.parentNode.replaceChild(newButton, themeToggle);
@@ -387,9 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         e.stopPropagation();
 
-        console.log('=== THEME TOGGLE CLICKED ===');
         const currentTheme = document.documentElement.getAttribute('data-theme');
-        console.log('Current theme before switch:', currentTheme);
 
         let newTheme;
         if (!currentTheme || currentTheme === 'light') {
@@ -398,7 +371,6 @@ document.addEventListener('DOMContentLoaded', function() {
           newTheme = 'light';
         }
 
-        console.log('Switching to theme:', newTheme);
         document.documentElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
 
@@ -406,12 +378,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.style.transition = 'none';
         document.body.offsetHeight; // Trigger reflow
         document.body.style.transition = '';
-
-        console.log('Theme switched! New data-theme:', document.documentElement.getAttribute('data-theme'));
-        console.log('LocalStorage updated:', localStorage.getItem('theme'));
       });
 
-      console.log('Theme toggle initialized successfully');
       return true;
     }
     return false;
@@ -420,21 +388,13 @@ document.addEventListener('DOMContentLoaded', function() {
   // Try multiple times with delays
   if (!initThemeToggle()) {
     setTimeout(() => {
-      console.log('Retry 1: Looking for theme toggle...');
       if (!initThemeToggle()) {
         setTimeout(() => {
-          console.log('Retry 2: Looking for theme toggle...');
           initThemeToggle();
         }, 500);
       }
     }, 100);
   }
-
-  // Debug current state every 2 seconds
-  setInterval(() => {
-    const currentTheme = document.documentElement.getAttribute('data-theme');
-    console.log('Current theme state:', currentTheme || 'auto');
-  }, 2000);
 });
 </script>
 </body>
