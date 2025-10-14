@@ -9,9 +9,9 @@
   --bg-alt: #e2e8f0;
   --bg-card: #f8fafc;
   --bg-card-alt: #f1f5f9;
-  --text: #0f172a;
-  --text-muted: #374151;
-  --text-light: #4b5563;
+  --text: #000000;
+  --text-muted: #1f2937;
+  --text-light: #374151;
   --border: #9ca3af;
   --border-light: #d1d5db;
 
@@ -49,9 +49,9 @@
   --bg-alt: #e2e8f0 !important;
   --bg-card: #f8fafc !important;
   --bg-card-alt: #f1f5f9 !important;
-  --text: #0f172a !important;
-  --text-muted: #374151 !important;
-  --text-light: #4b5563 !important;
+  --text: #000000 !important;
+  --text-muted: #1f2937 !important;
+  --text-light: #374151 !important;
   --border: #9ca3af !important;
   --border-light: #d1d5db !important;
   --shadow-xs: 0 2px 6px rgba(0,0,0,.12) !important;
@@ -2652,4 +2652,56 @@ button,
 [data-theme="dark"] .text-muted,
 [data-theme="dark"] .muted {
   color: #e2e8f0 !important;
+}
+
+/* ===== ENHANCED LIGHT MODE TEXT CONTRAST ===== */
+[data-theme="light"] {
+  /* Ensure maximum text contrast in light mode */
+  --text: #000000 !important;
+  --text-muted: #1f2937 !important;
+}
+
+/* Light mode comprehensive text improvements */
+[data-theme="light"] h1,
+[data-theme="light"] h2,
+[data-theme="light"] h3,
+[data-theme="light"] h4,
+[data-theme="light"] h5,
+[data-theme="light"] h6,
+[data-theme="light"] p,
+[data-theme="light"] span,
+[data-theme="light"] div,
+[data-theme="light"] label {
+  color: #000000 !important;
+}
+
+/* Light mode distributor form text improvements */
+[data-theme="light"] .dist-form .field span,
+[data-theme="light"] .dist-form .group legend,
+[data-theme="light"] .dist-form .checks-label {
+  color: #000000 !important;
+}
+
+[data-theme="light"] .dist-form input,
+[data-theme="light"] .dist-form select,
+[data-theme="light"] .dist-form textarea {
+  color: #000000 !important;
+}
+
+/* Light mode header dropdown improvements */
+[data-theme="light"] .nav-dropmenu a {
+  color: #000000 !important;
+}
+
+/* Light mode muted text */
+[data-theme="light"] .text-muted,
+[data-theme="light"] .muted {
+  color: #1f2937 !important;
+}
+
+/* Preserve specific colored elements in light mode */
+[data-theme="light"] .tier-price,
+[data-theme="light"] .accent-text {
+  color: #d97706 !important;
+  font-weight: 800 !important;
 }
