@@ -9,6 +9,9 @@ export const config = { runtime: 'nodejs' };
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecret ? require('stripe')(stripeSecret) : null;
 
+// Import DB counter for invoice numbers
+import { nextCounter } from './_lib/db.js';
+
 const RESEND_API_KEY   = process.env.RESEND_API_KEY;
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 const EMAIL_FROM       = process.env.EMAIL_FROM || 'orders@forcedowels.com';
@@ -62,7 +65,7 @@ function tierLabel(units) {
 }
 
 // Internal notification email for Force Dowels team
-function buildInternalNotificationHTML({ orderId, customerName, customerEmail, orderDate, sessionId, items, subtotalCents, shippingCents, taxCents, totalCents, metaSummary, shippingMethod, shippingAddress, billingAddress }) {
+function buildInternalNotificationHTML({ invoiceNumber, orderId, customerName, customerEmail, orderDate, sessionId, items, subtotalCents, shippingCents, taxCents, totalCents, metaSummary, shippingMethod, shippingAddress, billingAddress }) {
   const { bulkUnits = 0, kits = 0 } = metaSummary || {};
 
   // Build order items table rows
@@ -127,6 +130,10 @@ function buildInternalNotificationHTML({ orderId, customerName, customerEmail, o
             <td style="padding:24px;">
               <h3 style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;border-bottom:2px solid #1C4A99;padding-bottom:8px;">Customer Information</h3>
               <table role="presentation" style="width:100%;border-collapse:collapse;">
+                <tr>
+                  <td style="padding:8px 0;color:#6b7280;font-size:14px;width:120px;"><strong>Invoice #:</strong></td>
+                  <td style="padding:8px 0;color:#1C4A99;font-size:18px;font-weight:700;">${invoiceNumber}</td>
+                </tr>
                 <tr>
                   <td style="padding:8px 0;color:#6b7280;font-size:14px;width:120px;"><strong>Name:</strong></td>
                   <td style="padding:8px 0;color:#111827;font-size:14px;">${customerName || 'N/A'}</td>
@@ -243,7 +250,7 @@ function buildInternalNotificationHTML({ orderId, customerName, customerEmail, o
 }
 
 // Customer-facing email
-function buildEmailHTML({ orderId, email, items, subtotalCents, shippingCents, totalCents, metaSummary, shippingMethod }) {
+function buildEmailHTML({ invoiceNumber, orderId, email, items, subtotalCents, shippingCents, totalCents, metaSummary, shippingMethod }) {
   const { bulkUnits = 0, kits = 0 } = metaSummary || {};
   let bulkLine = '';
   if (bulkUnits > 0) {
@@ -288,6 +295,10 @@ function buildEmailHTML({ orderId, email, items, subtotalCents, shippingCents, t
     <p style="margin:0 0 16px 0; color:#6b7280;">We've received your payment and are getting things ready.</p>
 
     <table role="presentation" style="width:100%; border-collapse:collapse; margin-top:8px;">
+      <tr>
+        <td style="padding:6px 0; color:#6b7280;">Invoice #:</td>
+        <td style="padding:6px 0; text-align:right;"><strong>${invoiceNumber}</strong></td>
+      </tr>
       <tr>
         <td style="padding:6px 0; color:#6b7280;">Order:</td>
         <td style="padding:6px 0; text-align:right;"><strong>${orderId}</strong></td>
@@ -438,10 +449,34 @@ export default async function handler(req, res) {
       timeZoneName: 'short'
     });
 
+    // Generate sequential invoice number
+    const counterKey = process.env.VERCEL_ENV === 'production' ? 'invoice_prod' : 'invoice_preview';
+    let invoiceNumber = 0;
+    try {
+      invoiceNumber = await nextCounter(counterKey);
+    } catch (err) {
+      console.error('Failed to generate invoice number:', err);
+      // Fallback to timestamp-based number if DB fails
+      invoiceNumber = Math.floor(Date.now() / 1000);
+    }
+
+    // Update Stripe session metadata with invoice number
+    try {
+      await stripe.checkout.sessions.update(sessionId, {
+        metadata: {
+          ...session.metadata,
+          invoice_number: String(invoiceNumber)
+        }
+      });
+    } catch (err) {
+      console.error('Failed to update Stripe metadata with invoice number:', err);
+    }
+
     // Build + send email
     const shortId = `#${sessionId.slice(-8)}`;
     const subject = `Force Dowels Order ${shortId}`;
     const html = buildEmailHTML({
+      invoiceNumber,
       orderId: shortId,
       email: customerEmail,
       items: lineItems,
@@ -471,8 +506,9 @@ export default async function handler(req, res) {
 
     // Send internal notification to Force Dowels with different template
     if (EMAIL_BCC) {
-      const internalSubject = `New Order Received - ${shortId}`;
+      const internalSubject = `New Order Received - Invoice #${invoiceNumber}`;
       const internalHtml = buildInternalNotificationHTML({
+        invoiceNumber,
         orderId: shortId,
         customerName,
         customerEmail,
