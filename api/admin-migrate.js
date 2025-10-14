@@ -1,5 +1,4 @@
 // /api/admin-migrate.js
-import { sql, ensureCounterTable, upsertCounter, getCounter, nextCounter } from './_lib/db.js';
 
 function send(res, code, data) {
   res.statusCode = code;
@@ -8,6 +7,8 @@ function send(res, code, data) {
 }
 
 export default async function handler(req, res) {
+  // Dynamic import to avoid module loading issues
+  const { sql, ensureCounterTable, upsertCounter, getCounter, nextCounter } = await import('./_lib/db.js');
   try {
     if (req.method !== 'GET') return send(res, 405, { error: 'Method not allowed' });
 
