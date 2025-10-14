@@ -6,11 +6,11 @@
 
 export const config = { runtime: 'nodejs' };
 
-const stripeSecret = process.env.STRIPE_SECRET_KEY;
-const stripe = stripeSecret ? require('stripe')(stripeSecret) : null;
-
 // Import DB counter for invoice numbers
 import { nextCounter } from './_lib/db.js';
+
+const stripeSecret = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeSecret ? require('stripe')(stripeSecret) : null;
 
 const RESEND_API_KEY   = process.env.RESEND_API_KEY;
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
