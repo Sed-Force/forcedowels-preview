@@ -63,9 +63,9 @@
   --bg-alt: #1a2332 !important;
   --bg-card: #1e2a3f !important;
   --bg-card-alt: #243042 !important;
-  --text: #f8fafc !important;
-  --text-muted: #94a3b8 !important;
-  --text-light: #64748b !important;
+  --text: #ffffff !important;
+  --text-muted: #cbd5e1 !important;
+  --text-light: #94a3b8 !important;
   --border: #334155 !important;
   --border-light: #475569 !important;
   --shadow-xs: 0 2px 6px rgba(0,0,0,.3) !important;
@@ -253,9 +253,9 @@ a { color: inherit; text-decoration: none; }
 }
 .nav-dropmenu a {
   display: block; padding: 10px 12px;
-  border-radius: 8px; color: #1b2540;
+  border-radius: 8px; color: var(--text);
 }
-.nav-dropmenu a:hover { background: #f5f7fb; }
+.nav-dropmenu a:hover { background: var(--bg-alt); }
 .nav-dropdown:focus-within .nav-dropmenu,
 .nav-dropdown:hover .nav-dropmenu { display: block; }
 
@@ -1562,8 +1562,8 @@ a { color: inherit; text-decoration: none; }
 
 /* Optional: make ghost button borders visible on blue tint */
 .find-distributor .btn--ghost{
-  border-color: #d9e2ef;
-  color:#1b2540;
+  border-color: var(--border);
+  color: var(--text);
 }
 .find-distributor .btn--ghost:hover{
   border-color: var(--brand);
@@ -1588,7 +1588,7 @@ a { color: inherit; text-decoration: none; }
 }
 .dist-form .group legend {
   font-weight: 800;
-  color: #1b2540;
+  color: var(--text);
   padding: 0 6px;
 }
 
@@ -1599,8 +1599,8 @@ a { color: inherit; text-decoration: none; }
 }
 
 .dist-form .field { display: grid; gap: 6px; }
-.dist-form .field span { font-weight: 700; color: #23314f; }
-.dist-form .field b { color: #d12; font-weight: 900; }
+.dist-form .field span { font-weight: 700; color: var(--text); }
+.dist-form .field b { color: #dc2626; font-weight: 900; }
 
 .dist-form input[type="text"],
 .dist-form input[type="email"],
@@ -1629,7 +1629,7 @@ a { color: inherit; text-decoration: none; }
   margin-top: 10px;
   display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
 }
-.dist-form .checks-label { font-weight: 800; color: #1b2540; margin-right: 8px; }
+.dist-form .checks-label { font-weight: 800; color: var(--text); margin-right: 8px; }
 
 .dist-form .submit-row {
   display: flex; flex-wrap: wrap; gap: 12px;
@@ -2562,4 +2562,55 @@ button,
   border-top:1px dashed var(--fd-stroke);
   color: var(--fd-text-600);
   font-size:.9rem;
+}
+
+/* ===== ENHANCED DARK MODE TEXT CONTRAST ===== */
+[data-theme="dark"] {
+  /* Ensure maximum text contrast in dark mode */
+  --text: #ffffff !important;
+  --text-muted: #e2e8f0 !important;
+}
+
+/* Dark mode distributor form text improvements */
+[data-theme="dark"] .dist-form .field span,
+[data-theme="dark"] .dist-form .group legend,
+[data-theme="dark"] .dist-form .checks-label {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .dist-form input,
+[data-theme="dark"] .dist-form select,
+[data-theme="dark"] .dist-form textarea {
+  color: #ffffff !important;
+  background: var(--bg-card) !important;
+  border-color: var(--border) !important;
+}
+
+/* Dark mode header dropdown improvements */
+[data-theme="dark"] .nav-dropmenu a {
+  color: #ffffff !important;
+}
+
+/* Dark mode general text improvements */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6,
+[data-theme="dark"] p,
+[data-theme="dark"] span,
+[data-theme="dark"] div {
+  color: #ffffff !important;
+}
+
+/* Preserve specific colored elements */
+[data-theme="dark"] .tier-price,
+[data-theme="dark"] .accent-text {
+  color: #fbbf24 !important;
+}
+
+[data-theme="dark"] .text-muted,
+[data-theme="dark"] .muted {
+  color: #e2e8f0 !important;
 }
