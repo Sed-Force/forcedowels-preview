@@ -6,9 +6,6 @@
 
 export const config = { runtime: 'nodejs' };
 
-// Import DB counter for invoice numbers
-import { nextCounter } from './_lib/db.js';
-
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecret ? require('stripe')(stripeSecret) : null;
 
@@ -453,6 +450,8 @@ export default async function handler(req, res) {
     const counterKey = process.env.VERCEL_ENV === 'production' ? 'invoice_prod' : 'invoice_preview';
     let invoiceNumber = 0;
     try {
+      // Dynamic import to avoid module loading issues
+      const { nextCounter } = await import('./_lib/db.js');
       invoiceNumber = await nextCounter(counterKey);
     } catch (err) {
       console.error('Failed to generate invoice number:', err);
