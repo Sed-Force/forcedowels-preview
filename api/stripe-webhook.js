@@ -330,7 +330,7 @@ function buildEmailHTML({ orderId, email, items, subtotalCents, shippingCents, t
 async function sendViaResend({ to, subject, html }) {
   if (!RESEND_API_KEY) return { ok: false, reason: 'missing_resend_key' };
   const payload = { from: EMAIL_FROM, to: Array.isArray(to) ? to : [to], subject, html };
-  if (EMAIL_BCC) payload.bcc = [EMAIL_BCC];
+  // Note: BCC removed - internal notifications are sent separately
 
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -348,7 +348,8 @@ async function sendViaResend({ to, subject, html }) {
 async function sendViaSendgrid({ to, subject, html }) {
   if (!SENDGRID_API_KEY) return { ok: false, reason: 'missing_sendgrid_key' };
   const body = {
-    personalizations: [{ to: [{ email: to }], ...(EMAIL_BCC ? { bcc: [{ email: EMAIL_BCC }] } : {}) }],
+    personalizations: [{ to: [{ email: to }] }],
+    // Note: BCC removed - internal notifications are sent separately
     from: { email: EMAIL_FROM, name: 'Force Dowels' },
     subject,
     content: [{ type: 'text/html', value: html }],
