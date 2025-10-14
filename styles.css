@@ -1580,16 +1580,24 @@ a { color: inherit; text-decoration: none; }
 }
 
 .dist-form .group {
-  margin: 18px 0 8px;
-  border: 1px solid #e9eef5;
-  border-radius: 12px;
-  padding: 14px;
-  background: #fafcff;
+  margin: 24px 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  background: var(--bg-card);
+  position: relative;
 }
 .dist-form .group legend {
   font-weight: 800;
   color: var(--text);
-  padding: 0 6px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  position: absolute;
+  top: -12px;
+  left: 16px;
+  margin: 0;
 }
 
 .dist-form .form-grid {
@@ -1651,13 +1659,6 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* —— Distributor Application refinements ———————————————— */
-.dist-form .group {
-  margin: 18px 0 8px;
-  border: 1px solid #e9eef5;
-  border-radius: 12px;
-  padding: 14px;
-  background: #fafcff;              /* ensure same background for all groups */
-}
 
 .dist-form .form-grid {
   display: grid;
@@ -1681,19 +1682,26 @@ a { color: inherit; text-decoration: none; }
 
 /* Card groups on distributor application */
 .dist-form .group {
-  background: #0f172a;         /* same dark card bg you use elsewhere */
-  border: 1px solid rgba(255,255,255,.08);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 18px;
+  padding: 24px;
+  margin-bottom: 24px;
+  position: relative;
 }
 
 .dist-form .group > legend {
   font-weight: 800;
   font-size: 16px;
-  color: #fff;
-  margin: 0 0 10px;
-  padding: 0;
+  color: var(--text);
+  margin: 0;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  position: absolute;
+  top: -12px;
+  left: 16px;
 }
 
 /* 2–3 column adaptive grid for fields */
@@ -2576,6 +2584,19 @@ button,
 [data-theme="dark"] .dist-form .group legend,
 [data-theme="dark"] .dist-form .checks-label {
   color: #ffffff !important;
+}
+
+/* Enhanced legend positioning for both themes */
+[data-theme="dark"] .dist-form .group legend {
+  background: var(--bg-card) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+}
+
+[data-theme="light"] .dist-form .group legend {
+  background: var(--bg-card) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
 }
 
 [data-theme="dark"] .dist-form input,
