@@ -252,6 +252,7 @@ export default async function handler(req, res) {
       shippingMethod
     });
 
+    // Send email to customer
     let sent = { ok: false };
     if (RESEND_API_KEY) {
       sent = await sendViaResend({ to: customerEmail || EMAIL_BCC || EMAIL_FROM, subject, html });
@@ -266,6 +267,16 @@ export default async function handler(req, res) {
       console.error('Email send failed:', sent);
       // Still ack webhook (don’t retry forever); you can watch logs if needed.
       return asJSON(res, 200, { received: true, email: 'failed', detail: sent });
+    }
+
+    // Also send a copy directly to Force Dowels (not just BCC)
+    if (EMAIL_BCC && customerEmail && customerEmail !== EMAIL_BCC) {
+      const internalSubject = `[New Order] ${subject}`;
+      if (RESEND_API_KEY) {
+        await sendViaResend({ to: EMAIL_BCC, subject: internalSubject, html });
+      } else if (SENDGRID_API_KEY) {
+        await sendViaSendgrid({ to: EMAIL_BCC, subject: internalSubject, html });
+      }
     }
 
     return asJSON(res, 200, { received: true, email: 'sent' });
