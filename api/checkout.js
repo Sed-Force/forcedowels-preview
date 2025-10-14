@@ -173,6 +173,8 @@ export default async function handler(req, res) {
     const metadata = {
       ship_amount_cents: String(shipAmountCents || 0),
       summary: JSON.stringify({ bulkUnits, kits }),
+      ship_carrier: shipping?.carrier || '',
+      ship_service: shipping?.service || '',
     };
 
     const session = await stripe.checkout.sessions.create({

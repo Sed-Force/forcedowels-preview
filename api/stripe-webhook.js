@@ -61,7 +61,7 @@ function tierLabel(units) {
   return '5,000–20,000';
 }
 
-function buildEmailHTML({ orderId, email, items, subtotalCents, shippingCents, totalCents, metaSummary }) {
+function buildEmailHTML({ orderId, email, items, subtotalCents, shippingCents, totalCents, metaSummary, shippingMethod }) {
   const { bulkUnits = 0, kits = 0 } = metaSummary || {};
   let bulkLine = '';
   if (bulkUnits > 0) {
@@ -86,9 +86,15 @@ function buildEmailHTML({ orderId, email, items, subtotalCents, shippingCents, t
       </tr>`;
   }
 
+  // Build shipping line with method details if available
+  let shippingLabel = 'Shipping';
+  if (shippingMethod) {
+    shippingLabel = `Shipping<br><span style="color:#6b7280;">${shippingMethod}</span>`;
+  }
+
   const shippingLine = `
     <tr>
-      <td style="padding:8px 0;">Shipping</td>
+      <td style="padding:8px 0;">${shippingLabel}</td>
       <td style="text-align:right; padding:8px 0;">${formatMoney(shippingCents)}</td>
     </tr>`;
 
@@ -227,6 +233,11 @@ export default async function handler(req, res) {
     let metaSummary = {};
     try { metaSummary = JSON.parse(session.metadata?.summary || '{}'); } catch {}
 
+    // Extract shipping method from metadata
+    const shipCarrier = session.metadata?.ship_carrier || '';
+    const shipService = session.metadata?.ship_service || '';
+    const shippingMethod = [shipCarrier, shipService].filter(Boolean).join(' ');
+
     // Build + send email
     const shortId = `#${sessionId.slice(-8)}`;
     const subject = `Force Dowels Order ${shortId}`;
@@ -237,7 +248,8 @@ export default async function handler(req, res) {
       subtotalCents,
       shippingCents,
       totalCents,
-      metaSummary
+      metaSummary,
+      shippingMethod
     });
 
     let sent = { ok: false };
