@@ -7,9 +7,10 @@ function send(res, code, data) {
 }
 
 export default async function handler(req, res) {
-  // Dynamic import to avoid module loading issues
-  const { sql, ensureCounterTable, upsertCounter, getCounter, nextCounter } = await import('./_lib/db.js');
   try {
+    // Dynamic import to avoid module loading issues
+    const { sql, ensureCounterTable, upsertCounter, getCounter, nextCounter } = await import('./_lib/db.js');
+
     if (req.method !== 'GET') return send(res, 405, { error: 'Method not allowed' });
 
     const token = req.query.token || req.headers['x-admin-token'];
