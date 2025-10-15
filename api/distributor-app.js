@@ -1,7 +1,5 @@
 // Minimal distributor application endpoint
 import { Resend } from 'resend';
-import { sql } from './_lib/db.js';
-import crypto from 'crypto';
 
 export default async function handler(req, res) {
   // CORS
@@ -33,110 +31,8 @@ export default async function handler(req, res) {
       return;
     }
 
-    // Check database connection
-    console.log('Checking database connection...');
-    console.log('sql object:', sql ? 'EXISTS' : 'NULL');
-    console.log('NEON_DATABASE_URL:', process.env.NEON_DATABASE_URL ? 'SET' : 'NOT SET');
-    console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
-
-    // Prepare application data
-    const fullAddress = [data.street, data.city, data.state, data.zip, data.country]
-      .filter(Boolean)
-      .join(', ');
-
-    const allDetails = {
-      website: data.website,
-      title: data.title,
-      address: fullAddress,
-      business_type: data.business_type,
-      years_in_business: data.years_in_business,
-      resale_tax_id: data.resale_tax_id,
-      monthly_volume: data.monthly_volume,
-      compatibility: Array.isArray(data.compatibility) ? data.compatibility.join(', ') : data.compatibility,
-      notes: data.notes
-    };
-
-    // Save to database and generate tokens
-    let distributorId = null;
-    let acceptUrl = null;
-    let rejectUrl = null;
-
-    if (!sql) {
-      console.error('ERROR: No database connection available');
-      return res.status(500).json({
-        error: 'Database not configured',
-        detail: 'NEON_DATABASE_URL environment variable is not set'
-      });
-    }
-
-    // Ensure tables exist
-    await sql`
-      CREATE TABLE IF NOT EXISTS distributors (
-        id SERIAL PRIMARY KEY,
-        company_name TEXT NOT NULL,
-        contact_name TEXT,
-        email TEXT NOT NULL,
-        phone TEXT,
-        territory TEXT,
-        status TEXT DEFAULT 'pending',
-        notes TEXT,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `;
-
-    await sql`
-      CREATE TABLE IF NOT EXISTS distributor_tokens (
-        id SERIAL PRIMARY KEY,
-        distributor_id INTEGER NOT NULL,
-        token TEXT NOT NULL UNIQUE,
-        action TEXT NOT NULL,
-        used BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `;
-
-    const result = await sql`
-      INSERT INTO distributors (
-        company_name,
-        contact_name,
-        email,
-        phone,
-        territory,
-        status,
-        notes
-      ) VALUES (
-        ${data.company},
-        ${data.contact_name},
-        ${data.email},
-        ${data.phone || null},
-        ${data.territory || null},
-        'pending',
-        ${JSON.stringify(allDetails)}
-      )
-      RETURNING id
-    `;
-
-    distributorId = result[0].id;
-
-    // Generate secure tokens for accept/reject (one-time use)
-    const acceptToken = crypto.randomBytes(32).toString('hex');
-    const rejectToken = crypto.randomBytes(32).toString('hex');
-
-    await sql`
-      INSERT INTO distributor_tokens (distributor_id, token, action)
-      VALUES
-        (${distributorId}, ${acceptToken}, 'accept'),
-        (${distributorId}, ${rejectToken}, 'reject')
-    `;
-
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels-preview.vercel.app';
-    acceptUrl = `${baseUrl}/api/distributor-action?token=${acceptToken}`;
-    rejectUrl = `${baseUrl}/api/distributor-action?token=${rejectToken}`;
-
-    console.log('✅ Database save successful. Distributor ID:', distributorId);
-    console.log('✅ Accept URL:', acceptUrl);
-    console.log('✅ Reject URL:', rejectUrl);
+    // For now, just send email without database
+    // TODO: Add database integration once env vars are confirmed working
 
     // Send email
     const resend = new Resend(process.env.RESEND_API_KEY);
@@ -170,8 +66,8 @@ export default async function handler(req, res) {
       compatibility: compatibility,
       notes: data.notes,
       submittedDate: submittedDate,
-      acceptUrl: acceptUrl,
-      rejectUrl: rejectUrl
+      acceptUrl: null,
+      rejectUrl: null
     });
 
     const textEmail = `
@@ -207,7 +103,7 @@ ${data.notes || 'None'}
       reply_to: data.email
     });
 
-    res.status(200).json({ ok: true, status: 'sent', distributorId });
+    res.status(200).json({ ok: true, status: 'sent' });
   } catch (error) {
     console.error('=== ERROR IN DISTRIBUTOR APP ===');
     console.error('Error message:', error.message);
@@ -377,34 +273,8 @@ function buildProfessionalEmail({
           <tr>
             <td style="padding: 0 40px 30px;">
               <h2 style="margin: 0 0 15px 0; color: ${brandColor}; font-size: 20px; font-weight: bold; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">Action Required</h2>
-              <p style="margin: 0 0 20px 0; color: #333; font-size: 14px; line-height: 1.6;">
-                Please review this distributor application and choose your response:
-              </p>
-
-              <!-- Action Buttons -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td align="center" style="padding: 10px;">
-                    <table cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td style="padding-right: 10px;">
-                          <a href="${acceptUrl}" style="display: inline-block; padding: 14px 32px; background-color: #10b981; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
-                            ✅ Accept Application
-                          </a>
-                        </td>
-                        <td style="padding-left: 10px;">
-                          <a href="${rejectUrl}" style="display: inline-block; padding: 14px 32px; background-color: #ef4444; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
-                            ❌ Decline Application
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <p style="margin: 20px 0 0 0; color: #666; font-size: 12px; line-height: 1.6; text-align: center;">
-                These links are secure and can only be used once. After taking action, you can contact the applicant directly using the information provided above.
+              <p style="margin: 0 0 15px 0; color: #333; font-size: 14px; line-height: 1.6;">
+                Please review this distributor application and contact the applicant directly using the information provided above.
               </p>
             </td>
           </tr>
