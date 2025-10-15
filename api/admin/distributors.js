@@ -25,10 +25,25 @@ export default async function handler(req, res) {
   try {
     await ensureDistributorsTable();
 
+    // Parse body for POST/PUT requests
+    let body = {};
+    if (req.method === 'POST' || req.method === 'PUT') {
+      const bodyText = await new Promise((resolve) => {
+        let data = '';
+        req.on('data', chunk => data += chunk);
+        req.on('end', () => resolve(data));
+      });
+      try {
+        body = JSON.parse(bodyText);
+      } catch (e) {
+        return res.status(400).json({ error: 'Invalid JSON body' });
+      }
+    }
+
     if (req.method === 'GET') {
       // Fetch all distributors
       const distributors = await sql`
-        SELECT 
+        SELECT
           id,
           company_name,
           contact_name,
@@ -42,12 +57,13 @@ export default async function handler(req, res) {
         ORDER BY created_at DESC
       `;
 
+      console.log('Fetched distributors:', distributors.length, 'records');
       return res.status(200).json({ distributors });
     }
 
     if (req.method === 'POST') {
       // Add new distributor
-      const { company_name, contact_name, email, phone, territory, status, notes } = req.body;
+      const { company_name, contact_name, email, phone, territory, status, notes } = body;
 
       if (!company_name || !email) {
         return res.status(400).json({ error: 'Company name and email are required' });
@@ -83,15 +99,17 @@ export default async function handler(req, res) {
 
     if (req.method === 'PUT') {
       // Update distributor
-      const { id, company_name, contact_name, email, phone, territory, status, notes } = req.body;
+      const { id, company_name, contact_name, email, phone, territory, status, notes } = body;
+
+      console.log('PUT request received:', { id, status, company_name });
 
       if (!id) {
         return res.status(400).json({ error: 'Distributor ID is required' });
       }
 
-      await sql`
+      const result = await sql`
         UPDATE distributors
-        SET 
+        SET
           company_name = ${company_name},
           contact_name = ${contact_name || null},
           email = ${email},
@@ -101,11 +119,15 @@ export default async function handler(req, res) {
           notes = ${notes || null},
           updated_at = NOW()
         WHERE id = ${id}
+        RETURNING id, status
       `;
 
-      return res.status(200).json({ 
+      console.log('Update result:', result);
+
+      return res.status(200).json({
         success: true,
-        message: 'Distributor updated successfully' 
+        message: 'Distributor updated successfully',
+        updated: result[0]
       });
     }
 
