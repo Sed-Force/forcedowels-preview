@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sales Analytics - Force Dowel Admin</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+      line-height: 1.5;
+    }
+    .admin-header {
+      background: #1C4A99;
+      color: white;
+      padding: 16px 24px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .admin-header h1 {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .admin-nav {
+      display: flex;
+      gap: 16px;
+    }
+    .admin-nav a {
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .admin-nav a:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    .admin-nav a.active {
+      background: rgba(255,255,255,0.2);
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .period-filters {
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 12px;
+      border: 1px solid #e5e7eb;
+      flex-wrap: wrap;
+    }
+    .period-btn {
+      padding: 10px 20px;
+      border: 2px solid #e5e7eb;
+      background: white;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #6b7280;
+    }
+    .period-btn:hover {
+      border-color: #1C4A99;
+      color: #1C4A99;
+    }
+    .period-btn.active {
+      background: #1C4A99;
+      color: white;
+      border-color: #1C4A99;
+    }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .metric-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .metric-label {
+      font-size: 14px;
+      color: #6b7280;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .metric-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1C4A99;
+    }
+    .metric-value.money::before {
+      content: '$';
+      font-size: 24px;
+      color: #6b7280;
+      margin-right: 4px;
+    }
+    .chart-container {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .chart-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: #111827;
+    }
+    .chart-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .chart-table th {
+      text-align: left;
+      padding: 12px;
+      background: #f9fafb;
+      border-bottom: 2px solid #e5e7eb;
+      font-weight: 600;
+      font-size: 14px;
+      color: #6b7280;
+    }
+    .chart-table td {
+      padding: 12px;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 14px;
+    }
+    .chart-table tr:hover {
+      background: #f9fafb;
+    }
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6b7280;
+      font-size: 16px;
+    }
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6b7280;
+    }
+    .empty h2 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header class="admin-header">
+    <h1>Force Dowel Admin</h1>
+    <nav class="admin-nav">
+      <a href="/admin.html">Orders</a>
+      <a href="/admin-customers.html">Customers</a>
+      <a href="/admin-distributors.html">Distributors</a>
+      <a href="/admin-sales.html" class="active">Sales</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="period-filters">
+      <button class="period-btn" onclick="loadSales('day')" data-period="day">Today</button>
+      <button class="period-btn" onclick="loadSales('week')" data-period="week">Last 7 Days</button>
+      <button class="period-btn" onclick="loadSales('month')" data-period="month">Last 30 Days</button>
+      <button class="period-btn" onclick="loadSales('year')" data-period="year">Last Year</button>
+      <button class="period-btn active" onclick="loadSales('all')" data-period="all">All Time</button>
+    </div>
+
+    <div class="metrics-grid" id="metrics-grid">
+      <div class="loading">Loading sales data...</div>
+    </div>
+
+    <div class="chart-container" id="chart-container" style="display: none;">
+      <h2 class="chart-title">Sales Over Time</h2>
+      <table class="chart-table" id="chart-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Orders</th>
+            <th style="text-align: right;">Revenue</th>
+          </tr>
+        </thead>
+        <tbody id="chart-body">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let currentPeriod = 'all';
+
+    async function loadSales(period = 'all') {
+      currentPeriod = period;
+      
+      // Update active button
+      document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.querySelector(`[data-period="${period}"]`).classList.add('active');
+
+      // Show loading
+      document.getElementById('metrics-grid').innerHTML = '<div class="loading">Loading sales data...</div>';
+      document.getElementById('chart-container').style.display = 'none';
+
+      try {
+        const res = await fetch(`/api/admin/sales-analytics?period=${period}`);
+        if (!res.ok) throw new Error('Failed to load sales data');
+        
+        const data = await res.json();
+        renderMetrics(data.metrics);
+        renderChart(data.chartData);
+      } catch (err) {
+        document.getElementById('metrics-grid').innerHTML = `
+          <div class="empty">
+            <h2>Error loading sales data</h2>
+            <p>${err.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderMetrics(metrics) {
+      const grid = document.getElementById('metrics-grid');
+      
+      grid.innerHTML = `
+        <div class="metric-card">
+          <div class="metric-label">Total Revenue</div>
+          <div class="metric-value money">${Number(metrics.totalRevenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Total Orders</div>
+          <div class="metric-value">${metrics.totalOrders}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Total Items Sold</div>
+          <div class="metric-value">${metrics.totalItems}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Average Order Value</div>
+          <div class="metric-value money">${Number(metrics.averageOrderValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+      `;
+    }
+
+    function renderChart(chartData) {
+      const container = document.getElementById('chart-container');
+      const tbody = document.getElementById('chart-body');
+      
+      if (chartData.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+
+      // Reverse to show most recent first
+      const reversedData = [...chartData].reverse();
+      
+      tbody.innerHTML = reversedData.map(item => `
+        <tr>
+          <td>${new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+          <td>${item.orders}</td>
+          <td style="text-align: right; font-weight: 600;">$${Number(item.revenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        </tr>
+      `).join('');
+      
+      container.style.display = 'block';
+    }
+
+    // Load initial data
+    loadSales('all');
+  </script>
+</body>
+</html>
+
