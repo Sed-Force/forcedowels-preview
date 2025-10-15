@@ -43,89 +43,89 @@ export default async function handler(req, res) {
       return json(res, 400, { error: 'Invalid JSON body' });
     }
 
-  // Extract all form fields
-  const {
-    company, website, contact_name, title, email, phone,
-    street, city, state, zip, country,
-    business_type, years_in_business, resale_tax_id,
-    monthly_volume, territory, compatibility,
-    notes, agree
-  } = body || {};
+    // Extract all form fields
+    const {
+      company, website, contact_name, title, email, phone,
+      street, city, state, zip, country,
+      business_type, years_in_business, resale_tax_id,
+      monthly_volume, territory, compatibility,
+      notes, agree
+    } = body || {};
 
-  // Validate required fields
-  if (!company || !contact_name || !email) {
-    return json(res, 400, { error: 'Missing required fields: company, contact_name, email' });
-  }
+    // Validate required fields
+    if (!company || !contact_name || !email) {
+      return json(res, 400, { error: 'Missing required fields: company, contact_name, email' });
+    }
 
-  // Optional identity (do not require auth)
-  let identity = null;
-  try { identity = await verifyAuth(req); } catch {}
+    // Optional identity (do not require auth)
+    let identity = null;
+    try { identity = await verifyAuth(req); } catch {}
 
-  // Sending switches / guards
-  if (SEND_MODE === 'disabled') {
-    return json(res, 200, { ok: true, mode: 'disabled', note: 'Email sending disabled in this environment.' });
-  }
-  if (!HAS_RESEND) {
-    return json(res, 501, {
-      error: 'Email service not configured',
-      hint: 'Set RESEND_API_KEY, EMAIL_FROM (or set EMAIL_SEND_MODE=disabled)'
+    // Sending switches / guards
+    if (SEND_MODE === 'disabled') {
+      return json(res, 200, { ok: true, mode: 'disabled', note: 'Email sending disabled in this environment.' });
+    }
+    if (!HAS_RESEND) {
+      return json(res, 501, {
+        error: 'Email service not configured',
+        hint: 'Set RESEND_API_KEY, EMAIL_FROM (or set EMAIL_SEND_MODE=disabled)'
+      });
+    }
+    if (!process.env.EMAIL_FROM) {
+      return json(res, 501, { error: 'Missing EMAIL_FROM' });
+    }
+    if (IS_PREVIEW && WHITELIST.length) {
+      const blocked = DISTRIBUTOR_RECIPIENTS.filter(to => !WHITELIST.includes(to));
+      if (blocked.length) return json(res, 200, { ok: true, mode: 'skipped_by_whitelist', blocked });
+    }
+
+    // Compose
+    const subject = `${PREFIX}New Distributor Application from ${company}`;
+
+    const html = buildEmailHtml({
+      company, website, contact_name, title, email, phone,
+      street, city, state, zip, country,
+      business_type, years_in_business, resale_tax_id,
+      monthly_volume, territory, compatibility,
+      notes,
+      identityEmail: identity?.email || null,
+      identityId: identity?.userId || null,
+      BRAND_BLUE, LOGO_URL, LOGO_HEIGHT
     });
-  }
-  if (!process.env.EMAIL_FROM) {
-    return json(res, 501, { error: 'Missing EMAIL_FROM' });
-  }
-  if (IS_PREVIEW && WHITELIST.length) {
-    const blocked = DISTRIBUTOR_RECIPIENTS.filter(to => !WHITELIST.includes(to));
-    if (blocked.length) return json(res, 200, { ok: true, mode: 'skipped_by_whitelist', blocked });
-  }
 
-  // Compose
-  const subject = `${PREFIX}New Distributor Application from ${company}`;
+    const text = [
+      'New Distributor Application',
+      '',
+      '=== Company & Contact ===',
+      `Company Name: ${company}`,
+      website ? `Website: ${website}` : null,
+      `Primary Contact: ${contact_name}`,
+      title ? `Title/Role: ${title}` : null,
+      `Email: ${email}`,
+      phone ? `Phone: ${phone}` : null,
+      '',
+      '=== Business Address ===',
+      street ? `Street: ${street}` : null,
+      city ? `City: ${city}` : null,
+      state ? `State: ${state}` : null,
+      zip ? `ZIP: ${zip}` : null,
+      country ? `Country: ${country}` : null,
+      '',
+      '=== Business Profile ===',
+      business_type ? `Business Type: ${business_type}` : null,
+      years_in_business ? `Years in Business: ${years_in_business}` : null,
+      resale_tax_id ? `Resale/Tax ID: ${resale_tax_id}` : null,
+      monthly_volume ? `Estimated Monthly Volume: ${monthly_volume}` : null,
+      territory ? `Territories/Regions: ${territory}` : null,
+      compatibility ? `Compatibility: ${Array.isArray(compatibility) ? compatibility.join(', ') : compatibility}` : null,
+      '',
+      notes ? `=== Additional Notes ===\n${notes}` : null,
+      '',
+      identity?.email ? `Signed-in email: ${identity.email}` : null,
+      identity?.userId ? `Signed-in id: ${identity.userId}` : null
+    ].filter(Boolean).join('\n');
 
-  const html = buildEmailHtml({
-    company, website, contact_name, title, email, phone,
-    street, city, state, zip, country,
-    business_type, years_in_business, resale_tax_id,
-    monthly_volume, territory, compatibility,
-    notes,
-    identityEmail: identity?.email || null,
-    identityId: identity?.userId || null,
-    BRAND_BLUE, LOGO_URL, LOGO_HEIGHT
-  });
-
-  const text = [
-    'New Distributor Application',
-    '',
-    '=== Company & Contact ===',
-    `Company Name: ${company}`,
-    website ? `Website: ${website}` : null,
-    `Primary Contact: ${contact_name}`,
-    title ? `Title/Role: ${title}` : null,
-    `Email: ${email}`,
-    phone ? `Phone: ${phone}` : null,
-    '',
-    '=== Business Address ===',
-    street ? `Street: ${street}` : null,
-    city ? `City: ${city}` : null,
-    state ? `State: ${state}` : null,
-    zip ? `ZIP: ${zip}` : null,
-    country ? `Country: ${country}` : null,
-    '',
-    '=== Business Profile ===',
-    business_type ? `Business Type: ${business_type}` : null,
-    years_in_business ? `Years in Business: ${years_in_business}` : null,
-    resale_tax_id ? `Resale/Tax ID: ${resale_tax_id}` : null,
-    monthly_volume ? `Estimated Monthly Volume: ${monthly_volume}` : null,
-    territory ? `Territories/Regions: ${territory}` : null,
-    compatibility ? `Compatibility: ${Array.isArray(compatibility) ? compatibility.join(', ') : compatibility}` : null,
-    '',
-    notes ? `=== Additional Notes ===\n${notes}` : null,
-    '',
-    identity?.email ? `Signed-in email: ${identity.email}` : null,
-    identity?.userId ? `Signed-in id: ${identity.userId}` : null
-  ].filter(Boolean).join('\n');
-
-  // Send to info@forcedowels.com
+    // Send to info@forcedowels.com
     try {
       const sent = await resend.emails.send({
         from: process.env.EMAIL_FROM,
