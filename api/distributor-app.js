@@ -33,31 +33,30 @@ export default async function handler(req, res) {
       return;
     }
 
+    // Prepare application data
+    const fullAddress = [data.street, data.city, data.state, data.zip, data.country]
+      .filter(Boolean)
+      .join(', ');
+
+    const allDetails = {
+      website: data.website,
+      title: data.title,
+      address: fullAddress,
+      business_type: data.business_type,
+      years_in_business: data.years_in_business,
+      resale_tax_id: data.resale_tax_id,
+      monthly_volume: data.monthly_volume,
+      compatibility: Array.isArray(data.compatibility) ? data.compatibility.join(', ') : data.compatibility,
+      notes: data.notes
+    };
+
     // Try to save to database (but don't fail if it doesn't work)
     let distributorId = null;
-    let acceptToken = null;
-    let rejectToken = null;
     let acceptUrl = null;
     let rejectUrl = null;
 
     try {
       if (sql) {
-        const fullAddress = [data.street, data.city, data.state, data.zip, data.country]
-          .filter(Boolean)
-          .join(', ');
-
-        const allDetails = {
-          website: data.website,
-          title: data.title,
-          address: fullAddress,
-          business_type: data.business_type,
-          years_in_business: data.years_in_business,
-          resale_tax_id: data.resale_tax_id,
-          monthly_volume: data.monthly_volume,
-          compatibility: Array.isArray(data.compatibility) ? data.compatibility.join(', ') : data.compatibility,
-          notes: data.notes
-        };
-
         // Ensure tables exist
         await sql`
           CREATE TABLE IF NOT EXISTS distributors (
@@ -109,8 +108,8 @@ export default async function handler(req, res) {
         distributorId = result[0].id;
 
         // Generate secure tokens for accept/reject (one-time use)
-        acceptToken = crypto.randomBytes(32).toString('hex');
-        rejectToken = crypto.randomBytes(32).toString('hex');
+        const acceptToken = crypto.randomBytes(32).toString('hex');
+        const rejectToken = crypto.randomBytes(32).toString('hex');
 
         await sql`
           INSERT INTO distributor_tokens (distributor_id, token, action)
@@ -122,10 +121,16 @@ export default async function handler(req, res) {
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels-preview.vercel.app';
         acceptUrl = `${baseUrl}/api/distributor-action?token=${acceptToken}`;
         rejectUrl = `${baseUrl}/api/distributor-action?token=${rejectToken}`;
+
+        console.log('Database save successful. Distributor ID:', distributorId);
+        console.log('Accept URL:', acceptUrl);
+        console.log('Reject URL:', rejectUrl);
+      } else {
+        console.log('No database configured - buttons will not be included in email');
       }
     } catch (dbError) {
       console.error('Database error (continuing without DB):', dbError);
-      // Continue without database - email will still be sent
+      // Continue without database - email will still be sent without buttons
     }
 
     // Send email
@@ -360,6 +365,7 @@ function buildProfessionalEmail({
           </tr>` : ''}
 
           <!-- Action Required -->
+          ${acceptUrl && rejectUrl ? `
           <tr>
             <td style="padding: 0 40px 30px;">
               <h2 style="margin: 0 0 15px 0; color: ${brandColor}; font-size: 20px; font-weight: bold; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">Action Required</h2>
@@ -394,6 +400,16 @@ function buildProfessionalEmail({
               </p>
             </td>
           </tr>
+          ` : `
+          <tr>
+            <td style="padding: 0 40px 30px;">
+              <h2 style="margin: 0 0 15px 0; color: ${brandColor}; font-size: 20px; font-weight: bold; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">Action Required</h2>
+              <p style="margin: 0 0 15px 0; color: #333; font-size: 14px; line-height: 1.6;">
+                Please review this distributor application and contact the applicant directly using the information provided above.
+              </p>
+            </td>
+          </tr>
+          `}
 
           <!-- Footer -->
           <tr>
