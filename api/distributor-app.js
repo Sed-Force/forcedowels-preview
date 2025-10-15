@@ -1,5 +1,7 @@
 // Minimal distributor application endpoint
 import { Resend } from 'resend';
+import { sql } from './_lib/db.js';
+import crypto from 'crypto';
 
 export default async function handler(req, res) {
   // CORS
@@ -31,6 +33,69 @@ export default async function handler(req, res) {
       return;
     }
 
+    // Save to database first
+    const fullAddress = [data.street, data.city, data.state, data.zip, data.country]
+      .filter(Boolean)
+      .join(', ');
+
+    const allDetails = {
+      website: data.website,
+      title: data.title,
+      address: fullAddress,
+      business_type: data.business_type,
+      years_in_business: data.years_in_business,
+      resale_tax_id: data.resale_tax_id,
+      monthly_volume: data.monthly_volume,
+      compatibility: Array.isArray(data.compatibility) ? data.compatibility.join(', ') : data.compatibility,
+      notes: data.notes
+    };
+
+    const result = await sql`
+      INSERT INTO distributors (
+        company_name,
+        contact_name,
+        email,
+        phone,
+        territory,
+        status,
+        notes
+      ) VALUES (
+        ${data.company},
+        ${data.contact_name},
+        ${data.email},
+        ${data.phone || null},
+        ${data.territory || null},
+        'pending',
+        ${JSON.stringify(allDetails)}
+      )
+      RETURNING id
+    `;
+
+    const distributorId = result[0].id;
+
+    // Generate secure tokens for accept/reject (one-time use)
+    const acceptToken = crypto.randomBytes(32).toString('hex');
+    const rejectToken = crypto.randomBytes(32).toString('hex');
+
+    // Store tokens in database
+    await sql`
+      CREATE TABLE IF NOT EXISTS distributor_tokens (
+        id SERIAL PRIMARY KEY,
+        distributor_id INTEGER NOT NULL,
+        token TEXT NOT NULL UNIQUE,
+        action TEXT NOT NULL,
+        used BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `;
+
+    await sql`
+      INSERT INTO distributor_tokens (distributor_id, token, action)
+      VALUES
+        (${distributorId}, ${acceptToken}, 'accept'),
+        (${distributorId}, ${rejectToken}, 'reject')
+    `;
+
     // Send email
     const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -43,6 +108,10 @@ export default async function handler(req, res) {
     const compatibility = Array.isArray(data.compatibility)
       ? data.compatibility.join(', ')
       : (data.compatibility || 'Not specified');
+
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels-preview.vercel.app';
+    const acceptUrl = `${baseUrl}/api/distributor-action?token=${acceptToken}`;
+    const rejectUrl = `${baseUrl}/api/distributor-action?token=${rejectToken}`;
 
     const htmlEmail = buildProfessionalEmail({
       company: data.company,
@@ -62,7 +131,9 @@ export default async function handler(req, res) {
       territory: data.territory,
       compatibility: compatibility,
       notes: data.notes,
-      submittedDate: submittedDate
+      submittedDate: submittedDate,
+      acceptUrl: acceptUrl,
+      rejectUrl: rejectUrl
     });
 
     const textEmail = `
@@ -113,7 +184,7 @@ function buildProfessionalEmail({
   street, city, state, zip, country,
   business_type, years_in_business, resale_tax_id,
   monthly_volume, territory, compatibility, notes,
-  submittedDate
+  submittedDate, acceptUrl, rejectUrl
 }) {
   const logoUrl = process.env.EMAIL_LOGO_URL || 'https://forcedowels-preview.vercel.app/images/force-dowel-logo.jpg';
   const brandColor = '#1C4A99';
@@ -264,8 +335,34 @@ function buildProfessionalEmail({
           <tr>
             <td style="padding: 0 40px 30px;">
               <h2 style="margin: 0 0 15px 0; color: ${brandColor}; font-size: 20px; font-weight: bold; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">Action Required</h2>
-              <p style="margin: 0 0 15px 0; color: #333; font-size: 14px; line-height: 1.6;">
-                Please review this distributor application and respond to the applicant directly using the contact information provided above.
+              <p style="margin: 0 0 20px 0; color: #333; font-size: 14px; line-height: 1.6;">
+                Please review this distributor application and choose your response:
+              </p>
+
+              <!-- Action Buttons -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding: 10px;">
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="padding-right: 10px;">
+                          <a href="${acceptUrl}" style="display: inline-block; padding: 14px 32px; background-color: #10b981; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
+                            ✅ Accept Application
+                          </a>
+                        </td>
+                        <td style="padding-left: 10px;">
+                          <a href="${rejectUrl}" style="display: inline-block; padding: 14px 32px; background-color: #ef4444; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
+                            ❌ Decline Application
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 20px 0 0 0; color: #666; font-size: 12px; line-height: 1.6; text-align: center;">
+                These links are secure and can only be used once. After taking action, you can contact the applicant directly using the information provided above.
               </p>
             </td>
           </tr>
