@@ -2,8 +2,6 @@
 import { json, applyCORS, verifyAuth } from './_lib/auth.js';
 import { Resend } from 'resend';
 
-export const config = { runtime: 'nodejs' };
-
 // ---------- Env controls ----------
 const IS_PREVIEW = process.env.VERCEL_ENV === 'preview';
 const SEND_MODE  = (process.env.EMAIL_SEND_MODE || 'send').toLowerCase(); // "send" | "disabled"
