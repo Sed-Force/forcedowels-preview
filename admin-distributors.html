@@ -517,7 +517,7 @@
 
     function updateCounts() {
       const counts = {
-        all: allDistributors.length,
+        all: 0,
         pending: 0,
         approved: 0,
         rejected: 0,
@@ -526,6 +526,11 @@
       };
 
       allDistributors.forEach(dist => {
+        // Count for "All" excludes rejected
+        if (dist.status !== 'rejected') {
+          counts.all++;
+        }
+
         if (counts[dist.status] !== undefined) {
           counts[dist.status]++;
         }
@@ -555,6 +560,11 @@
 
       // Filter by status
       let filtered = allDistributors.filter(dist => {
+        // "All" filter excludes rejected applications
+        if (currentFilter === 'all' && dist.status === 'rejected') {
+          return false;
+        }
+
         if (currentFilter !== 'all' && dist.status !== currentFilter) {
           return false;
         }
@@ -722,6 +732,20 @@
             </div>
             ` : ''}
 
+            <!-- Purchase History (for approved/active distributors) -->
+            ${(dist.status === 'approved' || dist.status === 'active') ? `
+            <h4 class="section-title">Purchase History</h4>
+            <div id="orders-${dist.id}" class="orders-section">
+              <button class="btn btn-secondary" onclick="loadDistributorOrders(${dist.id}, event)" style="margin-bottom: 12px;">
+                📦 View Order History
+              </button>
+              <button class="btn btn-primary" onclick="addDistributorOrder(${dist.id}, event)" style="margin-bottom: 12px; margin-left: 8px;">
+                ➕ Add Order
+              </button>
+              <div id="orders-list-${dist.id}" style="display: none;"></div>
+            </div>
+            ` : ''}
+
             <!-- Action Buttons -->
             ${dist.status === 'pending' ? `
             <div class="action-buttons">
@@ -872,6 +896,120 @@
     document.getElementById('distributor-modal').addEventListener('click', (e) => {
       if (e.target.id === 'distributor-modal') closeModal();
     });
+
+    // Load distributor orders
+    async function loadDistributorOrders(distributorId, event) {
+      event.stopPropagation();
+
+      const listEl = document.getElementById(`orders-list-${distributorId}`);
+      const button = event.target;
+
+      // Toggle visibility
+      if (listEl.style.display === 'block') {
+        listEl.style.display = 'none';
+        button.textContent = '📦 View Order History';
+        return;
+      }
+
+      button.textContent = '⏳ Loading...';
+      button.disabled = true;
+
+      try {
+        const res = await fetch(`/api/admin/distributor-orders?distributor_id=${distributorId}`);
+        if (!res.ok) throw new Error('Failed to load orders');
+
+        const data = await res.json();
+        const orders = data.orders || [];
+
+        if (orders.length === 0) {
+          listEl.innerHTML = '<div style="padding: 16px; background: #f9fafb; border-radius: 8px; text-align: center; color: #6b7280;">No orders yet</div>';
+        } else {
+          listEl.innerHTML = `
+            <table style="width: 100%; border-collapse: collapse; margin-top: 12px;">
+              <thead>
+                <tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                  <th style="padding: 12px; text-align: left; font-weight: 600;">Order ID</th>
+                  <th style="padding: 12px; text-align: left; font-weight: 600;">Date</th>
+                  <th style="padding: 12px; text-align: right; font-weight: 600;">Total</th>
+                  <th style="padding: 12px; text-align: left; font-weight: 600;">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${orders.map(order => `
+                  <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 12px;">${escapeHtml(order.order_id)}</td>
+                    <td style="padding: 12px;">${order.order_date}</td>
+                    <td style="padding: 12px; text-align: right;">$${Number(order.total_amount).toFixed(2)}</td>
+                    <td style="padding: 12px;">
+                      <span class="status-badge status-${order.status}">${order.status}</span>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          `;
+        }
+
+        listEl.style.display = 'block';
+        button.textContent = '📦 Hide Order History';
+        button.disabled = false;
+      } catch (err) {
+        alert('Error loading orders: ' + err.message);
+        button.textContent = '📦 View Order History';
+        button.disabled = false;
+      }
+    }
+
+    // Add order to distributor
+    async function addDistributorOrder(distributorId, event) {
+      event.stopPropagation();
+
+      const distributor = allDistributors.find(d => d.id === distributorId);
+      if (!distributor) return;
+
+      const orderId = prompt(`Add order for ${distributor.company_name}\n\nEnter Order ID:`);
+      if (!orderId) return;
+
+      const totalAmount = prompt('Enter total amount (e.g., 1250.00):');
+      if (!totalAmount) return;
+
+      const items = prompt('Enter items description (optional):');
+
+      try {
+        const res = await fetch('/api/admin/distributor-orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            distributor_id: distributorId,
+            order_id: orderId,
+            total_amount: parseFloat(totalAmount),
+            items: items || null,
+            status: 'completed'
+          })
+        });
+
+        if (!res.ok) throw new Error('Failed to add order');
+
+        alert('✅ Order added successfully!');
+
+        // Reload orders if they're currently displayed
+        const listEl = document.getElementById(`orders-list-${distributorId}`);
+        if (listEl.style.display === 'block') {
+          // Trigger reload by simulating button click
+          const viewButton = event.target.previousElementSibling;
+          listEl.style.display = 'none';
+          viewButton.click();
+        }
+      } catch (err) {
+        alert('❌ Error adding order: ' + err.message);
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
 
     // Load on page load
     loadDistributors();

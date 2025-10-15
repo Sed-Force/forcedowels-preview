@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Customer Database - Force Dowel Admin</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+      line-height: 1.5;
+    }
+    .admin-header {
+      background: #1C4A99;
+      color: white;
+      padding: 16px 24px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .admin-header h1 {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .admin-nav {
+      display: flex;
+      gap: 16px;
+    }
+    .admin-nav a {
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .admin-nav a:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    .admin-nav a.active {
+      background: rgba(255,255,255,0.2);
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .search-bar {
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      border: 1px solid #e5e7eb;
+    }
+    .search-bar input {
+      width: 100%;
+      padding: 10px 16px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 15px;
+      font-family: inherit;
+    }
+    .search-bar input:focus {
+      outline: none;
+      border-color: #1C4A99;
+      box-shadow: 0 0 0 3px rgba(28, 74, 153, 0.1);
+    }
+    .customer-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .customer-card:hover {
+      box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+    }
+    .customer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .customer-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .customer-email {
+      font-size: 14px;
+      color: #6b7280;
+    }
+    .customer-stats {
+      display: flex;
+      gap: 24px;
+      margin-top: 12px;
+    }
+    .stat {
+      font-size: 14px;
+    }
+    .stat-label {
+      color: #6b7280;
+      font-weight: 600;
+    }
+    .stat-value {
+      color: #111827;
+      font-weight: 700;
+    }
+    .order-history {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #f3f4f6;
+      display: none;
+    }
+    .order-history.expanded {
+      display: block;
+    }
+    .order-history h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #374151;
+    }
+    .order-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .order-table th {
+      text-align: left;
+      padding: 8px;
+      background: #f9fafb;
+      font-weight: 600;
+      color: #6b7280;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .order-table td {
+      padding: 8px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .order-table tr:last-child td {
+      border-bottom: none;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .status-shipped {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .loading, .empty {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+    }
+    .expand-icon {
+      transition: transform 0.2s;
+      display: inline-block;
+    }
+    .expand-icon.expanded {
+      transform: rotate(180deg);
+    }
+    @media (max-width: 768px) {
+      .customer-stats {
+        flex-direction: column;
+        gap: 8px;
+      }
+      .order-table {
+        font-size: 12px;
+      }
+      .order-table th, .order-table td {
+        padding: 6px 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="admin-header">
+    <h1>Force Dowel Admin</h1>
+    <nav class="admin-nav">
+      <a href="/admin.html">Orders</a>
+      <a href="/admin-customers.html" class="active">Customers</a>
+      <a href="/admin-distributors.html">Distributors</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="Search by customer name or email...">
+    </div>
+
+    <div id="customers-container">
+      <div class="loading">Loading customers...</div>
+    </div>
+  </div>
+
+  <script>
+    let allCustomers = [];
+
+    async function loadCustomers() {
+      try {
+        const res = await fetch('/api/admin/customers');
+        if (!res.ok) throw new Error('Failed to load customers');
+        const data = await res.json();
+        allCustomers = data.customers || [];
+        renderCustomers();
+      } catch (err) {
+        document.getElementById('customers-container').innerHTML = `
+          <div class="empty">
+            <h2>Error loading customers</h2>
+            <p>${err.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderCustomers() {
+      const container = document.getElementById('customers-container');
+      const searchTerm = document.getElementById('search-input').value.toLowerCase();
+
+      let filtered = allCustomers.filter(customer => {
+        return !searchTerm || 
+          customer.email.toLowerCase().includes(searchTerm) ||
+          (customer.name && customer.name.toLowerCase().includes(searchTerm));
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty">
+            <h2>No customers found</h2>
+            <p>Try adjusting your search</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(customer => `
+        <div class="customer-card" onclick="toggleOrders('${customer.email}')">
+          <div class="customer-header">
+            <div>
+              <div class="customer-name">${customer.name || customer.email}</div>
+              <div class="customer-email">${customer.email}</div>
+            </div>
+            <span class="expand-icon" id="icon-${btoa(customer.email)}">▼</span>
+          </div>
+          
+          <div class="customer-stats">
+            <div class="stat">
+              <span class="stat-label">Total Orders:</span>
+              <span class="stat-value">${customer.order_count}</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Total Spent:</span>
+              <span class="stat-value">${customer.total_spent}</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Last Order:</span>
+              <span class="stat-value">${customer.last_order_date}</span>
+            </div>
+          </div>
+
+          <div class="order-history" id="orders-${btoa(customer.email)}">
+            <h4>Order History</h4>
+            <table class="order-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Order ID</th>
+                  <th>Invoice #</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${customer.orders.map(order => `
+                  <tr>
+                    <td>${order.date}</td>
+                    <td>${order.order_id}</td>
+                    <td>${order.invoice_number}</td>
+                    <td>${order.amount}</td>
+                    <td><span class="status-badge status-${order.status}">${order.status === 'pending' ? 'Pending' : 'Shipped'}</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleOrders(email) {
+      const encodedEmail = btoa(email);
+      const ordersDiv = document.getElementById(`orders-${encodedEmail}`);
+      const icon = document.getElementById(`icon-${encodedEmail}`);
+      
+      ordersDiv.classList.toggle('expanded');
+      icon.classList.toggle('expanded');
+    }
+
+    // Event listeners
+    document.getElementById('search-input').addEventListener('input', renderCustomers);
+
+    // Load on page load
+    loadCustomers();
+  </script>
+</body>
+</html>
+

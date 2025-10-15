@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Force Dowel Admin</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+      line-height: 1.5;
+    }
+    .admin-header {
+      background: #1C4A99;
+      color: white;
+      padding: 16px 24px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .admin-header h1 {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .admin-nav {
+      display: flex;
+      gap: 16px;
+    }
+    .admin-nav a {
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .admin-nav a:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    .admin-nav a.active {
+      background: rgba(255,255,255,0.2);
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .filters {
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      border: 1px solid #e5e7eb;
+    }
+    .filters label {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .filters select, .filters input {
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .filters select:focus, .filters input:focus {
+      outline: none;
+      border-color: #1C4A99;
+      box-shadow: 0 0 0 3px rgba(28, 74, 153, 0.1);
+    }
+    .order-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+      transition: box-shadow 0.2s;
+    }
+    .order-card:hover {
+      box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+    }
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .order-info h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+    .order-info p {
+      font-size: 14px;
+      color: #6b7280;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .status-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .status-shipped {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .order-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .detail-item {
+      font-size: 14px;
+    }
+    .detail-label {
+      color: #6b7280;
+      font-weight: 600;
+      display: block;
+      margin-bottom: 2px;
+    }
+    .detail-value {
+      color: #111827;
+    }
+    .shipping-form {
+      display: flex;
+      gap: 12px;
+      align-items: end;
+      padding-top: 12px;
+      border-top: 1px solid #f3f4f6;
+    }
+    .form-group {
+      flex: 1;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 4px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: #1C4A99;
+      box-shadow: 0 0 0 3px rgba(28, 74, 153, 0.1);
+    }
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .btn-primary {
+      background: #1C4A99;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #163a7a;
+    }
+    .btn-primary:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+    }
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6b7280;
+    }
+    .empty h2 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+    .success-msg {
+      background: #d1fae5;
+      color: #065f46;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-top: 8px;
+      display: none;
+    }
+    @media (max-width: 768px) {
+      .order-header {
+        flex-direction: column;
+        gap: 12px;
+      }
+      .shipping-form {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .filters {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="admin-header">
+    <h1>Force Dowel Admin</h1>
+    <nav class="admin-nav">
+      <a href="/admin.html" class="active">Orders</a>
+      <a href="/admin-customers.html">Customers</a>
+      <a href="/admin-distributors.html">Distributors</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="filters">
+      <label for="filter-status">Filter:</label>
+      <select id="filter-status">
+        <option value="all">All Orders</option>
+        <option value="pending" selected>Pending Only</option>
+        <option value="shipped">Shipped Only</option>
+      </select>
+      
+      <label for="search-email">Search:</label>
+      <input type="text" id="search-email" placeholder="Customer email or name...">
+    </div>
+
+    <div id="orders-container">
+      <div class="loading">Loading orders...</div>
+    </div>
+  </div>
+
+  <script>
+    let allOrders = [];
+
+    async function loadOrders() {
+      try {
+        const res = await fetch('/api/admin/orders');
+        if (!res.ok) throw new Error('Failed to load orders');
+        const data = await res.json();
+        allOrders = data.orders || [];
+        renderOrders();
+      } catch (err) {
+        document.getElementById('orders-container').innerHTML = `
+          <div class="empty">
+            <h2>Error loading orders</h2>
+            <p>${err.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderOrders() {
+      const container = document.getElementById('orders-container');
+      const statusFilter = document.getElementById('filter-status').value;
+      const searchTerm = document.getElementById('search-email').value.toLowerCase();
+
+      let filtered = allOrders.filter(order => {
+        const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+        const matchesSearch = !searchTerm || 
+          order.customer_email.toLowerCase().includes(searchTerm) ||
+          (order.customer_name && order.customer_name.toLowerCase().includes(searchTerm));
+        return matchesStatus && matchesSearch;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty">
+            <h2>No orders found</h2>
+            <p>Try adjusting your filters</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(order => `
+        <div class="order-card" data-session-id="${order.session_id}">
+          <div class="order-header">
+            <div class="order-info">
+              <h3>${order.customer_name || order.customer_email}</h3>
+              <p>${order.customer_email}</p>
+            </div>
+            <span class="status-badge status-${order.status}">${order.status === 'pending' ? 'Pending' : 'Shipped'}</span>
+          </div>
+          
+          <div class="order-details">
+            <div class="detail-item">
+              <span class="detail-label">Order ID</span>
+              <span class="detail-value">${order.order_id}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Invoice #</span>
+              <span class="detail-value">${order.invoice_number}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Date</span>
+              <span class="detail-value">${order.order_date}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Amount</span>
+              <span class="detail-value">${order.amount}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Items</span>
+              <span class="detail-value">${order.items_summary}</span>
+            </div>
+          </div>
+
+          ${order.status === 'pending' ? `
+            <form class="shipping-form" onsubmit="markAsShipped(event, '${order.session_id}')">
+              <div class="form-group">
+                <label for="carrier-${order.session_id}">Carrier</label>
+                <select
+                  id="carrier-${order.session_id}"
+                  name="carrier"
+                  onchange="toggleTrackingRequired(this, '${order.session_id}')"
+                  required
+                >
+                  <option value="">Select carrier...</option>
+                  <option value="UPS">UPS</option>
+                  <option value="USPS">USPS</option>
+                  <option value="TQL Freight">TQL Freight</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="tracking-${order.session_id}">Tracking Number</label>
+                <input
+                  type="text"
+                  id="tracking-${order.session_id}"
+                  name="tracking"
+                  placeholder="Enter tracking number"
+                  required
+                >
+              </div>
+              <button type="submit" class="btn btn-primary">Mark as Shipped</button>
+            </form>
+            <div class="success-msg" id="success-${order.session_id}">
+              ✓ Order marked as shipped! Email sent to customer.
+            </div>
+          ` : `
+            <div class="order-details">
+              <div class="detail-item">
+                <span class="detail-label">Carrier</span>
+                <span class="detail-value">${order.carrier || 'N/A'}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Tracking Number</span>
+                <span class="detail-value">${order.tracking_number || 'N/A'}</span>
+              </div>
+            </div>
+          `}
+        </div>
+      `).join('');
+    }
+
+    function toggleTrackingRequired(selectEl, sessionId) {
+      const trackingInput = document.getElementById(`tracking-${sessionId}`);
+      if (selectEl.value === 'TQL Freight') {
+        trackingInput.required = false;
+        trackingInput.placeholder = 'Optional for TQL Freight';
+      } else {
+        trackingInput.required = true;
+        trackingInput.placeholder = 'Enter tracking number';
+      }
+    }
+
+    async function markAsShipped(event, sessionId) {
+      event.preventDefault();
+      const form = event.target;
+      const btn = form.querySelector('button');
+      const carrierSelect = form.querySelector('select[name="carrier"]');
+      const trackingInput = form.querySelector('input[name="tracking"]');
+      const carrier = carrierSelect.value;
+      const tracking = trackingInput.value.trim();
+
+      if (!carrier) {
+        alert('Please select a carrier');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Updating...';
+
+      try {
+        const res = await fetch('/api/admin/ship-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionId,
+            carrier: carrier,
+            tracking_number: tracking || null
+          })
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'Failed to update order');
+        }
+
+        // Update local data
+        const order = allOrders.find(o => o.session_id === sessionId);
+        if (order) {
+          order.status = 'shipped';
+          order.carrier = carrier;
+          order.tracking_number = tracking || 'N/A';
+        }
+
+        // Show success message
+        const successMsg = document.getElementById(`success-${sessionId}`);
+        successMsg.style.display = 'block';
+
+        // Re-render after a moment
+        setTimeout(() => {
+          renderOrders();
+        }, 2000);
+
+      } catch (err) {
+        alert('Error: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Mark as Shipped';
+      }
+    }
+
+    // Event listeners
+    document.getElementById('filter-status').addEventListener('change', renderOrders);
+    document.getElementById('search-email').addEventListener('input', renderOrders);
+
+    // Load on page load
+    loadOrders();
+  </script>
+</body>
+</html>
+

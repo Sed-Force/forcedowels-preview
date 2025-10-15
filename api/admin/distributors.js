@@ -19,6 +19,21 @@ async function ensureDistributorsTable() {
       updated_at TIMESTAMP DEFAULT NOW()
     );
   `;
+
+  // Create distributor_orders table to track purchase history
+  await sql`
+    CREATE TABLE IF NOT EXISTS distributor_orders (
+      id SERIAL PRIMARY KEY,
+      distributor_id INTEGER REFERENCES distributors(id) ON DELETE CASCADE,
+      order_id TEXT NOT NULL,
+      stripe_session_id TEXT,
+      order_date TIMESTAMP DEFAULT NOW(),
+      total_amount NUMERIC(10,2),
+      items TEXT,
+      status TEXT DEFAULT 'completed',
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `;
 }
 
 export default async function handler(req, res) {
