@@ -12,11 +12,15 @@
   }
   function save(items) {
     localStorage.setItem(LS_KEY, JSON.stringify(items));
-    // header badge
+    // header badge - shows total dowel units
     const badge = document.getElementById('cart-count');
     if (badge) {
-      const count = items.reduce((n,i)=> n + (i.type==='kit' ? i.qty : (i.type==='bulk' && i.units ? 1 : 0)), 0);
-      badge.textContent = count ? String(count) : '';
+      const count = items.reduce((n, i) => {
+        if (i.type === 'bulk') return n + (i.units || 0); // total dowel units
+        if (i.type === 'kit') return n + (i.qty || 0) * 300; // kits have 300 dowels each
+        return n;
+      }, 0);
+      badge.textContent = count ? count.toLocaleString() : '';
     }
   }
   const clampUnits = u => {

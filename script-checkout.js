@@ -37,7 +37,7 @@
       }).filter(Boolean);
     }catch{return [];}
   }
-  function updateBadge(items){ if(!badgeEl)return; let t=0; for(const it of items){ if(it.type==='bulk')t+=it.units; else if(it.type==='kit')t+=it.qty; } badgeEl.textContent=t>0?String(t):''; badgeEl.style.display=t>0?'inline-block':'none'; }
+  function updateBadge(items){ if(!badgeEl)return; let t=0; for(const it of items){ if(it.type==='bulk')t+=it.units; else if(it.type==='kit')t+=(it.qty*300); } badgeEl.textContent=t>0?t.toLocaleString():''; badgeEl.style.display=t>0?'inline-block':'none'; }
   function computeSubtotal(items){ let c=0; for(const it of items){ if(it.type==='bulk') c+=Math.round(unitPriceFor(it.units)*it.units*100); else if(it.type==='kit') c+=3600*it.qty; } return c/100; }
   function getDest(){ try{return JSON.parse(localStorage.getItem(KEY_DEST)||'{}');}catch{return{};} }
   function setDest(d){ localStorage.setItem(KEY_DEST, JSON.stringify(d||{})); }

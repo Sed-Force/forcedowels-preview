@@ -6,8 +6,10 @@
 
 export const config = { runtime: 'nodejs' };
 
+import Stripe from 'stripe';
+
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
-const stripe = stripeSecret ? require('stripe')(stripeSecret) : null;
+const stripe = stripeSecret ? new Stripe(stripeSecret) : null;
 
 const asJSON = (res, code, obj) => {
   res.status(code).setHeader('Content-Type', 'application/json');

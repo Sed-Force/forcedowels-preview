@@ -17,10 +17,10 @@
     const items = getCart();
     let count = 0;
     for (const it of items) {
-      if (it.type === 'bulk') count += Math.max(1, Math.round((it.units || 0) / 5000));
-      if (it.type === 'kit') count += it.qty || 0;
+      if (it.type === 'bulk') count += (it.units || 0); // total dowel units
+      if (it.type === 'kit') count += (it.qty || 0) * 300; // kits have 300 dowels each
     }
-    badge.textContent = count ? String(count) : '';
+    badge.textContent = count ? count.toLocaleString() : '';
   };
 
   function addBulk(units) {

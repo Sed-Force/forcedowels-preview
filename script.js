@@ -55,7 +55,24 @@
 window.addEventListener('load', async () => {
   try {
     if (window.Clerk) {
-      await window.Clerk.load();
+      // Get current theme
+      const currentTheme = document.documentElement.getAttribute('data-theme') ||
+                          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+      // Configure Clerk appearance based on theme
+      await window.Clerk.load({
+        appearance: {
+          baseTheme: currentTheme === 'dark' ? 'dark' : 'light',
+          variables: {
+            colorPrimary: '#224d8f',
+            colorText: currentTheme === 'dark' ? '#ffffff' : '#000000',
+            colorBackground: currentTheme === 'dark' ? '#1e2a3f' : '#ffffff',
+            colorInputBackground: currentTheme === 'dark' ? '#0f1420' : '#ffffff',
+            colorInputText: currentTheme === 'dark' ? '#ffffff' : '#000000',
+          }
+        }
+      });
+
       const userBtn = document.getElementById('user-button');
       if (window.Clerk.user && userBtn) {
         window.Clerk.mountUserButton(userBtn);
@@ -104,7 +121,10 @@ window.addEventListener('load', async () => {
 
   const fmt = (n)=> `$${n.toFixed(2)}`;
   const load = ()=> JSON.parse(localStorage.getItem('fd_cart') || '[]');
-  const save = (data)=> localStorage.setItem('fd_cart', JSON.stringify(data));
+  const save = (data)=> {
+    localStorage.setItem('fd_cart', JSON.stringify(data));
+    window.dispatchEvent(new CustomEvent('fd_cart_updated', { detail: data }));
+  };
 
   function open(){ cartEl.setAttribute('aria-hidden', 'false'); }
   function close(){ cartEl.setAttribute('aria-hidden', 'true'); }
@@ -262,8 +282,8 @@ window.addEventListener('load', async () => {
         // open cart
         const cart = document.getElementById('cart');
         if (cart) cart.setAttribute('aria-hidden', 'false');
-        // trigger re-render if our cart UI is on this page
-        const evt = new Event('storage'); window.dispatchEvent(evt);
+        // trigger re-render and badge update
+        window.dispatchEvent(new CustomEvent('fd_cart_updated', { detail: data }));
       } catch (_) {}
     });
   }
@@ -284,7 +304,7 @@ window.addEventListener('load', async () => {
         localStorage.setItem('fd_cart', JSON.stringify(data));
         const cart = document.getElementById('cart');
         if (cart) cart.setAttribute('aria-hidden', 'false');
-        const evt = new Event('storage'); window.dispatchEvent(evt);
+        window.dispatchEvent(new CustomEvent('fd_cart_updated', { detail: data }));
       } catch (_) {}
     });
   }
@@ -338,10 +358,29 @@ window.addEventListener('load', async () => {
   if (window.Clerk?.addListener) window.Clerk.addListener(render);
   render();
 
+  // Helper to get Clerk appearance config based on current theme
+  const getClerkAppearance = () => {
+    const currentTheme = document.documentElement.getAttribute('data-theme') ||
+                        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    return {
+      baseTheme: currentTheme === 'dark' ? 'dark' : 'light',
+      variables: {
+        colorPrimary: '#224d8f',
+        colorText: currentTheme === 'dark' ? '#ffffff' : '#000000',
+        colorBackground: currentTheme === 'dark' ? '#1e2a3f' : '#ffffff',
+        colorInputBackground: currentTheme === 'dark' ? '#0f1420' : '#ffffff',
+        colorInputText: currentTheme === 'dark' ? '#ffffff' : '#000000',
+      }
+    };
+  };
+
   // Helpers: prefer modal, fall back to redirect (hosted pages)
   const goSignIn = () => {
     if (window.Clerk?.openSignIn) {
-      window.Clerk.openSignIn({ afterSignInUrl: window.location.href });
+      window.Clerk.openSignIn({
+        afterSignInUrl: window.location.href,
+        appearance: getClerkAppearance()
+      });
     } else if (window.Clerk?.redirectToSignIn) {
       window.Clerk.redirectToSignIn({ returnBackUrl: window.location.href });
     } else {
@@ -351,7 +390,10 @@ window.addEventListener('load', async () => {
 
   const goSignUp = () => {
     if (window.Clerk?.openSignUp) {
-      window.Clerk.openSignUp({ afterSignUpUrl: window.location.href });
+      window.Clerk.openSignUp({
+        afterSignUpUrl: window.location.href,
+        appearance: getClerkAppearance()
+      });
     } else if (window.Clerk?.redirectToSignUp) {
       window.Clerk.redirectToSignUp({ returnBackUrl: window.location.href });
     } else {

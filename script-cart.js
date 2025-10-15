@@ -45,9 +45,15 @@
         .map((it) => {
           if (it.type === 'bulk') {
             let u = Number(it.units || 0);
-            if (!Number.isFinite(u) || u < BULK_MIN) u = BULK_MIN;
+            // Only process if we have a valid positive number
+            if (!Number.isFinite(u) || u <= 0) {
+              return null; // Skip invalid items
+            }
+            // Clamp to valid range
             if (u > BULK_MAX) u = BULK_MAX;
+            // Round to nearest step
             u = Math.round(u / BULK_STEP) * BULK_STEP;
+            // After rounding, ensure it's still valid
             if (u < BULK_MIN) u = BULK_MIN;
             return { type: 'bulk', units: u };
           }
@@ -56,8 +62,15 @@
             if (!Number.isFinite(q) || q < 1) q = 1;
             return { type: 'kit', qty: q };
           }
-          if ('units' in it) return { type: 'bulk', units: Number(it.units) || BULK_MIN };
-          if ('qty'   in it) return { type: 'kit',  qty: Math.max(1, Number(it.qty) || 1) };
+          // Handle legacy format
+          if ('units' in it) {
+            const u = Number(it.units);
+            if (u > 0) return { type: 'bulk', units: u };
+          }
+          if ('qty' in it) {
+            const q = Number(it.qty);
+            if (q > 0) return { type: 'kit', qty: Math.max(1, q) };
+          }
           return null;
         })
         .filter(Boolean);
@@ -75,10 +88,10 @@
     if (!badgeEl) return;
     let total = 0;
     for (const it of items) {
-      if (it.type === 'bulk') total += it.units; // design choice: show total units
-      else if (it.type === 'kit') total += it.qty;
+      if (it.type === 'bulk') total += it.units; // total dowel units
+      else if (it.type === 'kit') total += it.qty * 300; // kits have 300 dowels each
     }
-    badgeEl.textContent = total > 0 ? String(total) : '';
+    badgeEl.textContent = total > 0 ? total.toLocaleString() : '';
     badgeEl.style.display = total > 0 ? 'inline-block' : 'none';
   }
 
@@ -291,7 +304,7 @@
   // On the cart page we now send users to the dedicated checkout page
   if (btnCheckout) {
     btnCheckout.addEventListener('click', () => {
-      window.location.href = '/checkout';
+      window.location.href = '/checkout.html';
     });
   }
 

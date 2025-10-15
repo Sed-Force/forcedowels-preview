@@ -189,11 +189,20 @@ a { color: inherit; text-decoration: none; }
   column-gap: 18px;
 }
 
-/* Logo */
-.brand img {
-  height: 42px;
-  width: auto;
-  border-radius: 8px;
+/* Logo - Unified across all pages */
+.site-header .brand {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+}
+
+.site-header .brand img {
+  height: 42px !important;
+  width: auto !important;
+  border-radius: 8px !important;
+  display: block !important;
+  object-fit: contain !important;
+  max-width: none !important;
 }
 
 /* Nav */
@@ -2704,4 +2713,131 @@ button,
 [data-theme="light"] .accent-text {
   color: #d97706 !important;
   font-weight: 800 !important;
+}
+
+/* ===== CLERK AUTHENTICATION MODAL STYLING ===== */
+/* Ensure Clerk modals have proper contrast in both light and dark modes */
+
+/* Light mode Clerk styling - applies when site theme is light */
+/* Target all Clerk elements with maximum specificity */
+[data-theme="light"] .cl-rootBox *,
+[data-theme="light"] .cl-card *,
+[data-theme="light"] .cl-modalContent *,
+[data-theme="light"] .cl-internal-b3fm6y * {
+  color: #000000 !important;
+}
+
+[data-theme="light"] .cl-rootBox,
+[data-theme="light"] .cl-card,
+[data-theme="light"] .cl-modalContent,
+[data-theme="light"] .cl-internal-b3fm6y,
+[data-theme="light"] .cl-modalBackdrop {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+[data-theme="light"] .cl-formFieldInput,
+[data-theme="light"] .cl-input,
+[data-theme="light"] .cl-formFieldInput__identifier,
+[data-theme="light"] input[type="email"],
+[data-theme="light"] input[type="password"],
+[data-theme="light"] input[type="text"] {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #9ca3af !important;
+}
+
+[data-theme="light"] .cl-dividerLine {
+  background: #d1d5db !important;
+}
+
+[data-theme="light"] .cl-footerActionLink,
+[data-theme="light"] .cl-footerActionLink a {
+  color: #224d8f !important;
+}
+
+/* Clerk primary buttons - only style buttons within Clerk components */
+[data-theme="light"] .cl-button,
+[data-theme="light"] .cl-formButtonPrimary {
+  background-color: #224d8f !important;
+  color: #ffffff !important;
+}
+
+/* Clerk secondary/text buttons should have dark text for contrast */
+[data-theme="light"] .cl-footerActionLink button,
+[data-theme="light"] .cl-socialButtonsBlockButton {
+  color: #000000 !important;
+}
+
+/* Dark mode Clerk styling - applies to both manual dark mode and auto dark mode */
+/* Target all Clerk elements with maximum specificity */
+[data-theme="dark"] .cl-rootBox *,
+[data-theme="dark"] .cl-card *,
+[data-theme="dark"] .cl-modalContent *,
+[data-theme="dark"] .cl-internal-b3fm6y * {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .cl-rootBox,
+[data-theme="dark"] .cl-card,
+[data-theme="dark"] .cl-modalContent,
+[data-theme="dark"] .cl-internal-b3fm6y {
+  background: #1e2a3f !important;
+  background-color: #1e2a3f !important;
+}
+
+[data-theme="dark"] .cl-formFieldInput,
+[data-theme="dark"] .cl-input,
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] input[type="text"] {
+  background: #0f1420 !important;
+  background-color: #0f1420 !important;
+  color: #ffffff !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] .cl-dividerLine {
+  background: #475569 !important;
+}
+
+[data-theme="dark"] .cl-footerActionLink,
+[data-theme="dark"] a {
+  color: #fbbf24 !important;
+}
+
+/* Auto dark mode (when browser is in light mode but site theme is dark) */
+@media (prefers-color-scheme: light) {
+  [data-theme="dark"] .cl-rootBox,
+  [data-theme="dark"] .cl-card,
+  [data-theme="dark"] .cl-modalContent,
+  [data-theme="dark"] .cl-internal-b3fm6y {
+    background: #1e2a3f !important;
+    color: #ffffff !important;
+  }
+
+  [data-theme="dark"] .cl-headerTitle,
+  [data-theme="dark"] .cl-headerSubtitle,
+  [data-theme="dark"] .cl-socialButtonsBlockButton__text,
+  [data-theme="dark"] .cl-formFieldLabel,
+  [data-theme="dark"] .cl-footerActionText,
+  [data-theme="dark"] .cl-identityPreviewText {
+    color: #ffffff !important;
+  }
+
+  [data-theme="dark"] .cl-formFieldInput,
+  [data-theme="dark"] .cl-input {
+    background: #0f1420 !important;
+    color: #ffffff !important;
+    border-color: #334155 !important;
+  }
+
+  [data-theme="dark"] .cl-dividerLine {
+    background: #475569 !important;
+  }
+
+  [data-theme="dark"] .cl-footerActionLink {
+    color: #fbbf24 !important;
+  }
 }

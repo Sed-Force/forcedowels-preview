@@ -37,19 +37,22 @@
   function saveCart(items) {
     localStorage.setItem(FD_CART_KEY, JSON.stringify(items));
     updateHeaderBadge(items);
+    // Dispatch custom event so other scripts can sync badge
+    window.dispatchEvent(new CustomEvent('fd_cart_updated', { detail: items }));
   }
 
   function updateHeaderBadge(items = loadCart()) {
-    // Badge shows total *units* (bulk units + kits*300), like your old build
+    // Badge shows total *dowel units* (bulk units + kits*300)
     const units =
       items.reduce((sum, it) => {
-        if (it.type === 'bulk') return sum + (it.qty || 0);
-        if (it.type === 'kit')  return sum + (it.qty || 0) * 300;
+        if (it.type === 'bulk') return sum + (Number(it.units) || Number(it.qty) || 0);
+        if (it.type === 'kit')  return sum + (Number(it.qty) || 0) * 300;
         return sum;
       }, 0) || 0;
     const badge = $('#cart-count');
     if (!badge) return;
     badge.textContent = units > 0 ? units.toLocaleString() : '';
+    badge.setAttribute('title', units > 0 ? `${units.toLocaleString()} dowels` : '');
   }
 
   // ---- elements ----
@@ -108,17 +111,29 @@
     perUnitEl.textContent = `$${ppu.toFixed(4)}`;
   });
 
-  // Add bulk selection to cart (merge same type into one line)
+  // Add bulk selection to cart (replaces existing bulk order)
   addBtn?.addEventListener('click', () => {
     const qty = clampToStep(qtyInput.value);
     let cart = loadCart();
     const bulk = cart.find(i => i.type === 'bulk');
     if (bulk) {
-      bulk.qty = Math.min(MAX_QTY, (Number(bulk.qty) || 0) + qty);
+      // REPLACE the quantity instead of adding to it
+      console.log('Replacing bulk order:', bulk.units, '->', qty);
+      bulk.units = qty;
+      delete bulk.qty; // Remove old property if it exists
     } else {
-      cart.push({ type: 'bulk', qty });
+      console.log('Adding new bulk order:', qty);
+      cart.push({ type: 'bulk', units: qty });
     }
     saveCart(cart);
+    console.log('Cart after save:', JSON.stringify(cart));
+
+    // Show feedback to user
+    const originalText = addBtn.textContent;
+    addBtn.textContent = '✓ Updated Cart';
+    setTimeout(() => {
+      addBtn.textContent = originalText;
+    }, 1500);
   });
 
   // Add ONE starter kit per click (no auto-redirect)
