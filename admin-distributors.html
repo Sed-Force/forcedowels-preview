@@ -690,10 +690,16 @@
       if (!distributor) return;
 
       const confirmMsg = newStatus === 'approved'
-        ? `Accept application from ${distributor.company_name}?`
-        : `Reject application from ${distributor.company_name}?`;
+        ? `✅ Accept application from ${distributor.company_name}?\n\nThis will mark them as approved.`
+        : `❌ Reject application from ${distributor.company_name}?\n\nThis will mark them as rejected.`;
 
       if (!confirm(confirmMsg)) return;
+
+      // Show loading state
+      const button = event.target;
+      const originalText = button.textContent;
+      button.textContent = '⏳ Processing...';
+      button.disabled = true;
 
       try {
         const res = await fetch('/api/admin/distributors', {
@@ -711,12 +717,25 @@
           })
         });
 
-        if (!res.ok) throw new Error('Failed to update status');
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.message || 'Failed to update status');
+        }
 
+        // Reload the distributors list
         await loadDistributors();
-        alert(`Application ${newStatus}!`);
+
+        // Show success message
+        const successMsg = newStatus === 'approved'
+          ? `✅ Application accepted! ${distributor.company_name} is now approved.`
+          : `❌ Application rejected. ${distributor.company_name} has been marked as rejected.`;
+
+        alert(successMsg);
       } catch (err) {
-        alert('Error: ' + err.message);
+        console.error('Error updating status:', err);
+        alert('❌ Error: ' + err.message);
+        button.textContent = originalText;
+        button.disabled = false;
       }
     }
 
