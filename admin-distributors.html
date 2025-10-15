@@ -99,29 +99,57 @@
     .distributor-card {
       background: white;
       border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 16px;
-      cursor: pointer;
+      border-radius: 12px;
+      padding: 0;
+      margin-bottom: 20px;
       transition: all 0.2s;
+      overflow: hidden;
     }
     .distributor-card:hover {
-      box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
     }
-    .distributor-header {
+    .card-header {
+      background: linear-gradient(135deg, #1C4A99 0%, #2563eb 100%);
+      color: white;
+      padding: 20px 24px;
       display: flex;
       justify-content: space-between;
-      align-items: start;
-      margin-bottom: 12px;
+      align-items: center;
     }
-    .distributor-name {
-      font-size: 18px;
+    .card-body {
+      padding: 24px;
+    }
+    .section-title {
+      font-size: 16px;
       font-weight: 700;
-      color: #111827;
+      color: #1C4A99;
+      margin: 20px 0 12px 0;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e5e7eb;
     }
-    .distributor-contact {
-      font-size: 14px;
-      color: #6b7280;
+    .section-title:first-child {
+      margin-top: 0;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .info-item {
+      background: #f9fafb;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border-left: 3px solid #1C4A99;
+    }
+    .company-name {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .submitted-date {
+      font-size: 13px;
+      opacity: 0.9;
       margin-top: 4px;
     }
     .status-badge {
@@ -450,54 +478,158 @@
         return;
       }
 
-      container.innerHTML = filtered.map(dist => `
+      container.innerHTML = filtered.map(dist => {
+        let details = {};
+        try {
+          details = dist.notes ? JSON.parse(dist.notes) : {};
+        } catch (e) {
+          details = { additional_notes: dist.notes };
+        }
+
+        return `
         <div class="distributor-card">
-          <div class="distributor-header">
+          <div class="card-header">
             <div>
-              <div class="distributor-name">${dist.company_name}</div>
-              <div class="distributor-contact">${dist.contact_name || ''} ${dist.email ? '• ' + dist.email : ''}</div>
+              <h3 class="company-name">${escapeHtml(dist.company_name)}</h3>
+              <div class="submitted-date">Submitted: ${dist.created_at}</div>
             </div>
             <span class="status-badge status-${dist.status}">${dist.status.charAt(0).toUpperCase() + dist.status.slice(1)}</span>
           </div>
-          
-          <div class="distributor-details">
-            ${dist.phone ? `
-              <div class="detail-item">
-                <span class="detail-label">Phone</span>
-                <span class="detail-value">${dist.phone}</span>
-              </div>
-            ` : ''}
-            ${dist.territory ? `
-              <div class="detail-item">
-                <span class="detail-label">Territory</span>
-                <span class="detail-value">${dist.territory}</span>
-              </div>
-            ` : ''}
-            <div class="detail-item">
-              <span class="detail-label">Added</span>
-              <span class="detail-value">${dist.created_at}</span>
-            </div>
-          </div>
-          ${dist.notes ? `
-            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #f3f4f6;">
-              <div class="detail-label">Notes</div>
-              <div class="detail-value" style="margin-top: 4px; white-space: pre-wrap;">${escapeHtml(dist.notes)}</div>
-            </div>
-          ` : ''}
 
-          ${dist.status === 'pending' ? `
+          <div class="card-body">
+            <!-- Contact Information -->
+            <h4 class="section-title">Contact Information</h4>
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="detail-label">Contact Name</div>
+                <div class="detail-value">${escapeHtml(dist.contact_name || 'N/A')}</div>
+              </div>
+              ${details.title ? `
+              <div class="info-item">
+                <div class="detail-label">Title</div>
+                <div class="detail-value">${escapeHtml(details.title)}</div>
+              </div>
+              ` : ''}
+              <div class="info-item">
+                <div class="detail-label">Email</div>
+                <div class="detail-value"><a href="mailto:${dist.email}" style="color: #1C4A99;">${escapeHtml(dist.email)}</a></div>
+              </div>
+              ${dist.phone ? `
+              <div class="info-item">
+                <div class="detail-label">Phone</div>
+                <div class="detail-value">${escapeHtml(dist.phone)}</div>
+              </div>
+              ` : ''}
+              ${details.website ? `
+              <div class="info-item">
+                <div class="detail-label">Website</div>
+                <div class="detail-value"><a href="${escapeHtml(details.website)}" target="_blank" style="color: #1C4A99;">${escapeHtml(details.website)}</a></div>
+              </div>
+              ` : ''}
+            </div>
+
+            <!-- Address -->
+            ${details.street || details.city || details.state || details.zip || details.country ? `
+            <h4 class="section-title">Business Address</h4>
+            <div class="info-grid">
+              ${details.street ? `
+              <div class="info-item">
+                <div class="detail-label">Street</div>
+                <div class="detail-value">${escapeHtml(details.street)}</div>
+              </div>
+              ` : ''}
+              ${details.city ? `
+              <div class="info-item">
+                <div class="detail-label">City</div>
+                <div class="detail-value">${escapeHtml(details.city)}</div>
+              </div>
+              ` : ''}
+              ${details.state ? `
+              <div class="info-item">
+                <div class="detail-label">State</div>
+                <div class="detail-value">${escapeHtml(details.state)}</div>
+              </div>
+              ` : ''}
+              ${details.zip ? `
+              <div class="info-item">
+                <div class="detail-label">ZIP Code</div>
+                <div class="detail-value">${escapeHtml(details.zip)}</div>
+              </div>
+              ` : ''}
+              ${details.country ? `
+              <div class="info-item">
+                <div class="detail-label">Country</div>
+                <div class="detail-value">${escapeHtml(details.country)}</div>
+              </div>
+              ` : ''}
+            </div>
+            ` : ''}
+
+            <!-- Business Details -->
+            <h4 class="section-title">Business Profile</h4>
+            <div class="info-grid">
+              ${details.business_type ? `
+              <div class="info-item">
+                <div class="detail-label">Business Type</div>
+                <div class="detail-value">${escapeHtml(details.business_type)}</div>
+              </div>
+              ` : ''}
+              ${details.years_in_business ? `
+              <div class="info-item">
+                <div class="detail-label">Years in Business</div>
+                <div class="detail-value">${escapeHtml(details.years_in_business)}</div>
+              </div>
+              ` : ''}
+              ${details.resale_tax_id ? `
+              <div class="info-item">
+                <div class="detail-label">Resale/Tax ID</div>
+                <div class="detail-value">${escapeHtml(details.resale_tax_id)}</div>
+              </div>
+              ` : ''}
+              ${details.monthly_volume ? `
+              <div class="info-item">
+                <div class="detail-label">Monthly Volume</div>
+                <div class="detail-value">${escapeHtml(details.monthly_volume)}</div>
+              </div>
+              ` : ''}
+              ${dist.territory ? `
+              <div class="info-item">
+                <div class="detail-label">Territory</div>
+                <div class="detail-value">${escapeHtml(dist.territory)}</div>
+              </div>
+              ` : ''}
+              ${details.compatibility ? `
+              <div class="info-item">
+                <div class="detail-label">System Compatibility</div>
+                <div class="detail-value">${escapeHtml(details.compatibility)}</div>
+              </div>
+              ` : ''}
+            </div>
+
+            <!-- Additional Notes -->
+            ${details.additional_notes ? `
+            <h4 class="section-title">Additional Information</h4>
+            <div style="background: #f9fafb; padding: 16px; border-radius: 8px; border-left: 3px solid #1C4A99;">
+              <div class="detail-value" style="white-space: pre-wrap;">${escapeHtml(details.additional_notes)}</div>
+            </div>
+            ` : ''}
+
+            <!-- Action Buttons -->
+            ${dist.status === 'pending' ? `
             <div class="action-buttons">
-              <button class="btn-accept" onclick="updateStatus(${dist.id}, 'approved', event)">✅ Accept</button>
-              <button class="btn-reject" onclick="updateStatus(${dist.id}, 'rejected', event)">❌ Reject</button>
+              <button class="btn-accept" onclick="updateStatus(${dist.id}, 'approved', event)">✅ Accept Application</button>
+              <button class="btn-reject" onclick="updateStatus(${dist.id}, 'rejected', event)">❌ Decline Application</button>
               <button class="btn-edit" onclick="editDistributor(${dist.id}, event)">Edit</button>
             </div>
-          ` : `
+            ` : `
             <div class="action-buttons">
               <button class="btn-edit" onclick="editDistributor(${dist.id}, event)">Edit Details</button>
             </div>
-          `}
+            `}
+          </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
 
     function escapeHtml(text) {
