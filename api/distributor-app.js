@@ -33,68 +33,100 @@ export default async function handler(req, res) {
       return;
     }
 
-    // Save to database first
-    const fullAddress = [data.street, data.city, data.state, data.zip, data.country]
-      .filter(Boolean)
-      .join(', ');
+    // Try to save to database (but don't fail if it doesn't work)
+    let distributorId = null;
+    let acceptToken = null;
+    let rejectToken = null;
+    let acceptUrl = null;
+    let rejectUrl = null;
 
-    const allDetails = {
-      website: data.website,
-      title: data.title,
-      address: fullAddress,
-      business_type: data.business_type,
-      years_in_business: data.years_in_business,
-      resale_tax_id: data.resale_tax_id,
-      monthly_volume: data.monthly_volume,
-      compatibility: Array.isArray(data.compatibility) ? data.compatibility.join(', ') : data.compatibility,
-      notes: data.notes
-    };
+    try {
+      if (sql) {
+        const fullAddress = [data.street, data.city, data.state, data.zip, data.country]
+          .filter(Boolean)
+          .join(', ');
 
-    const result = await sql`
-      INSERT INTO distributors (
-        company_name,
-        contact_name,
-        email,
-        phone,
-        territory,
-        status,
-        notes
-      ) VALUES (
-        ${data.company},
-        ${data.contact_name},
-        ${data.email},
-        ${data.phone || null},
-        ${data.territory || null},
-        'pending',
-        ${JSON.stringify(allDetails)}
-      )
-      RETURNING id
-    `;
+        const allDetails = {
+          website: data.website,
+          title: data.title,
+          address: fullAddress,
+          business_type: data.business_type,
+          years_in_business: data.years_in_business,
+          resale_tax_id: data.resale_tax_id,
+          monthly_volume: data.monthly_volume,
+          compatibility: Array.isArray(data.compatibility) ? data.compatibility.join(', ') : data.compatibility,
+          notes: data.notes
+        };
 
-    const distributorId = result[0].id;
+        // Ensure tables exist
+        await sql`
+          CREATE TABLE IF NOT EXISTS distributors (
+            id SERIAL PRIMARY KEY,
+            company_name TEXT NOT NULL,
+            contact_name TEXT,
+            email TEXT NOT NULL,
+            phone TEXT,
+            territory TEXT,
+            status TEXT DEFAULT 'pending',
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          )
+        `;
 
-    // Generate secure tokens for accept/reject (one-time use)
-    const acceptToken = crypto.randomBytes(32).toString('hex');
-    const rejectToken = crypto.randomBytes(32).toString('hex');
+        await sql`
+          CREATE TABLE IF NOT EXISTS distributor_tokens (
+            id SERIAL PRIMARY KEY,
+            distributor_id INTEGER NOT NULL,
+            token TEXT NOT NULL UNIQUE,
+            action TEXT NOT NULL,
+            used BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT NOW()
+          )
+        `;
 
-    // Store tokens in database
-    await sql`
-      CREATE TABLE IF NOT EXISTS distributor_tokens (
-        id SERIAL PRIMARY KEY,
-        distributor_id INTEGER NOT NULL,
-        token TEXT NOT NULL UNIQUE,
-        action TEXT NOT NULL,
-        used BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `;
+        const result = await sql`
+          INSERT INTO distributors (
+            company_name,
+            contact_name,
+            email,
+            phone,
+            territory,
+            status,
+            notes
+          ) VALUES (
+            ${data.company},
+            ${data.contact_name},
+            ${data.email},
+            ${data.phone || null},
+            ${data.territory || null},
+            'pending',
+            ${JSON.stringify(allDetails)}
+          )
+          RETURNING id
+        `;
 
-    await sql`
-      INSERT INTO distributor_tokens (distributor_id, token, action)
-      VALUES
-        (${distributorId}, ${acceptToken}, 'accept'),
-        (${distributorId}, ${rejectToken}, 'reject')
-    `;
+        distributorId = result[0].id;
+
+        // Generate secure tokens for accept/reject (one-time use)
+        acceptToken = crypto.randomBytes(32).toString('hex');
+        rejectToken = crypto.randomBytes(32).toString('hex');
+
+        await sql`
+          INSERT INTO distributor_tokens (distributor_id, token, action)
+          VALUES
+            (${distributorId}, ${acceptToken}, 'accept'),
+            (${distributorId}, ${rejectToken}, 'reject')
+        `;
+
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels-preview.vercel.app';
+        acceptUrl = `${baseUrl}/api/distributor-action?token=${acceptToken}`;
+        rejectUrl = `${baseUrl}/api/distributor-action?token=${rejectToken}`;
+      }
+    } catch (dbError) {
+      console.error('Database error (continuing without DB):', dbError);
+      // Continue without database - email will still be sent
+    }
 
     // Send email
     const resend = new Resend(process.env.RESEND_API_KEY);
@@ -108,10 +140,6 @@ export default async function handler(req, res) {
     const compatibility = Array.isArray(data.compatibility)
       ? data.compatibility.join(', ')
       : (data.compatibility || 'Not specified');
-
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels-preview.vercel.app';
-    const acceptUrl = `${baseUrl}/api/distributor-action?token=${acceptToken}`;
-    const rejectUrl = `${baseUrl}/api/distributor-action?token=${rejectToken}`;
 
     const htmlEmail = buildProfessionalEmail({
       company: data.company,
