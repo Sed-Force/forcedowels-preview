@@ -84,7 +84,13 @@
 
   <section class="section pt-0">
     <div class="container">
-      <form class="dist-form" method="post" action="https://formspree.io/f/REPLACE_ME" enctype="multipart/form-data">
+      <!-- Success Message -->
+      <div id="success-message" class="success-banner" style="display:none; margin-bottom:24px; padding:20px; background:#10b981; color:#ffffff; border-radius:12px; text-align:center;">
+        <h3 style="margin:0 0 8px 0; font-size:20px; font-weight:700;">Application Submitted Successfully! ✓</h3>
+        <p style="margin:0; font-size:16px;">Thank you for your interest in becoming a Force Dowels distributor. A representative will contact you shortly.</p>
+      </div>
+
+      <form id="distributor-form" class="dist-form" method="post" enctype="multipart/form-data">
         <!-- Company & Contact -->
         <fieldset class="group">
           <legend>Company &amp; Contact</legend>
@@ -212,27 +218,6 @@
           </div>
         </fieldset>
 
-        <!-- Shipping -->
-        <fieldset class="group">
-          <legend>Shipping Preferences</legend>
-          <div class="form-grid">
-            <label class="field">
-              <span>Preferred Carrier</span>
-              <select name="carrier">
-                <option value="">Select…</option>
-                <option>UPS</option>
-                <option>FedEx</option>
-                <option>LTL Freight</option>
-                <option>Other</option>
-              </select>
-            </label>
-            <label class="field">
-              <span>Account # (optional)</span>
-              <input name="carrier_account" type="text">
-            </label>
-          </div>
-        </fieldset>
-
         <!-- Notes -->
         <label class="field">
           <span>Additional Notes</span>
@@ -316,6 +301,72 @@
 
 <script>
   (function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})();
+
+  // Distributor Application Form Handler
+  (function() {
+    const form = document.getElementById('distributor-form');
+    const successMessage = document.getElementById('success-message');
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      // Disable button and set loading state
+      submitBtn.disabled = true;
+      const prevText = submitBtn.textContent;
+      submitBtn.textContent = 'Submitting...';
+
+      try {
+        // Collect form data
+        const formData = new FormData(form);
+        const data = {};
+
+        // Convert FormData to JSON object
+        for (const [key, value] of formData.entries()) {
+          if (key === 'compatibility[]') {
+            // Handle checkbox array
+            if (!data.compatibility) data.compatibility = [];
+            data.compatibility.push(value);
+          } else {
+            data[key] = value;
+          }
+        }
+
+        // Send to API
+        const res = await fetch('/api/distributor-application', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+
+        const result = await res.json().catch(() => ({}));
+
+        if (res.ok && result.ok) {
+          // Success - show message and reset form
+          form.reset();
+          successMessage.style.display = 'block';
+          successMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+          // Hide success message after 10 seconds
+          setTimeout(() => {
+            successMessage.style.display = 'none';
+          }, 10000);
+        } else {
+          // Error
+          alert('Sorry, something went wrong. Please try again or email info@forcedowels.com directly.\n\nError: ' + (result.error || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Network error. Please check your connection and try again, or email info@forcedowels.com directly.');
+        console.error('Form submission error:', err);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = prevText;
+      }
+    });
+  })();
 </script>
 
 </body>
