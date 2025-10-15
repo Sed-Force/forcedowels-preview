@@ -33,6 +33,12 @@ export default async function handler(req, res) {
       return;
     }
 
+    // Check database connection
+    console.log('Checking database connection...');
+    console.log('sql object:', sql ? 'EXISTS' : 'NULL');
+    console.log('NEON_DATABASE_URL:', process.env.NEON_DATABASE_URL ? 'SET' : 'NOT SET');
+    console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
+
     // Prepare application data
     const fullAddress = [data.street, data.city, data.state, data.zip, data.country]
       .filter(Boolean)
@@ -201,12 +207,16 @@ ${data.notes || 'None'}
       reply_to: data.email
     });
 
-    res.status(200).json({ ok: true, status: 'sent' });
+    res.status(200).json({ ok: true, status: 'sent', distributorId });
   } catch (error) {
-    console.error('Error:', error);
+    console.error('=== ERROR IN DISTRIBUTOR APP ===');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', error);
     res.status(500).json({
       error: 'Failed to send application',
-      detail: error.message
+      detail: error.message,
+      hint: 'Check Vercel function logs for details'
     });
   }
 }
