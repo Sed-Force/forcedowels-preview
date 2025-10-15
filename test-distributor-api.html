@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Distributor API</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button {
+      background: #1C4A99;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #153a7a;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .success {
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+    }
+    .error {
+      background: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+    .info {
+      background: #d1ecf1;
+      border: 1px solid #bee5eb;
+      color: #0c5460;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Test Distributor Application API</h1>
+    <p>This page tests the <code>/api/distributor-application</code> endpoint.</p>
+    
+    <button id="testBtn" onclick="testAPI()">Send Test Application</button>
+    <button onclick="clearResult()">Clear Result</button>
+    
+    <div id="result"></div>
+  </div>
+
+  <script>
+    async function testAPI() {
+      const resultDiv = document.getElementById('result');
+      const testBtn = document.getElementById('testBtn');
+      
+      testBtn.disabled = true;
+      testBtn.textContent = 'Sending...';
+      
+      resultDiv.className = 'info';
+      resultDiv.textContent = 'Sending test request...';
+      
+      const testData = {
+        company: 'Test Company Inc',
+        website: 'https://testcompany.com',
+        contact_name: 'John Doe',
+        title: 'CEO',
+        email: 'john@testcompany.com',
+        phone: '555-1234',
+        street: '123 Test St',
+        city: 'Phoenix',
+        state: 'AZ',
+        zip: '85001',
+        country: 'USA',
+        business_type: 'Cabinet Manufacturer',
+        years_in_business: '5–10 years',
+        resale_tax_id: 'TEST123456',
+        monthly_volume: '20,000–160,000 units',
+        territory: 'Arizona, Nevada',
+        compatibility: ['8mm line boring', 'CNC drill/router'],
+        notes: 'This is a test application from the test page.',
+        agree: true
+      };
+      
+      try {
+        const response = await fetch('/api/distributor-application', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(testData)
+        });
+        
+        const contentType = response.headers.get('content-type');
+        let result;
+        
+        if (contentType && contentType.includes('application/json')) {
+          result = await response.json();
+        } else {
+          result = await response.text();
+        }
+        
+        if (response.ok) {
+          resultDiv.className = 'success';
+          resultDiv.textContent = 'SUCCESS!\n\n' + 
+            'Status: ' + response.status + '\n' +
+            'Response:\n' + JSON.stringify(result, null, 2);
+        } else {
+          resultDiv.className = 'error';
+          resultDiv.textContent = 'ERROR!\n\n' + 
+            'Status: ' + response.status + ' ' + response.statusText + '\n' +
+            'Response:\n' + (typeof result === 'string' ? result : JSON.stringify(result, null, 2));
+        }
+      } catch (error) {
+        resultDiv.className = 'error';
+        resultDiv.textContent = 'NETWORK ERROR!\n\n' + error.message + '\n\n' + error.stack;
+      } finally {
+        testBtn.disabled = false;
+        testBtn.textContent = 'Send Test Application';
+      }
+    }
+    
+    function clearResult() {
+      document.getElementById('result').textContent = '';
+      document.getElementById('result').className = '';
+    }
+  </script>
+</body>
+</html>
+
