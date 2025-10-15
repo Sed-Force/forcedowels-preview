@@ -34,8 +34,13 @@ export default async function handler(req, res) {
 
     // Save to database if available
     let distributorId = null;
+    console.log('=== SAVING TO DATABASE ===');
+    console.log('SQL available:', !!sql);
+    console.log('NEON_DATABASE_URL set:', !!process.env.NEON_DATABASE_URL);
+
     if (sql) {
       try {
+        console.log('Attempting to save application to database...');
         // Ensure table exists
         await sql`
           CREATE TABLE IF NOT EXISTS distributors (
@@ -92,13 +97,18 @@ export default async function handler(req, res) {
         `;
 
         distributorId = result[0].id;
-        console.log('✅ Saved to database with ID:', distributorId);
+        console.log('✅ SUCCESS! Saved to database with ID:', distributorId);
+        console.log('Application data:', { company: data.company, email: data.email, status: 'pending' });
       } catch (dbError) {
-        console.error('Database error (continuing to send email):', dbError);
+        console.error('❌ DATABASE ERROR:', dbError.message);
+        console.error('Full error:', dbError);
         // Continue even if database fails - email will still be sent
       }
     } else {
       console.log('⚠️ No database connection - application will only be emailed');
+      console.log('Environment check:');
+      console.log('- NEON_DATABASE_URL:', process.env.NEON_DATABASE_URL ? 'SET' : 'NOT SET');
+      console.log('- DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
     }
 
     // Send email
