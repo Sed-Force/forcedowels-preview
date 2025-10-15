@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Distributor Database - Force Dowel Admin</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+      line-height: 1.5;
+    }
+    .admin-header {
+      background: #1C4A99;
+      color: white;
+      padding: 16px 24px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .admin-header h1 {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .admin-nav {
+      display: flex;
+      gap: 16px;
+    }
+    .admin-nav a {
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .admin-nav a:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    .admin-nav a.active {
+      background: rgba(255,255,255,0.2);
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .toolbar {
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid #e5e7eb;
+      flex-wrap: wrap;
+    }
+    .toolbar input {
+      flex: 1;
+      min-width: 250px;
+      padding: 10px 16px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 15px;
+      font-family: inherit;
+    }
+    .toolbar input:focus {
+      outline: none;
+      border-color: #1C4A99;
+      box-shadow: 0 0 0 3px rgba(28, 74, 153, 0.1);
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .btn-primary {
+      background: #1C4A99;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #163a7a;
+    }
+    .distributor-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .distributor-card:hover {
+      box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+    }
+    .distributor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+    .distributor-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .distributor-contact {
+      font-size: 14px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .status-active {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .status-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .status-inactive {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+    .status-approved {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .status-rejected {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .distributor-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .detail-item {
+      font-size: 14px;
+    }
+    .detail-label {
+      color: #6b7280;
+      font-weight: 600;
+      display: block;
+      margin-bottom: 2px;
+    }
+    .detail-value {
+      color: #111827;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #f3f4f6;
+    }
+    .btn-accept {
+      background: #10b981;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-accept:hover {
+      background: #059669;
+    }
+    .btn-reject {
+      background: #ef4444;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-reject:hover {
+      background: #dc2626;
+    }
+    .btn-edit {
+      background: #6b7280;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-edit:hover {
+      background: #4b5563;
+    }
+    .order-history {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #f3f4f6;
+      display: none;
+    }
+    .order-history.expanded {
+      display: block;
+    }
+    .order-history h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #374151;
+    }
+    .order-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .order-table th {
+      text-align: left;
+      padding: 8px;
+      background: #f9fafb;
+      font-weight: 600;
+      color: #6b7280;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .order-table td {
+      padding: 8px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .order-table tr:last-child td {
+      border-bottom: none;
+    }
+    .loading, .empty {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+    }
+    .expand-icon {
+      transition: transform 0.2s;
+      display: inline-block;
+    }
+    .expand-icon.expanded {
+      transform: rotate(180deg);
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.active {
+      display: flex;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #6b7280;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: #1C4A99;
+      box-shadow: 0 0 0 3px rgba(28, 74, 153, 0.1);
+    }
+    @media (max-width: 768px) {
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .toolbar input {
+        min-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="admin-header">
+    <h1>Force Dowel Admin</h1>
+    <nav class="admin-nav">
+      <a href="/admin.html">Orders</a>
+      <a href="/admin-customers.html">Customers</a>
+      <a href="/admin-distributors.html" class="active">Distributors</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="toolbar">
+      <input type="text" id="search-input" placeholder="Search distributors...">
+      <button class="btn btn-primary" onclick="openAddModal()">+ Add Distributor</button>
+    </div>
+
+    <div id="distributors-container">
+      <div class="loading">Loading distributors...</div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Modal -->
+  <div class="modal" id="distributor-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">Add Distributor</h2>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="distributor-form" onsubmit="saveDistributor(event)">
+        <input type="hidden" id="distributor-id">
+        <div class="form-group">
+          <label for="company-name">Company Name *</label>
+          <input type="text" id="company-name" required>
+        </div>
+        <div class="form-group">
+          <label for="contact-name">Contact Name</label>
+          <input type="text" id="contact-name">
+        </div>
+        <div class="form-group">
+          <label for="email">Email *</label>
+          <input type="email" id="email" required>
+        </div>
+        <div class="form-group">
+          <label for="phone">Phone</label>
+          <input type="tel" id="phone">
+        </div>
+        <div class="form-group">
+          <label for="territory">Territory</label>
+          <input type="text" id="territory" placeholder="e.g., Arizona, Nevada">
+        </div>
+        <div class="form-group">
+          <label for="status">Status</label>
+          <select id="status">
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="notes">Notes</label>
+          <textarea id="notes" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Save Distributor</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let allDistributors = [];
+
+    async function loadDistributors() {
+      try {
+        const res = await fetch('/api/admin/distributors');
+        if (!res.ok) throw new Error('Failed to load distributors');
+        const data = await res.json();
+        allDistributors = data.distributors || [];
+        renderDistributors();
+      } catch (err) {
+        document.getElementById('distributors-container').innerHTML = `
+          <div class="empty">
+            <h2>Error loading distributors</h2>
+            <p>${err.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderDistributors() {
+      const container = document.getElementById('distributors-container');
+      const searchTerm = document.getElementById('search-input').value.toLowerCase();
+
+      let filtered = allDistributors.filter(dist => {
+        return !searchTerm || 
+          dist.company_name.toLowerCase().includes(searchTerm) ||
+          (dist.contact_name && dist.contact_name.toLowerCase().includes(searchTerm)) ||
+          (dist.territory && dist.territory.toLowerCase().includes(searchTerm));
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty">
+            <h2>No distributors found</h2>
+            <p>Click "Add Distributor" to create one</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(dist => `
+        <div class="distributor-card">
+          <div class="distributor-header">
+            <div>
+              <div class="distributor-name">${dist.company_name}</div>
+              <div class="distributor-contact">${dist.contact_name || ''} ${dist.email ? '• ' + dist.email : ''}</div>
+            </div>
+            <span class="status-badge status-${dist.status}">${dist.status.charAt(0).toUpperCase() + dist.status.slice(1)}</span>
+          </div>
+          
+          <div class="distributor-details">
+            ${dist.phone ? `
+              <div class="detail-item">
+                <span class="detail-label">Phone</span>
+                <span class="detail-value">${dist.phone}</span>
+              </div>
+            ` : ''}
+            ${dist.territory ? `
+              <div class="detail-item">
+                <span class="detail-label">Territory</span>
+                <span class="detail-value">${dist.territory}</span>
+              </div>
+            ` : ''}
+            <div class="detail-item">
+              <span class="detail-label">Added</span>
+              <span class="detail-value">${dist.created_at}</span>
+            </div>
+          </div>
+          ${dist.notes ? `
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #f3f4f6;">
+              <div class="detail-label">Notes</div>
+              <div class="detail-value" style="margin-top: 4px; white-space: pre-wrap;">${escapeHtml(dist.notes)}</div>
+            </div>
+          ` : ''}
+
+          ${dist.status === 'pending' ? `
+            <div class="action-buttons">
+              <button class="btn-accept" onclick="updateStatus(${dist.id}, 'approved', event)">✅ Accept</button>
+              <button class="btn-reject" onclick="updateStatus(${dist.id}, 'rejected', event)">❌ Reject</button>
+              <button class="btn-edit" onclick="editDistributor(${dist.id}, event)">Edit</button>
+            </div>
+          ` : `
+            <div class="action-buttons">
+              <button class="btn-edit" onclick="editDistributor(${dist.id}, event)">Edit Details</button>
+            </div>
+          `}
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function openAddModal() {
+      document.getElementById('modal-title').textContent = 'Add Distributor';
+      document.getElementById('distributor-form').reset();
+      document.getElementById('distributor-id').value = '';
+      document.getElementById('distributor-modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('distributor-modal').classList.remove('active');
+    }
+
+    async function saveDistributor(event) {
+      event.preventDefault();
+
+      const id = document.getElementById('distributor-id').value;
+      const data = {
+        company_name: document.getElementById('company-name').value,
+        contact_name: document.getElementById('contact-name').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+        territory: document.getElementById('territory').value,
+        status: document.getElementById('status').value,
+        notes: document.getElementById('notes').value
+      };
+
+      if (id) {
+        data.id = parseInt(id);
+      }
+
+      try {
+        const res = await fetch('/api/admin/distributors', {
+          method: id ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (!res.ok) throw new Error('Failed to save distributor');
+
+        closeModal();
+        await loadDistributors();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function updateStatus(id, newStatus, event) {
+      event.stopPropagation();
+
+      const distributor = allDistributors.find(d => d.id === id);
+      if (!distributor) return;
+
+      const confirmMsg = newStatus === 'approved'
+        ? `Accept application from ${distributor.company_name}?`
+        : `Reject application from ${distributor.company_name}?`;
+
+      if (!confirm(confirmMsg)) return;
+
+      try {
+        const res = await fetch('/api/admin/distributors', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: id,
+            company_name: distributor.company_name,
+            contact_name: distributor.contact_name,
+            email: distributor.email,
+            phone: distributor.phone,
+            territory: distributor.territory,
+            status: newStatus,
+            notes: distributor.notes
+          })
+        });
+
+        if (!res.ok) throw new Error('Failed to update status');
+
+        await loadDistributors();
+        alert(`Application ${newStatus}!`);
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function editDistributor(id, event) {
+      event.stopPropagation();
+
+      const distributor = allDistributors.find(d => d.id === id);
+      if (!distributor) return;
+
+      document.getElementById('modal-title').textContent = 'Edit Distributor';
+      document.getElementById('distributor-id').value = distributor.id;
+      document.getElementById('company-name').value = distributor.company_name;
+      document.getElementById('contact-name').value = distributor.contact_name || '';
+      document.getElementById('email').value = distributor.email;
+      document.getElementById('phone').value = distributor.phone || '';
+      document.getElementById('territory').value = distributor.territory || '';
+      document.getElementById('status').value = distributor.status;
+      document.getElementById('notes').value = distributor.notes || '';
+      document.getElementById('distributor-modal').classList.add('active');
+    }
+
+    // Event listeners
+    document.getElementById('search-input').addEventListener('input', renderDistributors);
+
+    // Close modal on outside click
+    document.getElementById('distributor-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'distributor-modal') closeModal();
+    });
+
+    // Load on page load
+    loadDistributors();
+  </script>
+</body>
+</html>
+

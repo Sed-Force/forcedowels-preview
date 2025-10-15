@@ -1,5 +1,6 @@
 // Minimal distributor application endpoint
 import { Resend } from 'resend';
+import { sql } from './_lib/db.js';
 
 export default async function handler(req, res) {
   // CORS
@@ -31,8 +32,74 @@ export default async function handler(req, res) {
       return;
     }
 
-    // For now, just send email without database
-    // TODO: Add database integration once env vars are confirmed working
+    // Save to database if available
+    let distributorId = null;
+    if (sql) {
+      try {
+        // Ensure table exists
+        await sql`
+          CREATE TABLE IF NOT EXISTS distributors (
+            id SERIAL PRIMARY KEY,
+            company_name TEXT NOT NULL,
+            contact_name TEXT,
+            email TEXT NOT NULL,
+            phone TEXT,
+            territory TEXT,
+            status TEXT DEFAULT 'pending',
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          )
+        `;
+
+        // Prepare all details as JSON for notes field
+        const allDetails = {
+          website: data.website,
+          title: data.title,
+          street: data.street,
+          city: data.city,
+          state: data.state,
+          zip: data.zip,
+          country: data.country,
+          business_type: data.business_type,
+          years_in_business: data.years_in_business,
+          resale_tax_id: data.resale_tax_id,
+          monthly_volume: data.monthly_volume,
+          compatibility: Array.isArray(data.compatibility) ? data.compatibility.join(', ') : data.compatibility,
+          additional_notes: data.notes
+        };
+
+        // Insert into database
+        const result = await sql`
+          INSERT INTO distributors (
+            company_name,
+            contact_name,
+            email,
+            phone,
+            territory,
+            status,
+            notes
+          ) VALUES (
+            ${data.company},
+            ${data.contact_name},
+            ${data.email},
+            ${data.phone || null},
+            ${data.territory || null},
+            'pending',
+            ${JSON.stringify(allDetails, null, 2)}
+          )
+          RETURNING id
+        `;
+
+        distributorId = result[0].id;
+        console.log('✅ Saved to database with ID:', distributorId);
+      } catch (dbError) {
+        console.error('Database error (continuing to send email):', dbError);
+        // Continue even if database fails - email will still be sent
+      }
+    } else {
+      console.log('⚠️ No database connection - application will only be emailed');
+    }
 
     // Send email
     const resend = new Resend(process.env.RESEND_API_KEY);
