@@ -79,6 +79,41 @@
       border-color: #1C4A99;
       box-shadow: 0 0 0 3px rgba(28, 74, 153, 0.1);
     }
+    .filter-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      width: 100%;
+      margin-top: 8px;
+    }
+    .filter-tab {
+      padding: 8px 16px;
+      border: 2px solid #e5e7eb;
+      background: white;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #6b7280;
+    }
+    .filter-tab:hover {
+      border-color: #1C4A99;
+      color: #1C4A99;
+    }
+    .filter-tab.active {
+      background: #1C4A99;
+      color: white;
+      border-color: #1C4A99;
+    }
+    .filter-tab .count {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 2px 8px;
+      background: rgba(0,0,0,0.1);
+      border-radius: 10px;
+      font-size: 12px;
+    }
     .btn {
       padding: 10px 20px;
       border: none;
@@ -382,6 +417,27 @@
     <div class="toolbar">
       <input type="text" id="search-input" placeholder="Search distributors...">
       <button class="btn btn-primary" onclick="openAddModal()">+ Add Distributor</button>
+
+      <div class="filter-tabs">
+        <button class="filter-tab active" onclick="filterByStatus('all')" data-status="all">
+          All <span class="count" id="count-all">0</span>
+        </button>
+        <button class="filter-tab" onclick="filterByStatus('pending')" data-status="pending">
+          Pending <span class="count" id="count-pending">0</span>
+        </button>
+        <button class="filter-tab" onclick="filterByStatus('approved')" data-status="approved">
+          Approved <span class="count" id="count-approved">0</span>
+        </button>
+        <button class="filter-tab" onclick="filterByStatus('rejected')" data-status="rejected">
+          Rejected <span class="count" id="count-rejected">0</span>
+        </button>
+        <button class="filter-tab" onclick="filterByStatus('active')" data-status="active">
+          Active <span class="count" id="count-active">0</span>
+        </button>
+        <button class="filter-tab" onclick="filterByStatus('inactive')" data-status="inactive">
+          Inactive <span class="count" id="count-inactive">0</span>
+        </button>
+      </div>
     </div>
 
     <div id="distributors-container">
@@ -439,6 +495,7 @@
 
   <script>
     let allDistributors = [];
+    let currentFilter = 'all';
 
     async function loadDistributors() {
       try {
@@ -446,6 +503,7 @@
         if (!res.ok) throw new Error('Failed to load distributors');
         const data = await res.json();
         allDistributors = data.distributors || [];
+        updateCounts();
         renderDistributors();
       } catch (err) {
         document.getElementById('distributors-container').innerHTML = `
@@ -457,15 +515,65 @@
       }
     }
 
+    function updateCounts() {
+      const counts = {
+        all: allDistributors.length,
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+        active: 0,
+        inactive: 0
+      };
+
+      allDistributors.forEach(dist => {
+        if (counts[dist.status] !== undefined) {
+          counts[dist.status]++;
+        }
+      });
+
+      Object.keys(counts).forEach(status => {
+        const countEl = document.getElementById(`count-${status}`);
+        if (countEl) countEl.textContent = counts[status];
+      });
+    }
+
+    function filterByStatus(status) {
+      currentFilter = status;
+
+      // Update active tab
+      document.querySelectorAll('.filter-tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      document.querySelector(`[data-status="${status}"]`).classList.add('active');
+
+      renderDistributors();
+    }
+
     function renderDistributors() {
       const container = document.getElementById('distributors-container');
       const searchTerm = document.getElementById('search-input').value.toLowerCase();
 
+      // Filter by status
       let filtered = allDistributors.filter(dist => {
-        return !searchTerm || 
+        if (currentFilter !== 'all' && dist.status !== currentFilter) {
+          return false;
+        }
+
+        // Filter by search term
+        return !searchTerm ||
           dist.company_name.toLowerCase().includes(searchTerm) ||
           (dist.contact_name && dist.contact_name.toLowerCase().includes(searchTerm)) ||
           (dist.territory && dist.territory.toLowerCase().includes(searchTerm));
+      });
+
+      // Sort: Pending first, then by created date (newest first)
+      filtered.sort((a, b) => {
+        // Pending applications always come first
+        if (a.status === 'pending' && b.status !== 'pending') return -1;
+        if (a.status !== 'pending' && b.status === 'pending') return 1;
+
+        // Then sort by created date (newest first)
+        return new Date(b.created_at) - new Date(a.created_at);
       });
 
       if (filtered.length === 0) {
