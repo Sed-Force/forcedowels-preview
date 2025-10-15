@@ -2,6 +2,8 @@
 import { json, applyCORS, verifyAuth } from './_lib/auth.js';
 import { Resend } from 'resend';
 
+export const config = { runtime: 'nodejs' };
+
 // ---------- Env controls ----------
 const IS_PREVIEW = process.env.VERCEL_ENV === 'preview';
 const SEND_MODE  = (process.env.EMAIL_SEND_MODE || 'send').toLowerCase(); // "send" | "disabled"
@@ -29,17 +31,19 @@ const resend = HAS_RESEND ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // ---------- Handler ----------
 export default async function handler(req, res) {
-  if (applyCORS(req, res)) return;
-  if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
-
-  // Body
-  let body = {};
   try {
-    const text = await readBody(req);
-    body = text ? JSON.parse(text) : {};
-  } catch {
-    return json(res, 400, { error: 'Invalid JSON body' });
-  }
+    if (applyCORS(req, res)) return;
+    if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
+
+    // Body
+    let body = {};
+    try {
+      const text = await readBody(req);
+      body = text ? JSON.parse(text) : {};
+    } catch (parseErr) {
+      console.error('JSON parse error:', parseErr);
+      return json(res, 400, { error: 'Invalid JSON body' });
+    }
 
   // Extract all form fields
   const {
@@ -124,18 +128,28 @@ export default async function handler(req, res) {
   ].filter(Boolean).join('\n');
 
   // Send to info@forcedowels.com
-  try {
-    const sent = await resend.emails.send({
-      from: process.env.EMAIL_FROM,
-      to: DISTRIBUTOR_RECIPIENTS,
-      subject,
-      html,
-      text,
-      reply_to: email
+    try {
+      const sent = await resend.emails.send({
+        from: process.env.EMAIL_FROM,
+        to: DISTRIBUTOR_RECIPIENTS,
+        subject,
+        html,
+        text,
+        reply_to: email
+      });
+      return json(res, 200, { ok: true, id: sent?.id || null, to: DISTRIBUTOR_RECIPIENTS, status: 'sent' });
+    } catch (err) {
+      console.error('Email send error:', err);
+      return json(res, 502, { error: 'Email send failed', detail: err?.message || String(err) });
+    }
+  } catch (error) {
+    // Catch-all error handler
+    console.error('Distributor application handler error:', error);
+    return json(res, 500, {
+      error: 'Internal server error',
+      detail: error?.message || String(error),
+      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined
     });
-    return json(res, 200, { ok: true, id: sent?.id || null, to: DISTRIBUTOR_RECIPIENTS, status: 'sent' });
-  } catch (err) {
-    return json(res, 502, { error: 'Email send failed', detail: err?.message || String(err) });
   }
 }
 
