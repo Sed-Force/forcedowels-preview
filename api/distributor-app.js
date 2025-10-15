@@ -55,8 +55,14 @@ export default async function handler(req, res) {
     let acceptUrl = null;
     let rejectUrl = null;
 
+    console.log('=== DISTRIBUTOR APP DEBUG ===');
+    console.log('SQL object exists:', !!sql);
+    console.log('NEON_DATABASE_URL exists:', !!process.env.NEON_DATABASE_URL);
+    console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
+
     try {
       if (sql) {
+        console.log('Attempting to save to database...');
         // Ensure tables exist
         await sql`
           CREATE TABLE IF NOT EXISTS distributors (
