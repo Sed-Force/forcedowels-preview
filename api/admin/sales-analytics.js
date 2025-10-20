@@ -1,7 +1,6 @@
 // /api/admin/sales-analytics.js
-// Sales analytics from Stripe data
-import Stripe from 'stripe';
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' });
+// Sales analytics from database orders
+import { sql } from '../_lib/db.js';
 
 function formatMoney(cents) {
   return (Number(cents || 0) / 100).toFixed(2);
@@ -14,36 +13,44 @@ export default async function handler(req, res) {
 
   try {
     const { period } = req.query; // 'day', 'week', 'month', 'year', 'all'
-    
+
     // Calculate date range based on period
     let startDate = null;
-    const now = Math.floor(Date.now() / 1000); // Current timestamp in seconds
-    
+    const now = new Date();
+
     switch (period) {
       case 'day':
-        startDate = now - (24 * 60 * 60); // Last 24 hours
+        startDate = new Date(now.getTime() - (24 * 60 * 60 * 1000));
         break;
       case 'week':
-        startDate = now - (7 * 24 * 60 * 60); // Last 7 days
+        startDate = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
         break;
       case 'month':
-        startDate = now - (30 * 24 * 60 * 60); // Last 30 days
+        startDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
         break;
       case 'year':
-        startDate = now - (365 * 24 * 60 * 60); // Last 365 days
+        startDate = new Date(now.getTime() - (365 * 24 * 60 * 60 * 1000));
         break;
       case 'all':
       default:
-        startDate = 0; // All time
+        startDate = new Date('2000-01-01'); // All time
         break;
     }
 
-    // Fetch all completed checkout sessions
-    const sessions = await stripe.checkout.sessions.list({
-      limit: 100,
-      created: startDate > 0 ? { gte: startDate } : undefined,
-      expand: ['data.line_items']
-    });
+    const startDateStr = startDate.toISOString().split('T')[0];
+
+    // Fetch all orders from database within the period
+    const orders = await sql`
+      SELECT
+        invoice_number,
+        order_date,
+        amount_cents,
+        quantity,
+        status
+      FROM orders
+      WHERE order_date >= ${startDateStr}
+      ORDER BY order_date ASC
+    `;
 
     // Calculate metrics
     let totalRevenue = 0;
@@ -52,32 +59,27 @@ export default async function handler(req, res) {
     const ordersByDate = {};
     const revenueByDate = {};
 
-    sessions.data.forEach(session => {
-      if (session.payment_status === 'paid') {
+    orders.forEach(order => {
+      // Only count paid or shipped orders (not pending/cancelled)
+      if (order.status === 'paid' || order.status === 'shipped') {
         totalOrders++;
-        totalRevenue += session.amount_total || 0;
-
-        // Count items
-        if (session.line_items && session.line_items.data) {
-          session.line_items.data.forEach(item => {
-            totalItems += item.quantity || 0;
-          });
-        }
+        totalRevenue += order.amount_cents || 0;
+        totalItems += order.quantity || 0;
 
         // Group by date
-        const date = new Date(session.created * 1000).toISOString().split('T')[0];
+        const date = order.order_date;
         ordersByDate[date] = (ordersByDate[date] || 0) + 1;
-        revenueByDate[date] = (revenueByDate[date] || 0) + (session.amount_total || 0);
+        revenueByDate[date] = (revenueByDate[date] || 0) + (order.amount_cents || 0);
       }
     });
 
     // Calculate average order value
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-    // Prepare chart data (last 30 days or available data)
+    // Prepare chart data
     const chartData = [];
     const sortedDates = Object.keys(revenueByDate).sort();
-    
+
     sortedDates.forEach(date => {
       chartData.push({
         date: date,
@@ -98,9 +100,9 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('Error fetching sales analytics:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Failed to fetch sales analytics',
-      message: error.message 
+      message: error.message
     });
   }
 }
