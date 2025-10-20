@@ -216,6 +216,127 @@
       margin-top: 8px;
       display: none;
     }
+    .add-invoice-btn {
+      background: #059669;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-left: auto;
+    }
+    .add-invoice-btn:hover {
+      background: #047857;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.active {
+      display: flex;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 32px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .modal-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: #6b7280;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .close-btn:hover {
+      background: #f3f4f6;
+    }
+    .form-row {
+      margin-bottom: 16px;
+    }
+    .form-row label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    .form-row input,
+    .form-row select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .form-row input:focus,
+    .form-row select:focus {
+      outline: none;
+      border-color: #1C4A99;
+      box-shadow: 0 0 0 3px rgba(28, 74, 153, 0.1);
+    }
+    .form-row small {
+      display: block;
+      margin-top: 4px;
+      color: #6b7280;
+      font-size: 12px;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid #e5e7eb;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #374151;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
     @media (max-width: 768px) {
       .order-header {
         flex-direction: column;
@@ -254,13 +375,89 @@
         <option value="pending" selected>Pending Only</option>
         <option value="shipped">Shipped Only</option>
       </select>
-      
+
       <label for="search-email">Search:</label>
       <input type="text" id="search-email" placeholder="Customer email or name...">
+
+      <button class="add-invoice-btn" onclick="openAddInvoiceModal()">+ Add Manual Invoice</button>
     </div>
 
     <div id="orders-container">
       <div class="loading">Loading orders...</div>
+    </div>
+  </div>
+
+  <!-- Add Manual Invoice Modal -->
+  <div id="add-invoice-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add Manual Invoice</h2>
+        <button class="close-btn" onclick="closeAddInvoiceModal()">&times;</button>
+      </div>
+
+      <form id="add-invoice-form" onsubmit="submitManualInvoice(event)">
+        <div class="form-row">
+          <label for="invoice-customer-name">Customer Name *</label>
+          <input type="text" id="invoice-customer-name" name="customer_name" required>
+        </div>
+
+        <div class="form-row">
+          <label for="invoice-customer-email">Customer Email *</label>
+          <input type="email" id="invoice-customer-email" name="customer_email" required>
+        </div>
+
+        <div class="form-row">
+          <label for="invoice-quantity">Quantity (Units) *</label>
+          <input type="number" id="invoice-quantity" name="quantity" min="1" required>
+          <small>Total number of units ordered</small>
+        </div>
+
+        <div class="form-row">
+          <label for="invoice-amount">Amount (USD) *</label>
+          <input type="number" id="invoice-amount" name="amount" step="0.01" min="0" required>
+          <small>Enter dollar amount (e.g., 382.98)</small>
+        </div>
+
+        <div class="form-row">
+          <label for="invoice-order-date">Order Date *</label>
+          <input type="date" id="invoice-order-date" name="order_date" required>
+        </div>
+
+        <div class="form-row">
+          <label for="invoice-carrier">Carrier *</label>
+          <select id="invoice-carrier" name="carrier" required>
+            <option value="">Select carrier...</option>
+            <option value="UPS">UPS</option>
+            <option value="USPS">USPS</option>
+            <option value="TQL Freight">TQL Freight</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="invoice-tracking">Tracking Number</label>
+          <input type="text" id="invoice-tracking" name="tracking_number">
+          <small>Optional - can be added later</small>
+        </div>
+
+        <div class="form-row">
+          <label for="invoice-status">Status *</label>
+          <select id="invoice-status" name="status" required>
+            <option value="shipped">Shipped</option>
+            <option value="pending">Pending</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="invoice-shipped-date">Shipped Date</label>
+          <input type="date" id="invoice-shipped-date" name="shipped_date">
+          <small>Leave blank if status is pending</small>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeAddInvoiceModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Invoice</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -454,6 +651,79 @@
         btn.textContent = 'Mark as Shipped';
       }
     }
+
+    // Modal functions
+    function openAddInvoiceModal() {
+      document.getElementById('add-invoice-modal').classList.add('active');
+      // Set today's date as default
+      document.getElementById('invoice-order-date').value = new Date().toISOString().split('T')[0];
+    }
+
+    function closeAddInvoiceModal() {
+      document.getElementById('add-invoice-modal').classList.remove('active');
+      document.getElementById('add-invoice-form').reset();
+    }
+
+    async function submitManualInvoice(event) {
+      event.preventDefault();
+      const form = event.target;
+      const submitBtn = form.querySelector('button[type="submit"]');
+
+      // Get form data
+      const formData = new FormData(form);
+      const data = {
+        customer_name: formData.get('customer_name'),
+        customer_email: formData.get('customer_email'),
+        quantity: parseInt(formData.get('quantity')),
+        amount_cents: Math.round(parseFloat(formData.get('amount')) * 100),
+        order_date: formData.get('order_date'),
+        carrier: formData.get('carrier'),
+        tracking_number: formData.get('tracking_number') || '',
+        status: formData.get('status'),
+        shipped_date: formData.get('shipped_date') || null
+      };
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Adding...';
+
+      try {
+        const res = await fetch('/api/admin/add-invoice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || 'Failed to add invoice');
+        }
+
+        const result = await res.json();
+
+        // Close modal and reload orders
+        closeAddInvoiceModal();
+        await loadOrders();
+
+        // Show success message
+        alert(`Invoice #${result.invoice_number} added successfully!`);
+
+        // Switch to "All Orders" view to see the new invoice
+        document.getElementById('filter-status').value = 'all';
+        renderOrders();
+
+      } catch (err) {
+        alert('Error: ' + err.message);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Add Invoice';
+      }
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('add-invoice-modal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeAddInvoiceModal();
+      }
+    });
 
     // Event listeners
     document.getElementById('filter-status').addEventListener('change', renderOrders);
