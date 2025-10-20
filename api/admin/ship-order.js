@@ -125,34 +125,82 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { session_id, carrier, tracking_number } = req.body;
+    const { session_id, carrier, tracking_number, invoice_number } = req.body;
 
-    if (!session_id || !carrier) {
-      return res.status(400).json({ error: 'Missing session_id or carrier' });
+    if (!carrier) {
+      return res.status(400).json({ error: 'Missing carrier' });
     }
 
-    // Fetch the session to get customer details
-    const session = await stripe.checkout.sessions.retrieve(session_id);
+    // Import database
+    const { sql } = await import('../_lib/db.js');
 
-    const customerEmail = session.customer_details?.email || session.customer_email;
-    const customerName = session.customer_details?.name || session.shipping?.name || 'Customer';
+    let customerEmail, customerName, orderNumber;
+
+    // Check if this is a database order (historical or new) or a Stripe-only session
+    if (invoice_number) {
+      // Update database order
+      const rows = await sql`
+        UPDATE orders
+        SET status = 'shipped',
+            tracking_number = ${tracking_number || ''},
+            carrier = ${carrier},
+            shipped_date = CURRENT_DATE,
+            updated_at = NOW()
+        WHERE invoice_number = ${invoice_number}
+        RETURNING customer_email, customer_name, invoice_number
+      `;
+
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      customerEmail = rows[0].customer_email;
+      customerName = rows[0].customer_name;
+      orderNumber = `#${rows[0].invoice_number}`;
+
+      // Also update Stripe session if it exists
+      if (session_id && !session_id.startsWith('hist_')) {
+        try {
+          await stripe.checkout.sessions.update(session_id, {
+            metadata: {
+              shipping_status: 'shipped',
+              carrier: carrier,
+              tracking_number: tracking_number || '',
+              shipped_at: new Date().toISOString()
+            }
+          });
+        } catch (err) {
+          console.log('Stripe session not found or could not be updated:', err.message);
+        }
+      }
+    } else if (session_id && !session_id.startsWith('hist_')) {
+      // Legacy: Update Stripe session only (for orders not yet in database)
+      const session = await stripe.checkout.sessions.retrieve(session_id);
+
+      customerEmail = session.customer_details?.email || session.customer_email;
+      customerName = session.customer_details?.name || session.shipping?.name || 'Customer';
+
+      if (!customerEmail) {
+        return res.status(400).json({ error: 'No customer email found for this order' });
+      }
+
+      orderNumber = '#' + session_id.replace('cs_test_', '').replace('cs_live_', '').replace(/[^a-zA-Z0-9]/g, '').slice(-8).toUpperCase();
+
+      await stripe.checkout.sessions.update(session_id, {
+        metadata: {
+          shipping_status: 'shipped',
+          carrier: carrier,
+          tracking_number: tracking_number || '',
+          shipped_at: new Date().toISOString()
+        }
+      });
+    } else {
+      return res.status(400).json({ error: 'Must provide either session_id or invoice_number' });
+    }
 
     if (!customerEmail) {
       return res.status(400).json({ error: 'No customer email found for this order' });
     }
-
-    // Generate order number
-    const orderNumber = '#' + session_id.replace('cs_test_', '').replace('cs_live_', '').replace(/[^a-zA-Z0-9]/g, '').slice(-8).toUpperCase();
-
-    // Update the Stripe session metadata
-    await stripe.checkout.sessions.update(session_id, {
-      metadata: {
-        shipping_status: 'shipped',
-        carrier: carrier,
-        tracking_number: tracking_number || '',
-        shipped_at: new Date().toISOString()
-      }
-    });
 
     // Send shipping notification email
     const emailHtml = buildShippingEmail({

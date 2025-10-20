@@ -471,6 +471,57 @@ export default async function handler(req, res) {
       console.error('Failed to update Stripe metadata with invoice number:', err);
     }
 
+    // Save order to database
+    try {
+      const { sql } = await import('./_lib/db.js');
+      if (sql) {
+        // Build items summary
+        const { bulkUnits = 0, kitQty = 0 } = metaSummary;
+        let itemsSummary = '';
+        if (bulkUnits > 0) {
+          const tier = bulkUnits >= 165000 ? '165,000+' : bulkUnits >= 25000 ? '25,000-164,999' : '5,000-24,999';
+          itemsSummary = `${tier} (${bulkUnits}) (Qty: ${bulkUnits})`;
+        } else if (kitQty > 0) {
+          const totalUnits = kitQty * 300;
+          itemsSummary = `Kit - 300 units (${totalUnits}) (Qty: ${totalUnits})`;
+        }
+
+        await sql`
+          INSERT INTO orders (
+            invoice_number,
+            customer_name,
+            customer_email,
+            items_summary,
+            shipping_method,
+            quantity,
+            status,
+            order_date,
+            amount_cents,
+            tracking_number,
+            carrier,
+            session_id
+          ) VALUES (
+            ${invoiceNumber},
+            ${customerName},
+            ${customerEmail},
+            ${itemsSummary},
+            ${shippingMethod},
+            ${bulkUnits || kitQty * 300},
+            'paid',
+            CURRENT_DATE,
+            ${totalCents},
+            '',
+            ${shipCarrier},
+            ${sessionId}
+          )
+        `;
+        console.log(`[Webhook] Saved order #${invoiceNumber} to database`);
+      }
+    } catch (err) {
+      console.error('Failed to save order to database:', err);
+      // Don't fail the webhook if database save fails
+    }
+
     // Build + send email
     const shortId = `#${sessionId.slice(-8)}`;
     const subject = `Force Dowels Order ${shortId}`;

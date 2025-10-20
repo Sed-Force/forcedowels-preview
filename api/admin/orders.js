@@ -1,7 +1,6 @@
 // /api/admin/orders.js
-// Fetch all orders from Stripe checkout sessions
-import Stripe from 'stripe';
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' });
+// Fetch all orders from database (includes historical orders)
+import { sql } from '../_lib/db.js';
 
 function formatMoney(cents) {
   return (Number(cents || 0) / 100).toLocaleString('en-US', {
@@ -11,76 +10,72 @@ function formatMoney(cents) {
   });
 }
 
-function shortId(sessionId = '') {
-  const base = sessionId.replace('cs_test_', '').replace('cs_live_', '').replace(/[^a-zA-Z0-9]/g, '');
-  return '#' + base.slice(-8).toUpperCase();
-}
-
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // Fetch all completed checkout sessions (last 100)
-    const sessions = await stripe.checkout.sessions.list({
-      limit: 100,
-      expand: ['data.line_items']
-    });
+    if (!sql) {
+      throw new Error('Database not configured');
+    }
 
-    const orders = sessions.data
-      .filter(session => session.payment_status === 'paid')
-      .map(session => {
-        const metadata = session.metadata || {};
-        const status = metadata.shipping_status === 'shipped' ? 'shipped' : 'pending';
-        const trackingNumber = metadata.tracking_number || '';
-        const carrier = metadata.carrier || '';
-        const invoiceNumber = metadata.invoice_number || 'N/A';
+    // Fetch all orders from database, sorted by invoice number descending (newest first)
+    const rows = await sql`
+      SELECT
+        invoice_number,
+        customer_name,
+        customer_email,
+        items_summary,
+        shipping_method,
+        quantity,
+        status,
+        order_date,
+        amount_cents,
+        tracking_number,
+        carrier,
+        shipped_date,
+        session_id
+      FROM orders
+      ORDER BY invoice_number DESC
+    `;
 
-        // Get customer info
-        const customerEmail = session.customer_details?.email || session.customer_email || 'N/A';
-        const customerName = session.customer_details?.name || session.shipping?.name || '';
-
-        // Format date
-        const orderDate = new Date(session.created * 1000).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
-        });
-
-        // Get items summary
-        const lineItems = session.line_items?.data || [];
-        let itemsSummary = '';
-
-        if (lineItems.length > 0) {
-          itemsSummary = lineItems.map(item => {
-            const name = item.description || item.price?.product?.name || 'Item';
-            const qty = item.quantity || 1;
-            return qty > 1 ? `${name} (${qty})` : name;
-          }).join(', ');
-        } else {
-          itemsSummary = 'No items';
-        }
-
-        return {
-          session_id: session.id,
-          order_id: shortId(session.id),
-          invoice_number: invoiceNumber,
-          customer_email: customerEmail,
-          customer_name: customerName,
-          order_date: orderDate,
-          amount: formatMoney(session.amount_total),
-          items_summary: itemsSummary,
-          status: status,
-          carrier: carrier,
-          tracking_number: trackingNumber,
-          created_timestamp: session.created
-        };
-      })
-      .sort((a, b) => {
-        // Sort by date (newest first)
-        return b.created_timestamp - a.created_timestamp;
+    const orders = rows.map(row => {
+      // Format the order date
+      const orderDate = new Date(row.order_date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
       });
+
+      // Format shipped date if available
+      const shippedDate = row.shipped_date
+        ? new Date(row.shipped_date).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          })
+        : null;
+
+      return {
+        session_id: row.session_id || `hist_${row.invoice_number}`,
+        order_id: `#${row.invoice_number}`,
+        invoice_number: row.invoice_number,
+        customer_email: row.customer_email,
+        customer_name: row.customer_name,
+        order_date: orderDate,
+        amount: formatMoney(row.amount_cents),
+        amount_cents: row.amount_cents,
+        items_summary: row.items_summary,
+        quantity: row.quantity,
+        status: row.status,
+        carrier: row.carrier || '',
+        tracking_number: row.tracking_number || '',
+        shipping_method: row.shipping_method,
+        shipped_date: shippedDate,
+        created_timestamp: new Date(row.order_date).getTime() / 1000
+      };
+    });
 
     res.status(200).json({ orders });
   } catch (err) {
