@@ -39,17 +39,24 @@ export default async function handler(req, res) {
 
     const startDateStr = startDate.toISOString().split('T')[0];
 
-    // Fetch all orders from database within the period
-    const orders = await sql`
+    // Fetch full order details for the period
+    const fullOrders = await sql`
       SELECT
         invoice_number,
+        customer_name,
+        customer_email,
+        items_summary,
+        shipping_method,
+        quantity,
+        status,
         order_date,
         amount_cents,
-        quantity,
-        status
+        tracking_number,
+        carrier,
+        shipped_date
       FROM orders
       WHERE order_date >= ${startDateStr}
-      ORDER BY order_date ASC
+      ORDER BY order_date ASC, invoice_number ASC
     `;
 
     // Calculate metrics
@@ -58,8 +65,9 @@ export default async function handler(req, res) {
     let totalItems = 0;
     const ordersByDate = {};
     const revenueByDate = {};
+    const orderDetailsByDate = {};
 
-    orders.forEach(order => {
+    fullOrders.forEach(order => {
       // Only count paid or shipped orders (not pending/cancelled)
       if (order.status === 'paid' || order.status === 'shipped') {
         totalOrders++;
@@ -70,6 +78,25 @@ export default async function handler(req, res) {
         const date = order.order_date;
         ordersByDate[date] = (ordersByDate[date] || 0) + 1;
         revenueByDate[date] = (revenueByDate[date] || 0) + (order.amount_cents || 0);
+
+        // Store order details by date
+        if (!orderDetailsByDate[date]) {
+          orderDetailsByDate[date] = [];
+        }
+        orderDetailsByDate[date].push({
+          invoice_number: order.invoice_number,
+          customer_name: order.customer_name,
+          customer_email: order.customer_email,
+          items_summary: order.items_summary,
+          shipping_method: order.shipping_method,
+          quantity: order.quantity,
+          status: order.status,
+          amount: formatMoney(order.amount_cents),
+          amount_cents: order.amount_cents,
+          tracking_number: order.tracking_number || '',
+          carrier: order.carrier || '',
+          shipped_date: order.shipped_date || null
+        });
       }
     });
 
@@ -84,7 +111,8 @@ export default async function handler(req, res) {
       chartData.push({
         date: date,
         revenue: formatMoney(revenueByDate[date]),
-        orders: ordersByDate[date]
+        orders: ordersByDate[date],
+        orderDetails: orderDetailsByDate[date] || []
       });
     });
 
