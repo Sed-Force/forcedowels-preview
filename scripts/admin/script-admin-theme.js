@@ -6,18 +6,18 @@
   // Apply theme immediately to prevent flash
   document.documentElement.setAttribute('data-theme', currentTheme);
 
-  // Wait for DOM to be ready to update button icon
+  // Wait for DOM to be ready to attach click handler
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', updateButtonIcon);
+    document.addEventListener('DOMContentLoaded', initTheme);
   } else {
-    updateButtonIcon();
+    initTheme();
   }
 
-  function updateButtonIcon() {
+  function initTheme() {
     const toggle = document.getElementById('theme-toggle');
     if (toggle) {
-      const theme = document.documentElement.getAttribute('data-theme') || 'light';
-      toggle.innerHTML = theme === 'dark' ? '☀️' : '🌙';
+      // Add click handler
+      toggle.addEventListener('click', toggleTheme);
     }
   }
 
@@ -27,14 +27,8 @@
 
     document.documentElement.setAttribute('data-theme', newTheme);
     localStorage.setItem('admin-theme', newTheme);
-
-    // Update button icon
-    const toggle = document.getElementById('theme-toggle');
-    if (toggle) {
-      toggle.innerHTML = newTheme === 'dark' ? '☀️' : '🌙';
-    }
   }
 
-  // Make toggleTheme available globally
+  // Make toggleTheme available globally as well
   window.toggleAdminTheme = toggleTheme;
 })();

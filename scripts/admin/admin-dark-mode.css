@@ -192,23 +192,48 @@ body {
   color: var(--text-secondary) !important;
 }
 
-/* Theme toggle button */
-.theme-toggle-btn {
-  background: none !important;
-  border: none !important;
-  font-size: 24px !important;
-  cursor: pointer !important;
-  padding: 6px 12px !important;
-  border-radius: 4px !important;
-  transition: background 0.2s !important;
-  line-height: 1 !important;
+/* Theme toggle button - matching main site style */
+.admin-theme-btn {
+  background: transparent !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
   color: white !important;
-  display: inline-block !important;
-  vertical-align: middle !important;
+  cursor: pointer !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+  transition: all 0.2s !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
 }
 
-.theme-toggle-btn:hover {
+.admin-theme-btn:hover {
   background: rgba(255,255,255,0.1) !important;
+  border-color: rgba(255,255,255,0.3) !important;
+}
+
+.theme-icon {
+  flex-shrink: 0 !important;
+  transition: transform 0.2s !important;
+}
+
+/* Show sun icon in light mode, hide moon */
+:root .theme-icon-light {
+  display: block;
+}
+
+:root .theme-icon-dark {
+  display: none;
+}
+
+/* Show moon icon in dark mode, hide sun */
+[data-theme="dark"] .theme-icon-light {
+  display: none;
+}
+
+[data-theme="dark"] .theme-icon-dark {
+  display: block;
 }
 
 .admin-nav {
