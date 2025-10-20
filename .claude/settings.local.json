@@ -25,7 +25,10 @@
       "WebFetch(domain:api.github.com)",
       "Bash(curl:*)",
       "Bash(tree:*)",
-      "Bash(timeout 15 bash:*)"
+      "Bash(timeout 15 bash:*)",
+      "Bash(while read file)",
+      "Bash(do if ! grep -q \"admin-dark-mode.css\" \"$file\")",
+      "Bash(then echo \"Processing: $file\" fi done)"
     ],
     "deny": [],
     "ask": []
