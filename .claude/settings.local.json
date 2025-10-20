@@ -31,7 +31,8 @@
       "Bash(then echo \"Processing: $file\" fi done)",
       "Bash(for file in admin-sales.html admin-customers.html admin-distributors.html)",
       "Bash(do)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(for file in admin.html admin-sales.html admin-customers.html admin-distributors.html)"
     ],
     "deny": [],
     "ask": []
