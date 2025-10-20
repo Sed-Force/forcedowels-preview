@@ -21,7 +21,7 @@
     themeToggle.innerHTML = currentTheme === 'dark' ? '☀️' : '🌙';
     themeToggle.setAttribute('aria-label', 'Toggle theme');
     themeToggle.setAttribute('title', 'Toggle dark mode');
-    themeToggle.style.cssText = 'background: none; border: none; font-size: 20px; cursor: pointer; padding: 6px 12px; border-radius: 4px; transition: background 0.2s; line-height: 1;';
+    themeToggle.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; padding: 6px 12px; border-radius: 4px; transition: background 0.2s; line-height: 1; color: white; display: inline-block;';
     themeToggle.onclick = toggleTheme;
 
     // Hover effect
@@ -32,13 +32,11 @@
       this.style.background = 'none';
     };
 
-    // Add to nav (before logout link)
+    // Add to nav (at the beginning, before Orders link)
     const nav = document.querySelector('.admin-nav');
-    const logoutLink = nav?.querySelector('a[onclick*="adminLogout"]');
-    if (nav && logoutLink) {
-      nav.insertBefore(themeToggle, logoutLink);
+    if (nav && nav.firstChild) {
+      nav.insertBefore(themeToggle, nav.firstChild);
     } else if (nav) {
-      // If no logout link, just append to nav
       nav.appendChild(themeToggle);
     }
   }
