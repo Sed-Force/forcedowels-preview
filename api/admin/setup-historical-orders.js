@@ -13,11 +13,12 @@ const HISTORICAL_ORDERS = [
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
     shipping_method: 'UPS Ground',
     quantity: 5000,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-07-22',
     amount_cents: 38298,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-07-23'
   },
   {
     invoice_number: 2,
@@ -26,11 +27,12 @@ const HISTORICAL_ORDERS = [
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
     shipping_method: 'UPS Ground',
     quantity: 5000,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-07-31',
     amount_cents: 40003,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-08-01'
   },
   {
     invoice_number: 3,
@@ -109,11 +111,12 @@ const HISTORICAL_ORDERS = [
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
     shipping_method: 'UPS Ground',
     quantity: 5000,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-08-18',
     amount_cents: 41979,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-08-19'
   },
   {
     invoice_number: 9,
@@ -122,11 +125,12 @@ const HISTORICAL_ORDERS = [
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
     shipping_method: 'UPS Ground',
     quantity: 5000,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-08-25',
     amount_cents: 38298,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-08-26'
   },
   {
     invoice_number: 10,
@@ -135,11 +139,12 @@ const HISTORICAL_ORDERS = [
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
     shipping_method: 'UPS Ground',
     quantity: 5000,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-08-25',
     amount_cents: 38298,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-08-26'
   },
   {
     invoice_number: 11,
@@ -148,11 +153,12 @@ const HISTORICAL_ORDERS = [
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
     shipping_method: 'UPS Ground',
     quantity: 5000,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-08-30',
     amount_cents: 37797,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-08-31'
   },
   {
     invoice_number: 12,
@@ -161,11 +167,12 @@ const HISTORICAL_ORDERS = [
     items_summary: 'Kit - 300 units (600) (Qty: 600)',
     shipping_method: 'UPS Ground',
     quantity: 600,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-09-04',
     amount_cents: 8993,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-09-05'
   },
   {
     invoice_number: 13,
@@ -174,11 +181,12 @@ const HISTORICAL_ORDERS = [
     items_summary: 'Kit - 300 units (600) (Qty: 600)',
     shipping_method: 'UPS Ground',
     quantity: 600,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-09-04',
     amount_cents: 8993,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-09-05'
   },
   {
     invoice_number: 14,
@@ -187,11 +195,12 @@ const HISTORICAL_ORDERS = [
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
     shipping_method: 'UPS Ground',
     quantity: 300,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-09-05',
     amount_cents: 5660,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-09-06'
   },
   {
     invoice_number: 15,
@@ -200,11 +209,12 @@ const HISTORICAL_ORDERS = [
     items_summary: '5,000-20,000 (10000) (Qty: 10000)',
     shipping_method: 'UPS Ground',
     quantity: 10000,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-09-08',
     amount_cents: 80463,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-09-09'
   },
   {
     invoice_number: 16,
@@ -213,11 +223,12 @@ const HISTORICAL_ORDERS = [
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
     shipping_method: 'UPS Ground',
     quantity: 300,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-09-12',
     amount_cents: 5660,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-09-13'
   },
   {
     invoice_number: 17,
@@ -226,11 +237,12 @@ const HISTORICAL_ORDERS = [
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
     shipping_method: 'UPS Ground',
     quantity: 300,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-09-12',
     amount_cents: 5660,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-09-13'
   },
   {
     invoice_number: 18,
@@ -239,11 +251,12 @@ const HISTORICAL_ORDERS = [
     items_summary: '5,000-20,000 (10000) (Qty: 10000)',
     shipping_method: 'UPS Ground',
     quantity: 10000,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-09-16',
     amount_cents: 70000,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-09-17'
   },
   {
     invoice_number: 19,
@@ -252,11 +265,12 @@ const HISTORICAL_ORDERS = [
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
     shipping_method: 'UPS Ground',
     quantity: 300,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-09-16',
     amount_cents: 5660,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-09-17'
   },
   {
     invoice_number: 20,
@@ -265,11 +279,12 @@ const HISTORICAL_ORDERS = [
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
     shipping_method: 'UPS Ground',
     quantity: 300,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-09-16',
     amount_cents: 5660,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-09-17'
   },
   {
     invoice_number: 21,
@@ -278,11 +293,12 @@ const HISTORICAL_ORDERS = [
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
     shipping_method: 'UPS Ground',
     quantity: 300,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-09-16',
     amount_cents: 5660,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-09-17'
   },
   {
     invoice_number: 22,
@@ -305,11 +321,12 @@ const HISTORICAL_ORDERS = [
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
     shipping_method: 'UPS Ground',
     quantity: 5000,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-09-19',
     amount_cents: 37432,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-09-20'
   },
   {
     invoice_number: 24,
@@ -318,11 +335,12 @@ const HISTORICAL_ORDERS = [
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
     shipping_method: 'UPS Ground',
     quantity: 300,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-09-30',
     amount_cents: 6397,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-10-01'
   },
   {
     invoice_number: 25,
@@ -331,11 +349,12 @@ const HISTORICAL_ORDERS = [
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
     shipping_method: 'UPS Ground',
     quantity: 300,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-09-30',
     amount_cents: 6397,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-10-01'
   },
   {
     invoice_number: 26,
@@ -344,11 +363,12 @@ const HISTORICAL_ORDERS = [
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
     shipping_method: 'UPS Ground',
     quantity: 300,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-10-10',
     amount_cents: 7023,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-10-11'
   },
   {
     invoice_number: 27,
@@ -357,11 +377,12 @@ const HISTORICAL_ORDERS = [
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
     shipping_method: 'UPS Ground',
     quantity: 300,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-10-10',
     amount_cents: 7023,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-10-11'
   },
   {
     invoice_number: 28,
@@ -370,11 +391,12 @@ const HISTORICAL_ORDERS = [
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
     shipping_method: 'UPS Ground',
     quantity: 300,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-10-10',
     amount_cents: 7023,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-10-11'
   },
   {
     invoice_number: 29,
@@ -383,11 +405,12 @@ const HISTORICAL_ORDERS = [
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
     shipping_method: 'UPS Ground',
     quantity: 300,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-10-14',
     amount_cents: 6522,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-10-15'
   },
   {
     invoice_number: 30,
@@ -396,11 +419,12 @@ const HISTORICAL_ORDERS = [
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
     shipping_method: 'UPS Ground',
     quantity: 300,
-    status: 'paid',
+    status: 'shipped',
     order_date: '2025-10-14',
     amount_cents: 6522,
     tracking_number: '',
-    carrier: 'UPS'
+    carrier: 'UPS',
+    shipped_date: '2025-10-15'
   }
 ];
 
