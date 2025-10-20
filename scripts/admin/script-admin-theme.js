@@ -20,13 +20,26 @@
     themeToggle.className = 'theme-toggle-btn';
     themeToggle.innerHTML = currentTheme === 'dark' ? '☀️' : '🌙';
     themeToggle.setAttribute('aria-label', 'Toggle theme');
+    themeToggle.setAttribute('title', 'Toggle dark mode');
+    themeToggle.style.cssText = 'background: none; border: none; font-size: 20px; cursor: pointer; padding: 6px 12px; border-radius: 4px; transition: background 0.2s; line-height: 1;';
     themeToggle.onclick = toggleTheme;
+
+    // Hover effect
+    themeToggle.onmouseover = function() {
+      this.style.background = 'rgba(255,255,255,0.1)';
+    };
+    themeToggle.onmouseout = function() {
+      this.style.background = 'none';
+    };
 
     // Add to nav (before logout link)
     const nav = document.querySelector('.admin-nav');
     const logoutLink = nav?.querySelector('a[onclick*="adminLogout"]');
     if (nav && logoutLink) {
       nav.insertBefore(themeToggle, logoutLink);
+    } else if (nav) {
+      // If no logout link, just append to nav
+      nav.appendChild(themeToggle);
     }
   }
 
