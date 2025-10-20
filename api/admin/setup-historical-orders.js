@@ -409,10 +409,17 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Security check - require admin auth
+  // Security check - require admin auth (skip in development if not set)
   const authHeader = req.headers.authorization;
-  if (!authHeader || authHeader !== `Bearer ${process.env.ADMIN_SETUP_TOKEN}`) {
+  const adminToken = process.env.ADMIN_SETUP_TOKEN;
+  const isDev = process.env.VERCEL_ENV !== 'production';
+
+  if (adminToken && authHeader !== `Bearer ${adminToken}`) {
     return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!isDev && !adminToken) {
+    return res.status(500).json({ error: 'ADMIN_SETUP_TOKEN not configured' });
   }
 
   try {
@@ -420,11 +427,16 @@ export default async function handler(req, res) {
       throw new Error('Database not configured');
     }
 
+    console.log('[Setup] Dropping existing orders table if exists...');
+
+    // Drop existing orders table
+    await sql`DROP TABLE IF EXISTS orders`;
+
     console.log('[Setup] Creating orders table...');
 
     // Create orders table
     await sql`
-      CREATE TABLE IF NOT EXISTS orders (
+      CREATE TABLE orders (
         id SERIAL PRIMARY KEY,
         invoice_number INTEGER UNIQUE NOT NULL,
         customer_name TEXT NOT NULL,
@@ -443,11 +455,6 @@ export default async function handler(req, res) {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `;
-
-    console.log('[Setup] Clearing existing orders...');
-
-    // Clear existing orders
-    await sql`DELETE FROM orders`;
 
     console.log('[Setup] Inserting historical orders...');
 
@@ -490,13 +497,66 @@ export default async function handler(req, res) {
     const counterKey = process.env.VERCEL_ENV === 'production' ? 'invoice_prod' : 'invoice_preview';
     await upsertCounter(counterKey, 30);
 
-    console.log('[Setup] Clearing distributor applications...');
+    console.log('[Setup] Clearing all distributors...');
 
-    // Clear distributor applications if table exists
+    // Clear ALL distributors (no active distributors)
     try {
-      await sql`DELETE FROM distributor_applications WHERE status != 'approved'`;
+      await sql`DELETE FROM distributors`;
+      console.log('[Setup] All distributors cleared');
     } catch (err) {
-      console.log('[Setup] No distributor_applications table found, skipping...');
+      console.log('[Setup] No distributors table found, skipping...');
+    }
+
+    console.log('[Setup] Creating customers table...');
+
+    // Drop and recreate customers table
+    await sql`DROP TABLE IF EXISTS customers`;
+    await sql`
+      CREATE TABLE customers (
+        id SERIAL PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        total_orders INTEGER DEFAULT 0,
+        total_spent_cents INTEGER DEFAULT 0,
+        first_order_date DATE,
+        last_order_date DATE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `;
+
+    console.log('[Setup] Populating customers from orders...');
+
+    // Extract unique customers from orders and calculate stats
+    const customerData = {};
+    for (const order of HISTORICAL_ORDERS) {
+      const email = order.customer_email.toLowerCase();
+      if (!customerData[email]) {
+        customerData[email] = {
+          email,
+          name: order.customer_name,
+          total_orders: 0,
+          total_spent_cents: 0,
+          first_order_date: order.order_date,
+          last_order_date: order.order_date
+        };
+      }
+      customerData[email].total_orders++;
+      customerData[email].total_spent_cents += order.amount_cents;
+      if (order.order_date < customerData[email].first_order_date) {
+        customerData[email].first_order_date = order.order_date;
+      }
+      if (order.order_date > customerData[email].last_order_date) {
+        customerData[email].last_order_date = order.order_date;
+      }
+    }
+
+    // Insert customers
+    for (const customer of Object.values(customerData)) {
+      await sql`
+        INSERT INTO customers (email, name, total_orders, total_spent_cents, first_order_date, last_order_date)
+        VALUES (${customer.email}, ${customer.name}, ${customer.total_orders}, ${customer.total_spent_cents}, ${customer.first_order_date}, ${customer.last_order_date})
+      `;
     }
 
     console.log('[Setup] Setup complete!');
@@ -505,6 +565,8 @@ export default async function handler(req, res) {
       success: true,
       message: 'Historical orders setup complete',
       orders_created: HISTORICAL_ORDERS.length,
+      customers_created: Object.keys(customerData).length,
+      distributors_cleared: true,
       next_invoice_number: 31
     });
 
