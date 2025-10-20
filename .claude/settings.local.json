@@ -28,7 +28,10 @@
       "Bash(timeout 15 bash:*)",
       "Bash(while read file)",
       "Bash(do if ! grep -q \"admin-dark-mode.css\" \"$file\")",
-      "Bash(then echo \"Processing: $file\" fi done)"
+      "Bash(then echo \"Processing: $file\" fi done)",
+      "Bash(for file in admin-sales.html admin-customers.html admin-distributors.html)",
+      "Bash(do)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []
