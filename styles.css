@@ -2663,6 +2663,19 @@ button,
   color: #e2e8f0 !important;
 }
 
+/* Dark mode button text improvements */
+[data-theme="dark"] .btn--accent {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn--ghost {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn--ghost:hover {
+  color: var(--accent) !important;
+}
+
 /* ===== ENHANCED LIGHT MODE TEXT CONTRAST ===== */
 [data-theme="light"] {
   /* Ensure maximum text contrast in light mode */
@@ -2840,4 +2853,23 @@ button,
   [data-theme="dark"] .cl-footerActionLink {
     color: #fbbf24 !important;
   }
+}
+
+/* Remove border from user profile icon */
+.cl-userButtonBox,
+.cl-avatarBox,
+.cl-userButtonTrigger,
+#user-button button,
+#user-button img {
+  border: none !important;
+  outline: none !important;
+}
+
+.cl-userButtonBox:focus,
+.cl-avatarBox:focus,
+.cl-userButtonTrigger:focus,
+#user-button button:focus {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }

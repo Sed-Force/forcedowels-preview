@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(npm run:*)",
+      "Bash(python:*)",
+      "Bash(npx vercel dev:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "mcp__vercel__deploy_to_vercel",
+      "Bash(node:*)",
+      "Bash(vercel dev)",
+      "Read(//c/Users/GunnerSparks/Pictures/Screenshots/**)",
+      "WebSearch",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd.exe /c taskkill /PID 24596 /F)",
+      "Bash(powershell -Command \"Stop-Process -Id 24596 -Force\")",
+      "Bash(powershell -Command \"Stop-Process -Id 24856,34216,11396 -Force\")",
+      "Bash(vercel dev:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(curl:*)",
+      "Bash(tree:*)",
+      "Bash(timeout 15 bash:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

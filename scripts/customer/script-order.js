@@ -10,8 +10,8 @@
 
   // price ladder
   function pricePerUnit(qty) {
-    if (qty >= 160000) return 0.0630;
-    if (qty > 20000)   return 0.0675;
+    if (qty >= 165000) return 0.0630;
+    if (qty >= 25000)  return 0.0675;
     return 0.0720;
   }
 

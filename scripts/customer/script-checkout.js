@@ -108,10 +108,25 @@
 
       const prev=btnRates.textContent; btnRates.disabled=true; btnRates.textContent='Getting rates…';
       try{
-        const res=await fetchWithTimeout('/api/shipping/quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({destination:dest,items})});
-        if(!res.ok){ console.error('Quote error',await res.text()); alert('Could not get shipping rates. Please try again.'); return; }
+        const res=await fetchWithTimeout('/api/shipping/rates',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:dest,items})});
+        if(!res.ok){ console.error('Rates error',await res.text()); alert('Could not get shipping rates. Please try again.'); return; }
         const data=await res.json();
-        renderRates(data?.rates||[], data?.status||null);
+        // Convert new API format (priceCents) to old format (amount)
+        const rates = (data?.rates || []).map(r => ({
+          carrier: r.carrier,
+          service: r.service,
+          amount: r.priceCents / 100,
+          currency: 'USD',
+          serviceCode: r.serviceCode,
+          estDays: r.estDays
+        }));
+        // Build status from errors if present
+        const status = data?.errors ? {
+          ups: data.errors.find(e => e.carrier === 'UPS') ? {available: false, message: data.errors.find(e => e.carrier === 'UPS').error} : null,
+          usps: data.errors.find(e => e.carrier === 'USPS') ? {available: false, message: data.errors.find(e => e.carrier === 'USPS').error} : null,
+          tql: data.errors.find(e => e.carrier === 'TQL') ? {available: false, message: data.errors.find(e => e.carrier === 'TQL').error} : null
+        } : null;
+        renderRates(rates, status);
       }catch(e){ console.error(e); alert(e.name==='AbortError'?'Timed out getting rates. Try again.':'Network error getting rates.'); }
       finally{ btnRates.disabled=false; btnRates.textContent=prev; }
     });

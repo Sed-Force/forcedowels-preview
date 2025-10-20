@@ -10,7 +10,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css?v=101" />
-
+  <script defer src="scripts/customer/script.js?v=101"></script>
+  <script defer src="scripts/customer/script-order.js?v=101"></script>
   <!-- Force theme override for order page -->
   <style>
     /* Aggressive theme override - force theme variables to work */
@@ -148,17 +149,17 @@
 
         <!-- Exactly one tier is active at a time. Clicking swaps the yellow outline. -->
         <button class="tier active" type="button" data-min="5000">
-          <span class="tier-range">5,000–20,000</span>
+          <span class="tier-range">5,000–24,999</span>
           <span class="tier-price">$0.0720/Unit</span>
         </button>
 
         <button class="tier" type="button" data-min="25000">
-          <span class="tier-range">&gt;20,000–160,000</span>
+          <span class="tier-range">25,000–164,999</span>
           <span class="tier-price">$0.0675/Unit</span>
         </button>
 
         <button class="tier" type="button" data-min="165000">
-          <span class="tier-range">&gt;160,000–960,000</span>
+          <span class="tier-range">165,000–960,000</span>
           <span class="tier-price">$0.0630/Unit</span>
         </button>
 
@@ -217,53 +218,6 @@
     </div>
   </section>
 </main>
-
-  <script>
-(function () {
-  const link = document.getElementById('btn-view-cart') || document.querySelector('[data-view-cart]');
-  if (!link) return;
-  link.addEventListener('click', function (e) {
-    try {
-      const raw = localStorage.getItem('fd_cart');
-      if (!raw) return; // nothing to pass
-      const b64 = btoa(unescape(encodeURIComponent(raw)));
-      // go to your cart on the same site; the cart page will import from ?cart=
-      const href = '/cart.html?cart=' + encodeURIComponent(b64);
-      e.preventDefault();
-      window.location.href = href;
-
-      // Optional cookie backup (helps if someone navigates to /cart.html manually afterwards)
-      document.cookie = 'fd_cart_b64=' + b64 + '; path=/; max-age=1200';
-    } catch {}
-  });
-})();
-</script>
-
-  <script>
-(function () {
-  const link =
-    document.getElementById('btn-view-cart') ||
-    document.querySelector('[data-view-cart]') ||
-    document.querySelector('a[href="/cart.html"]');
-
-  if (!link) return;
-
-  link.addEventListener('click', function (e) {
-    try {
-      const raw = localStorage.getItem('fd_cart');
-      if (!raw) return; // nothing to pass
-      const b64 = btoa(unescape(encodeURIComponent(raw)));
-      const href = '/cart.html?cart=' + encodeURIComponent(b64);
-      e.preventDefault();
-      // backup cookie (helps if user later opens /cart.html without ?cart)
-      document.cookie = 'fd_cart_b64=' + b64 + '; path=/; max-age=1200';
-      window.location.href = href;
-    } catch {}
-  });
-})();
-</script>
-
-
 
 <footer class="site-footer">
   <div class="container footer-main">
@@ -326,18 +280,6 @@
 <script>
   (function(){var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})();
 </script>
-
-
-    <!-- end of your main content -->
-  </section>
-</main>
-
-<!-- Footer pasted here -->
-<footer class="site-footer"> … </footer>
-
-<!-- your page scripts -->
-<script defer src="/script.js?v=103"></script>
-<script defer src="/script-order.js?v=103"></script>
 
 <!-- Clean theme toggle for order page -->
 <script>

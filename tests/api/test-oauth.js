@@ -6,8 +6,8 @@ export default async function handler(req, res) {
     console.log('[TEST-OAUTH] Starting test...');
     
     // Check environment variables
-    const clientId = process.env.USPS_CONSUMER_KEY;
-    const clientSecret = process.env.USPS_CONSUMER_SECRET;
+    const clientId = process.env.USPS_CLIENT_ID;
+    const clientSecret = process.env.USPS_CLIENT_SECRET;
     const tokenUrl = process.env.USPS_PORTAL_TOKEN_URL;
 
     // Try different possible token URLs
@@ -31,8 +31,8 @@ export default async function handler(req, res) {
       return res.status(400).json({
         error: 'Missing environment variables',
         missing: {
-          USPS_CONSUMER_KEY: !clientId,
-          USPS_CONSUMER_SECRET: !clientSecret,
+          USPS_CLIENT_ID: !clientId,
+          USPS_CLIENT_SECRET: !clientSecret,
           USPS_PORTAL_TOKEN_URL: !tokenUrl
         }
       });
