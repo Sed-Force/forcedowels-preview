@@ -5,13 +5,14 @@ export const config = { runtime: 'nodejs' };
 import { sql } from '../_lib/db.js';
 import { upsertCounter } from '../_lib/db.js';
 
+// All orders sorted chronologically (earliest to latest)
 const HISTORICAL_ORDERS = [
+  // July 2025
   {
-    invoice_number: 1,
     customer_name: 'L',
     customer_email: 'xlianc@gmail.com',
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
-    shipping_method: 'UPS Ground',
+    shipping_method: 'Stripe Link',
     quantity: 5000,
     status: 'shipped',
     order_date: '2025-07-22',
@@ -21,7 +22,19 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-07-23'
   },
   {
-    invoice_number: 2,
+    customer_name: 'Segale Brothers',
+    customer_email: 'don@segalebros.com',
+    items_summary: 'Custom Order (Qty: 600)',
+    shipping_method: 'Stripe Link',
+    quantity: 600,
+    status: 'shipped',
+    order_date: '2025-07-28',
+    amount_cents: 4417,
+    tracking_number: '',
+    carrier: 'UPS',
+    shipped_date: '2025-07-29'
+  },
+  {
     customer_name: 'lee',
     customer_email: 'lee@acercabinets.com',
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
@@ -34,8 +47,35 @@ const HISTORICAL_ORDERS = [
     carrier: 'UPS',
     shipped_date: '2025-08-01'
   },
+
+  // August 2025
   {
-    invoice_number: 3,
+    customer_name: 'Larry Falken',
+    customer_email: 'Ljfalken2@gmail.com',
+    items_summary: 'Custom Order (Qty: 500)',
+    shipping_method: 'Stripe Link',
+    quantity: 500,
+    status: 'shipped',
+    order_date: '2025-08-01',
+    amount_cents: 3899,
+    tracking_number: '',
+    carrier: 'UPS',
+    shipped_date: '2025-08-02'
+  },
+  {
+    customer_name: 'North Atlantic Corp',
+    customer_email: 'ds@northatlanticcorp.com',
+    items_summary: 'Custom Order (Qty: 400)',
+    shipping_method: 'Stripe Link',
+    quantity: 400,
+    status: 'shipped',
+    order_date: '2025-08-06',
+    amount_cents: 2780,
+    tracking_number: '',
+    carrier: 'UPS',
+    shipped_date: '2025-08-07'
+  },
+  {
     customer_name: 'Richard R Elliott',
     customer_email: 'Snowmtnwoodworking@gmail.com',
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
@@ -49,7 +89,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-08-07'
   },
   {
-    invoice_number: 4,
     customer_name: 'Richard R Elliott',
     customer_email: 'Snowmtnwoodworking@gmail.com',
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
@@ -63,7 +102,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-08-07'
   },
   {
-    invoice_number: 5,
     customer_name: 'purchasing',
     customer_email: 'purchasing@spadina.com',
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
@@ -77,7 +115,58 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-08-12'
   },
   {
-    invoice_number: 6,
+    customer_name: 'Paris Mexico Design',
+    customer_email: 'pgremion@parismexico.net',
+    items_summary: '5,000-20,000 (5000) (Qty: 5000)',
+    shipping_method: 'Stripe Link',
+    quantity: 5000,
+    status: 'shipped',
+    order_date: '2025-08-11',
+    amount_cents: 19633,
+    tracking_number: '',
+    carrier: 'UPS',
+    shipped_date: '2025-08-12'
+  },
+  {
+    customer_name: 'Yasser Ali',
+    customer_email: 'flm36032@gmail.com',
+    items_summary: '5,000-20,000 (20000) (Qty: 20000)',
+    shipping_method: 'Stripe Link',
+    quantity: 20000,
+    status: 'shipped',
+    order_date: '2025-08-12',
+    amount_cents: 77912,
+    tracking_number: '',
+    carrier: 'UPS',
+    shipped_date: '2025-08-13'
+  },
+  {
+    customer_name: 'Marathon Hardware',
+    customer_email: 'erik.janelle@marathonhardware.com',
+    items_summary: '5,000-20,000 (8000) (Qty: 8000)',
+    shipping_method: 'Stripe Link',
+    quantity: 8000,
+    status: 'shipped',
+    order_date: '2025-08-13',
+    amount_cents: 32843,
+    tracking_number: '',
+    carrier: 'UPS',
+    shipped_date: '2025-08-14'
+  },
+  {
+    customer_name: 'Abellex Millworks',
+    customer_email: 'noah@abellex.com',
+    items_summary: 'Custom Order (Qty: 1500)',
+    shipping_method: 'Stripe Link',
+    quantity: 1500,
+    status: 'shipped',
+    order_date: '2025-08-14',
+    amount_cents: 9305,
+    tracking_number: '',
+    carrier: 'UPS',
+    shipped_date: '2025-08-15'
+  },
+  {
     customer_name: 'Blake Barber',
     customer_email: 'Production@cabinetsbycrest.com',
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
@@ -91,7 +180,19 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-08-18'
   },
   {
-    invoice_number: 7,
+    customer_name: 'Shelby Woodworking',
+    customer_email: 'making127@gmail.com',
+    items_summary: 'Custom Order (Qty: 800)',
+    shipping_method: 'Stripe Link',
+    quantity: 800,
+    status: 'shipped',
+    order_date: '2025-08-15',
+    amount_cents: 5450,
+    tracking_number: '',
+    carrier: 'UPS',
+    shipped_date: '2025-08-16'
+  },
+  {
     customer_name: 'Gordan Kustura',
     customer_email: 'gordan@merrimackstone.com',
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
@@ -105,7 +206,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-08-18'
   },
   {
-    invoice_number: 8,
     customer_name: 'Gordan Kustura',
     customer_email: 'gordan@merrimackstone.com',
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
@@ -119,7 +219,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-08-19'
   },
   {
-    invoice_number: 9,
     customer_name: 'purchasing',
     customer_email: 'purchasing@spadina.com',
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
@@ -133,7 +232,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-08-26'
   },
   {
-    invoice_number: 10,
     customer_name: 'purchasing',
     customer_email: 'purchasing@spadina.com',
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
@@ -147,7 +245,19 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-08-26'
   },
   {
-    invoice_number: 11,
+    customer_name: 'Yehuda Spadina',
+    customer_email: 'yehuda@spadina.com',
+    items_summary: '5,000-20,000 (8000) (Qty: 8000)',
+    shipping_method: 'Stripe Link',
+    quantity: 8000,
+    status: 'shipped',
+    order_date: '2025-08-26',
+    amount_cents: 30384,
+    tracking_number: '',
+    carrier: 'UPS',
+    shipped_date: '2025-08-27'
+  },
+  {
     customer_name: 'Levin',
     customer_email: 'info@thematerialreserve.com',
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
@@ -160,8 +270,22 @@ const HISTORICAL_ORDERS = [
     carrier: 'UPS',
     shipped_date: '2025-08-31'
   },
+
+  // September 2025
   {
-    invoice_number: 12,
+    customer_name: 'Gary Miller',
+    customer_email: 'gary@shelfnation.com',
+    items_summary: 'Custom Order (Qty: 600)',
+    shipping_method: 'Stripe Link',
+    quantity: 600,
+    status: 'shipped',
+    order_date: '2025-09-02',
+    amount_cents: 4500,
+    tracking_number: '',
+    carrier: 'UPS',
+    shipped_date: '2025-09-03'
+  },
+  {
     customer_name: 'Jason Risnes',
     customer_email: 'jason.risnes@yahoo.com',
     items_summary: 'Kit - 300 units (600) (Qty: 600)',
@@ -175,7 +299,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-09-05'
   },
   {
-    invoice_number: 13,
     customer_name: 'Jason Risnes',
     customer_email: 'jason.risnes@yahoo.com',
     items_summary: 'Kit - 300 units (600) (Qty: 600)',
@@ -189,7 +312,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-09-05'
   },
   {
-    invoice_number: 14,
     customer_name: 'eugenia.vrf',
     customer_email: 'eugenia.vrf@sincrology.com',
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
@@ -203,7 +325,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-09-06'
   },
   {
-    invoice_number: 15,
     customer_name: 'purchasing',
     customer_email: 'purchasing@spadina.com',
     items_summary: '5,000-20,000 (10000) (Qty: 10000)',
@@ -217,7 +338,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-09-09'
   },
   {
-    invoice_number: 16,
     customer_name: 'Avron Levin',
     customer_email: 'avronlevin@gmail.com',
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
@@ -231,7 +351,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-09-13'
   },
   {
-    invoice_number: 17,
     customer_name: 'Avron Levin',
     customer_email: 'avronlevin@gmail.com',
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
@@ -245,7 +364,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-09-13'
   },
   {
-    invoice_number: 18,
     customer_name: 'purchasing',
     customer_email: 'purchasing@spadina.com',
     items_summary: '5,000-20,000 (10000) (Qty: 10000)',
@@ -259,7 +377,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-09-17'
   },
   {
-    invoice_number: 19,
     customer_name: 'Mohannad halaweh',
     customer_email: 'fairwaycustomcabinets@gmail.com',
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
@@ -273,7 +390,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-09-17'
   },
   {
-    invoice_number: 20,
     customer_name: 'Mohannad halaweh',
     customer_email: 'fairwaycustomcabinets@gmail.com',
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
@@ -287,7 +403,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-09-17'
   },
   {
-    invoice_number: 21,
     customer_name: 'Mohannad halaweh',
     customer_email: 'fairwaycustomcabinets@gmail.com',
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
@@ -301,7 +416,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-09-17'
   },
   {
-    invoice_number: 22,
     customer_name: 'kyle',
     customer_email: 'kyle@cosandconstruction.com',
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
@@ -315,7 +429,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-09-19'
   },
   {
-    invoice_number: 23,
     customer_name: 'lee',
     customer_email: 'lee@acercabinets.com',
     items_summary: '5,000-20,000 (5000) (Qty: 5000)',
@@ -329,7 +442,19 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-09-20'
   },
   {
-    invoice_number: 24,
+    customer_name: 'Spadina',
+    customer_email: 'purchasing@spadina.com',
+    items_summary: 'Custom Order (Qty: 2500)',
+    shipping_method: 'Stripe Link',
+    quantity: 2500,
+    status: 'shipped',
+    order_date: '2025-09-23',
+    amount_cents: 10463,
+    tracking_number: '',
+    carrier: 'UPS',
+    shipped_date: '2025-09-24'
+  },
+  {
     customer_name: 'Dan Walpole',
     customer_email: 'dwalpole@milltechllc.com',
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
@@ -343,7 +468,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-10-01'
   },
   {
-    invoice_number: 25,
     customer_name: 'Dan Walpole',
     customer_email: 'dwalpole@milltechllc.com',
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
@@ -356,8 +480,9 @@ const HISTORICAL_ORDERS = [
     carrier: 'UPS',
     shipped_date: '2025-10-01'
   },
+
+  // October 2025
   {
-    invoice_number: 26,
     customer_name: 'Jonathan Ward',
     customer_email: 'jonathan@dreamclosetshawaii.com',
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
@@ -371,7 +496,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-10-11'
   },
   {
-    invoice_number: 27,
     customer_name: 'Jonathan Ward',
     customer_email: 'jonathan@dreamclosetshawaii.com',
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
@@ -385,7 +509,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-10-11'
   },
   {
-    invoice_number: 28,
     customer_name: 'Jonathan Ward',
     customer_email: 'jonathan@dreamclosetshawaii.com',
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
@@ -399,7 +522,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-10-11'
   },
   {
-    invoice_number: 29,
     customer_name: 'Wolf Studio',
     customer_email: 'wolfwoodco@gmail.com',
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
@@ -413,7 +535,6 @@ const HISTORICAL_ORDERS = [
     shipped_date: '2025-10-15'
   },
   {
-    invoice_number: 30,
     customer_name: 'Wolf Studio',
     customer_email: 'wolfwoodco@gmail.com',
     items_summary: 'Kit - 300 units (300) (Qty: 300)',
@@ -482,7 +603,8 @@ export default async function handler(req, res) {
 
     console.log('[Setup] Inserting historical orders...');
 
-    // Insert historical orders
+    // Insert historical orders with sequential invoice numbers
+    let invoiceNum = 1;
     for (const order of HISTORICAL_ORDERS) {
       await sql`
         INSERT INTO orders (
@@ -499,7 +621,7 @@ export default async function handler(req, res) {
           carrier,
           shipped_date
         ) VALUES (
-          ${order.invoice_number},
+          ${invoiceNum},
           ${order.customer_name},
           ${order.customer_email},
           ${order.items_summary},
@@ -513,13 +635,15 @@ export default async function handler(req, res) {
           ${order.shipped_date || null}
         )
       `;
+      invoiceNum++;
     }
 
-    console.log('[Setup] Setting invoice counter to 30...');
+    const totalOrders = HISTORICAL_ORDERS.length;
+    console.log(`[Setup] Setting invoice counter to ${totalOrders}...`);
 
-    // Set the invoice counter to 30 so next order will be #31
+    // Set the invoice counter so next order will be totalOrders + 1
     const counterKey = process.env.VERCEL_ENV === 'production' ? 'invoice_prod' : 'invoice_preview';
-    await upsertCounter(counterKey, 30);
+    await upsertCounter(counterKey, totalOrders);
 
     console.log('[Setup] Clearing all distributors...');
 
@@ -588,10 +712,10 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       message: 'Historical orders setup complete',
-      orders_created: HISTORICAL_ORDERS.length,
+      orders_created: totalOrders,
       customers_created: Object.keys(customerData).length,
       distributors_cleared: true,
-      next_invoice_number: 31
+      next_invoice_number: totalOrders + 1
     });
 
   } catch (err) {
