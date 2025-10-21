@@ -66,7 +66,6 @@
   const totalEl   = $('#price-total');
   const addBtn    = $('#btn-add-to-cart');
   const kitBtn    = $('#starter-kit');
-  const testBtn   = $('#test-product');
   const tierButtons = $$('.tier');
 
   function setActiveTier(btn) {
@@ -212,19 +211,4 @@
     saveCart(cart);
   });
 
-  // Add test product ($1 for testing Stripe)
-  testBtn?.addEventListener('click', () => {
-    let cart = loadCart();
-    // Remove any existing test product first (replace, don't stack)
-    cart = cart.filter(i => i.type !== 'test');
-    cart.push({ type: 'test', units: 1, price: 1.0, title: 'Test Product - Payment Verification' });
-    saveCart(cart);
-
-    // Show feedback
-    const originalText = testBtn.innerHTML;
-    testBtn.innerHTML = '<div><strong>✓ Added to Cart</strong><div class="muted">Test product ready</div></div><div class="kit-right"><strong>$1.00</strong><div class="muted">1 unit test item</div></div>';
-    setTimeout(() => {
-      testBtn.innerHTML = originalText;
-    }, 1500);
-  });
 })();

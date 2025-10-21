@@ -34,13 +34,12 @@
       return arr.map(it=>{
         if(it?.type==='bulk'){ let u=Number(it.units||0); if(!Number.isFinite(u)||u<BULK_MIN)u=BULK_MIN; if(u>BULK_MAX)u=BULK_MAX; u=Math.round(u/BULK_STEP)*BULK_STEP; return {type:'bulk',units:u}; }
         if(it?.type==='kit'){ let q=Number(it.qty||0); if(!Number.isFinite(q)||q<1)q=1; return {type:'kit',qty:q}; }
-        if(it?.type==='test'){ return {type:'test',units:1,price:1.0}; }
         return null;
       }).filter(Boolean);
     }catch{return [];}
   }
-  function updateBadge(items){ if(!badgeEl)return; let t=0; for(const it of items){ if(it.type==='bulk')t+=it.units; else if(it.type==='kit')t+=(it.qty*300); else if(it.type==='test')t+=1; } badgeEl.textContent=t>0?t.toLocaleString():''; badgeEl.style.display=t>0?'inline-block':'none'; }
-  function computeSubtotal(items){ let c=0; for(const it of items){ if(it.type==='bulk') c+=Math.round(unitPriceFor(it.units)*it.units*100); else if(it.type==='kit') c+=3600*it.qty; else if(it.type==='test') c+=100; } return c/100; }
+  function updateBadge(items){ if(!badgeEl)return; let t=0; for(const it of items){ if(it.type==='bulk')t+=it.units; else if(it.type==='kit')t+=(it.qty*300); } badgeEl.textContent=t>0?t.toLocaleString():''; badgeEl.style.display=t>0?'inline-block':'none'; }
+  function computeSubtotal(items){ let c=0; for(const it of items){ if(it.type==='bulk') c+=Math.round(unitPriceFor(it.units)*it.units*100); else if(it.type==='kit') c+=3600*it.qty; } return c/100; }
   function getDest(){ try{return JSON.parse(localStorage.getItem(KEY_DEST)||'{}');}catch{return{};} }
   function setDest(d){ localStorage.setItem(KEY_DEST, JSON.stringify(d||{})); }
   function getChosenRate(){ try{return JSON.parse(localStorage.getItem(KEY_RATE)||'null');}catch{return null;} }
@@ -144,12 +143,9 @@
       if(!email){ alert('Please enter your email address.'); return; }
       if(!phone){ alert('Please enter your phone number.'); return; }
 
-      // Check if cart only contains test product
-      const onlyTestProduct = items.length === 1 && items[0].type === 'test';
-
-      // Only require shipping if NOT just test product
-      const rate = onlyTestProduct ? null : getChosenRate();
-      if(!onlyTestProduct && !rate){ alert('Please choose a shipping option first.'); return; }
+      // Require shipping
+      const rate = getChosenRate();
+      if(!rate){ alert('Please choose a shipping option first.'); return; }
 
       setDest(currentDestFromForm());
 
@@ -166,24 +162,7 @@
     });
   }
 
-  // Hide shipping sections if only test product
-  function updateShippingVisibility(){
-    const items=loadCart();
-    const onlyTestProduct = items.length === 1 && items[0].type === 'test';
-    const shippingCards = $$('.card');
-    shippingCards.forEach(card => {
-      const heading = card.querySelector('h3');
-      if(heading && (heading.textContent.includes('Shipping Address') || heading.textContent.includes('Shipping Options'))){
-        card.style.display = onlyTestProduct ? 'none' : '';
-      }
-    });
-    // Also hide shipping row in summary if test product only
-    const shipRow = shipEl?.closest('.summary-row');
-    if(shipRow) shipRow.style.display = onlyTestProduct ? 'none' : '';
-  }
-
   // Init
   prefillForm();
-  updateShippingVisibility();
   (function initTotals(){ const items=loadCart(); const sub=computeSubtotal(items); if(subtotalEl)subtotalEl.textContent=fmtMoney(sub); if(shipEl)shipEl.textContent=fmtMoney(getChosenRate()?.amount||0); if(grandEl)grandEl.textContent=fmtMoney(sub+(getChosenRate()?.amount||0)); updateBadge(items); })();
 })();

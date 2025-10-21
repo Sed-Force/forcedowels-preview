@@ -5,9 +5,6 @@ const STEP = 5000;
 const MIN_UNITS = 5000;
 const MAX_UNITS = 960000;
 
-// Special test product
-const TEST_PRODUCT = { units: 1, unitUSD: 1.00, label: 'Test Product - $1' };
-
 // Edit tier numbers here if pricing changes
 const TIERS = [
   { max: 20000,   unitUSD: 0.072,  requiresAuth: false, label: '5,000–20,000' },
@@ -35,19 +32,6 @@ export default async function handler(req, res) {
     } catch { return json(res, 400, { error: 'Invalid JSON body' }); }
   } else {
     return json(res, 405, { error: 'Method not allowed' });
-  }
-
-  // Handle test product (1 unit for $1)
-  if (units === TEST_PRODUCT.units) {
-    return json(res, 200, {
-      ok: true,
-      units: TEST_PRODUCT.units,
-      unitUSD: TEST_PRODUCT.unitUSD,
-      unitCents: toCents(TEST_PRODUCT.unitUSD),
-      totalCents: toCents(TEST_PRODUCT.units * TEST_PRODUCT.unitUSD),
-      requiresAuth: false,
-      tierLabel: TEST_PRODUCT.label
-    });
   }
 
   if (!Number.isFinite(units) || units < MIN_UNITS || units > MAX_UNITS || units % STEP !== 0) {

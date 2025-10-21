@@ -63,7 +63,7 @@ function tierLabel(units) {
 
 // Internal notification email for Force Dowels team
 function buildInternalNotificationHTML({ invoiceNumber, orderId, customerName, customerEmail, orderDate, sessionId, items, subtotalCents, shippingCents, taxCents, totalCents, metaSummary, shippingMethod, shippingAddress, billingAddress }) {
-  const { bulkUnits = 0, kits = 0, testProduct = false } = metaSummary || {};
+  const { bulkUnits = 0, kits = 0 } = metaSummary || {};
 
   // Build order items table rows
   let itemRows = '';
@@ -88,17 +88,6 @@ function buildInternalNotificationHTML({ invoiceNumber, orderId, customerName, c
         <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:center;">300</td>
         <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$0.12</td>
         <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$36.00</td>
-      </tr>`;
-  }
-
-  if (testProduct) {
-    itemRows += `
-      <tr>
-        <td style="padding:12px;border-bottom:1px solid #e5e7eb;">Test Product</td>
-        <td style="padding:12px;border-bottom:1px solid #e5e7eb;">Payment Verification</td>
-        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:center;">1</td>
-        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$1.00</td>
-        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$1.00</td>
       </tr>`;
   }
 
@@ -259,7 +248,7 @@ function buildInternalNotificationHTML({ invoiceNumber, orderId, customerName, c
 
 // Customer-facing email
 function buildEmailHTML({ invoiceNumber, orderId, email, items, subtotalCents, shippingCents, totalCents, metaSummary, shippingMethod }) {
-  const { bulkUnits = 0, kits = 0, testProduct = false } = metaSummary || {};
+  const { bulkUnits = 0, kits = 0 } = metaSummary || {};
   let bulkLine = '';
   if (bulkUnits > 0) {
     const unitCentsExact = bulkTotalCents(bulkUnits) / bulkUnits;
@@ -283,17 +272,6 @@ function buildEmailHTML({ invoiceNumber, orderId, email, items, subtotalCents, s
       </tr>`;
   }
 
-  let testLine = '';
-  if (testProduct) {
-    testLine = `
-      <tr>
-        <td style="padding:8px 0;">Test Product — Payment Verification<br>
-          <span style="color:#6b7280;">1 × $1.00</span>
-        </td>
-        <td style="text-align:right; padding:8px 0;">$1.00</td>
-      </tr>`;
-  }
-
   // Build shipping line with method details if available
   let shippingLabel = 'Shipping';
   if (shippingMethod) {
@@ -306,7 +284,7 @@ function buildEmailHTML({ invoiceNumber, orderId, email, items, subtotalCents, s
       <td style="text-align:right; padding:8px 0;">${formatMoney(shippingCents)}</td>
     </tr>`;
 
-  const rowsHTML = `${bulkLine}${kitsLine}${testLine}`;
+  const rowsHTML = `${bulkLine}${kitsLine}`;
 
   return `
   <div style="font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; max-width:640px; margin:0 auto; padding:24px;">
@@ -498,7 +476,7 @@ export default async function handler(req, res) {
       const { sql } = await import('./_lib/db.js');
       if (sql) {
         // Build items summary
-        const { bulkUnits = 0, kits = 0, testProduct = false } = metaSummary;
+        const { bulkUnits = 0, kits = 0 } = metaSummary;
         let itemsSummary = '';
         let quantity = 0;
         if (bulkUnits > 0) {
@@ -509,9 +487,6 @@ export default async function handler(req, res) {
           const totalUnits = kits * 300;
           itemsSummary = `Kit - 300 units (${totalUnits}) (Qty: ${totalUnits})`;
           quantity = totalUnits;
-        } else if (testProduct) {
-          itemsSummary = 'Test Product - Payment Verification (Qty: 1)';
-          quantity = 1;
         }
 
         await sql`

@@ -61,7 +61,7 @@ function safeParseBody(req) {
 }
 
 function validateItems(items) {
-  const out = { bulkUnits: 0, kits: 0, testProduct: false };
+  const out = { bulkUnits: 0, kits: 0 };
 
   for (const it of Array.isArray(items) ? items : []) {
     if (it && it.type === 'bulk') {
@@ -74,8 +74,6 @@ function validateItems(items) {
       let q = Number(it.qty || 0);
       if (!Number.isFinite(q) || q < 1) q = 1;
       out.kits += q;
-    } else if (it && it.type === 'test') {
-      out.testProduct = true;
     }
   }
   return out;
@@ -109,9 +107,9 @@ export default async function handler(req, res) {
   const shipping = body.shipping || null; // { amount, carrier, service, currency }
   const customerEmail = toStr(body.customerEmail);
   const customerPhone = toStr(body.customerPhone);
-  const { bulkUnits, kits, testProduct } = validateItems(items);
+  const { bulkUnits, kits } = validateItems(items);
 
-  if (!bulkUnits && !kits && !testProduct) {
+  if (!bulkUnits && !kits) {
     return asJSON(res, 400, { error: 'Cart is empty.' });
   }
 
@@ -152,21 +150,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Test Product ($1)
-    if (testProduct) {
-      line_items.push({
-        price_data: {
-          currency: 'usd',
-          unit_amount: 100,
-          product_data: {
-            name: 'Test Product - Payment Verification',
-            description: 'For testing payment processing only',
-          },
-        },
-        quantity: 1,
-      });
-    }
-
     // Shipping (optional explicit line item)
     let shipAmountCents = 0;
     if (shipping && Number.isFinite(Number(shipping.amount))) {
@@ -193,7 +176,7 @@ export default async function handler(req, res) {
     // Basic metadata for webhook/email rendering
     const metadata = {
       ship_amount_cents: String(shipAmountCents || 0),
-      summary: JSON.stringify({ bulkUnits, kits, testProduct }),
+      summary: JSON.stringify({ bulkUnits, kits }),
       ship_carrier: shipping?.carrier || '',
       ship_service: shipping?.service || '',
     };
