@@ -136,12 +136,21 @@
   if(btnCheckout){
     btnCheckout.addEventListener('click', async ()=>{
       const items=loadCart(); if(!items.length){ alert('Your cart is empty.'); return; }
-      const rate=getChosenRate(); if(!rate){ alert('Please choose a shipping option first.'); return; }
+
+      // Check if cart only contains test product
+      const onlyTestProduct = items.length === 1 && items[0].type === 'test';
+
+      // Only require shipping if NOT just test product
+      const rate = onlyTestProduct ? null : getChosenRate();
+      if(!onlyTestProduct && !rate){ alert('Please choose a shipping option first.'); return; }
+
       setDest(currentDestFromForm());
 
       const prev=btnCheckout.textContent; btnCheckout.disabled=true; btnCheckout.textContent='Loading…';
       try{
-        const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,shipping:{carrier:rate.carrier,service:rate.service,amount:rate.amount,currency:rate.currency||'USD'}})});
+        const payload = {items};
+        if(rate) payload.shipping = {carrier:rate.carrier,service:rate.service,amount:rate.amount,currency:rate.currency||'USD'};
+        const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         if(!res.ok){ console.error('Checkout failed',await res.text()); alert('A server error occurred creating your checkout. Please try again.'); return; }
         const data=await res.json(); if(!data?.url){ alert('Could not start checkout. Please try again.'); return; }
         window.location.assign(data.url);
@@ -150,7 +159,24 @@
     });
   }
 
+  // Hide shipping sections if only test product
+  function updateShippingVisibility(){
+    const items=loadCart();
+    const onlyTestProduct = items.length === 1 && items[0].type === 'test';
+    const shippingCards = $$('.card');
+    shippingCards.forEach(card => {
+      const heading = card.querySelector('h3');
+      if(heading && (heading.textContent.includes('Shipping Address') || heading.textContent.includes('Shipping Options'))){
+        card.style.display = onlyTestProduct ? 'none' : '';
+      }
+    });
+    // Also hide shipping row in summary if test product only
+    const shipRow = shipEl?.closest('.summary-row');
+    if(shipRow) shipRow.style.display = onlyTestProduct ? 'none' : '';
+  }
+
   // Init
   prefillForm();
+  updateShippingVisibility();
   (function initTotals(){ const items=loadCart(); const sub=computeSubtotal(items); if(subtotalEl)subtotalEl.textContent=fmtMoney(sub); if(shipEl)shipEl.textContent=fmtMoney(getChosenRate()?.amount||0); if(grandEl)grandEl.textContent=fmtMoney(sub+(getChosenRate()?.amount||0)); updateBadge(items); })();
 })();
