@@ -10,6 +10,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css?v=101" />
+
+  <!-- Clerk (Browser) -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_dmlhYmxlLWhhZGRvY2stMzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
+  </script>
+
   <script defer src="scripts/customer/script.js?v=101"></script>
   <script defer src="scripts/customer/script-order.js?v=101"></script>
   <!-- Force theme override for order page -->
@@ -124,6 +133,9 @@
         <span class="hide-sm">Cart</span>
         <span id="cart-count" class="badge"></span>
       </a>
+
+      <!-- Shown when signed IN (Clerk mounts here) -->
+      <div id="user-button"></div>
     </div>
   </div>
 </header>

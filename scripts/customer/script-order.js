@@ -138,6 +138,23 @@
   // Add bulk selection to cart (replaces existing bulk order)
   addBtn?.addEventListener('click', () => {
     const qty = clampToStep(qtyInput.value);
+
+    // Check if quantity requires authentication (25,000+)
+    const requiresAuth = qty >= 25000;
+
+    if (requiresAuth) {
+      // Check if user is signed in
+      if (!window.Clerk || !window.Clerk.user) {
+        alert('Please sign in or create an account to order 25,000+ units.');
+        if (window.Clerk) {
+          window.Clerk.openSignIn();
+        } else {
+          window.location.href = '/sign-in';
+        }
+        return;
+      }
+    }
+
     let cart = loadCart();
     const bulk = cart.find(i => i.type === 'bulk');
     if (bulk) {
