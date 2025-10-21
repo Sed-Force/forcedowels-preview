@@ -63,7 +63,7 @@ function tierLabel(units) {
 
 // Internal notification email for Force Dowels team
 function buildInternalNotificationHTML({ invoiceNumber, orderId, customerName, customerEmail, orderDate, sessionId, items, subtotalCents, shippingCents, taxCents, totalCents, metaSummary, shippingMethod, shippingAddress, billingAddress }) {
-  const { bulkUnits = 0, kits = 0 } = metaSummary || {};
+  const { bulkUnits = 0, kits = 0, testProduct = false } = metaSummary || {};
 
   // Build order items table rows
   let itemRows = '';
@@ -88,6 +88,17 @@ function buildInternalNotificationHTML({ invoiceNumber, orderId, customerName, c
         <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:center;">300</td>
         <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$0.12</td>
         <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$36.00</td>
+      </tr>`;
+  }
+
+  if (testProduct) {
+    itemRows += `
+      <tr>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;">Test Product</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;">Payment Verification</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:center;">1</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$1.00</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$1.00</td>
       </tr>`;
   }
 
@@ -248,7 +259,7 @@ function buildInternalNotificationHTML({ invoiceNumber, orderId, customerName, c
 
 // Customer-facing email
 function buildEmailHTML({ invoiceNumber, orderId, email, items, subtotalCents, shippingCents, totalCents, metaSummary, shippingMethod }) {
-  const { bulkUnits = 0, kits = 0 } = metaSummary || {};
+  const { bulkUnits = 0, kits = 0, testProduct = false } = metaSummary || {};
   let bulkLine = '';
   if (bulkUnits > 0) {
     const unitCentsExact = bulkTotalCents(bulkUnits) / bulkUnits;
@@ -272,6 +283,17 @@ function buildEmailHTML({ invoiceNumber, orderId, email, items, subtotalCents, s
       </tr>`;
   }
 
+  let testLine = '';
+  if (testProduct) {
+    testLine = `
+      <tr>
+        <td style="padding:8px 0;">Test Product — Payment Verification<br>
+          <span style="color:#6b7280;">1 × $1.00</span>
+        </td>
+        <td style="text-align:right; padding:8px 0;">$1.00</td>
+      </tr>`;
+  }
+
   // Build shipping line with method details if available
   let shippingLabel = 'Shipping';
   if (shippingMethod) {
@@ -284,7 +306,7 @@ function buildEmailHTML({ invoiceNumber, orderId, email, items, subtotalCents, s
       <td style="text-align:right; padding:8px 0;">${formatMoney(shippingCents)}</td>
     </tr>`;
 
-  const rowsHTML = `${bulkLine}${kitsLine}`;
+  const rowsHTML = `${bulkLine}${kitsLine}${testLine}`;
 
   return `
   <div style="font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; max-width:640px; margin:0 auto; padding:24px;">
@@ -476,14 +498,20 @@ export default async function handler(req, res) {
       const { sql } = await import('./_lib/db.js');
       if (sql) {
         // Build items summary
-        const { bulkUnits = 0, kitQty = 0 } = metaSummary;
+        const { bulkUnits = 0, kits = 0, testProduct = false } = metaSummary;
         let itemsSummary = '';
+        let quantity = 0;
         if (bulkUnits > 0) {
           const tier = bulkUnits >= 165000 ? '165,000+' : bulkUnits >= 25000 ? '25,000-164,999' : '5,000-24,999';
           itemsSummary = `${tier} (${bulkUnits}) (Qty: ${bulkUnits})`;
-        } else if (kitQty > 0) {
-          const totalUnits = kitQty * 300;
+          quantity = bulkUnits;
+        } else if (kits > 0) {
+          const totalUnits = kits * 300;
           itemsSummary = `Kit - 300 units (${totalUnits}) (Qty: ${totalUnits})`;
+          quantity = totalUnits;
+        } else if (testProduct) {
+          itemsSummary = 'Test Product - Payment Verification (Qty: 1)';
+          quantity = 1;
         }
 
         await sql`
@@ -506,7 +534,7 @@ export default async function handler(req, res) {
             ${customerEmail},
             ${itemsSummary},
             ${shippingMethod},
-            ${bulkUnits || kitQty * 300},
+            ${quantity},
             'paid',
             CURRENT_DATE,
             ${totalCents},
@@ -575,10 +603,29 @@ export default async function handler(req, res) {
         billingAddress
       });
 
+      // Split EMAIL_BCC into array of email addresses
+      const bccEmails = EMAIL_BCC.split(',').map(e => e.trim()).filter(Boolean);
+
       if (RESEND_API_KEY) {
-        await sendViaResend({ to: EMAIL_BCC, subject: internalSubject, html: internalHtml });
+        // Send to each BCC email individually for better deliverability
+        for (const email of bccEmails) {
+          try {
+            await sendViaResend({ to: email, subject: internalSubject, html: internalHtml });
+            console.log(`[Webhook] Sent internal notification to ${email}`);
+          } catch (err) {
+            console.error(`[Webhook] Failed to send internal notification to ${email}:`, err);
+          }
+        }
       } else if (SENDGRID_API_KEY) {
-        await sendViaSendgrid({ to: EMAIL_BCC, subject: internalSubject, html: internalHtml });
+        // Send to each BCC email individually for better deliverability
+        for (const email of bccEmails) {
+          try {
+            await sendViaSendgrid({ to: email, subject: internalSubject, html: internalHtml });
+            console.log(`[Webhook] Sent internal notification to ${email}`);
+          } catch (err) {
+            console.error(`[Webhook] Failed to send internal notification to ${email}:`, err);
+          }
+        }
       }
     }
 
