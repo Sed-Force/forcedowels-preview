@@ -25,9 +25,20 @@
       justify-content: space-between;
       align-items: center;
     }
+    .admin-header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .admin-logo {
+      height: 40px;
+      width: auto;
+      border-radius: 4px;
+    }
     .admin-header h1 {
       font-size: 20px;
       font-weight: 700;
+      margin: 0;
     }
     .admin-nav {
       display: flex;
@@ -240,7 +251,10 @@
   <script src="scripts/admin/script-admin-auth.js"></script>
 
   <header class="admin-header">
-    <h1>Force Dowel Admin</h1>
+    <div class="admin-header-left">
+      <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" class="admin-logo" />
+      <h1>Force Dowel Admin</h1>
+    </div>
     <nav class="admin-nav">
       <a href="/admin.html">Orders</a>
       <a href="/admin-customers.html">Customers</a>
