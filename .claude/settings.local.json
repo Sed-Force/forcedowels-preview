@@ -32,7 +32,10 @@
       "Bash(for file in admin-sales.html admin-customers.html admin-distributors.html)",
       "Bash(do)",
       "Bash(done)",
-      "Bash(for file in admin.html admin-sales.html admin-customers.html admin-distributors.html)"
+      "Bash(for file in admin.html admin-sales.html admin-customers.html admin-distributors.html)",
+      "Bash(vercel deploy:*)",
+      "Bash(vercel env:*)",
+      "Bash(cmd.exe /c \"taskkill /F /IM node.exe\")"
     ],
     "deny": [],
     "ask": []

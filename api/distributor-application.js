@@ -19,7 +19,7 @@ const parseList = (v) => String(v || '')
   .map(s => s.trim())
   .filter(Boolean);
 
-const DISTRIBUTOR_RECIPIENTS = ['info@forcedowels.com'];
+const DISTRIBUTOR_RECIPIENTS = parseList(process.env.EMAIL_BCC || 'info@forcedowels.com');
 const WHITELIST = parseList(process.env.EMAIL_WHITELIST).map(s => s.toLowerCase());
 
 // Resend client
