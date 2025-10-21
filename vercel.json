@@ -2,6 +2,28 @@
   "outputDirectory": ".",
   "cleanUrls": true,
   "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/admin.html",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.forcedowels.com"
+        }
+      ]
+    },
+    {
+      "source": "/:path((?!admin).*)",
+      "destination": "/admin-:path.html",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.forcedowels.com"
+        }
+      ]
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
