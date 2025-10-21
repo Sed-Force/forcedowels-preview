@@ -19,6 +19,9 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
+  // Track authentication state
+  let isAuthenticated = false;
+
   function clampToStep(val) {
     let n = Math.round(Number(val) / STEP) * STEP;
     if (!isFinite(n) || n < MIN_QTY) n = MIN_QTY;
@@ -79,6 +82,41 @@
     totalEl.textContent = `$${total.toFixed(2)}`;
   }
 
+  // Update UI based on authentication state
+  function updateAuthUI() {
+    tierButtons.forEach(btn => {
+      const requiresAuth = btn.dataset.requiresAuth === 'true';
+      const lockIcon = btn.querySelector('.tier-lock');
+
+      if (requiresAuth && lockIcon) {
+        // Show/hide lock based on auth state
+        lockIcon.style.display = isAuthenticated ? 'none' : 'inline';
+      }
+    });
+  }
+
+  // Initialize Clerk and set up auth listener
+  function initClerk() {
+    if (window.Clerk) {
+      window.Clerk.load().then(() => {
+        isAuthenticated = !!window.Clerk.user;
+        updateAuthUI();
+
+        // Listen for auth changes
+        window.Clerk.addListener((clerk) => {
+          isAuthenticated = !!clerk.user;
+          updateAuthUI();
+        });
+      });
+    } else {
+      // Retry if Clerk hasn't loaded yet
+      setTimeout(initClerk, 100);
+    }
+  }
+
+  // Start Clerk initialization
+  initClerk();
+
   // initial
   setQtyAndRecalc(qtyInput.value || MIN_QTY);
   updateHeaderBadge();
@@ -89,29 +127,19 @@
       // Check if this tier requires authentication
       const requiresAuth = btn.dataset.requiresAuth === 'true';
 
-      if (requiresAuth) {
-        // Check if user is signed in (Clerk sets window.Clerk)
-        if (window.Clerk && window.Clerk.user) {
-          // User is authenticated, allow selection
-          setActiveTier(btn);
-          const min = Number(btn.dataset.min || MIN_QTY);
-          setQtyAndRecalc(min);
-        } else {
-          // User not authenticated, redirect to sign up
-          alert('Please sign in or create an account to access this pricing tier.');
-          if (window.Clerk) {
-            window.Clerk.openSignIn();
-          } else {
-            // Fallback if Clerk isn't loaded
-            window.location.href = '/sign-in';
-          }
+      if (requiresAuth && !isAuthenticated) {
+        // User not authenticated, show alert and open sign-in
+        alert('Please sign in or create an account to access this pricing tier.');
+        if (window.Clerk) {
+          window.Clerk.openSignIn();
         }
-      } else {
-        // No auth required, allow selection
-        setActiveTier(btn);
-        const min = Number(btn.dataset.min || MIN_QTY);
-        setQtyAndRecalc(min);
+        return;
       }
+
+      // Allow selection
+      setActiveTier(btn);
+      const min = Number(btn.dataset.min || MIN_QTY);
+      setQtyAndRecalc(min);
     });
   });
 
@@ -142,17 +170,12 @@
     // Check if quantity requires authentication (25,000+)
     const requiresAuth = qty >= 25000;
 
-    if (requiresAuth) {
-      // Check if user is signed in
-      if (!window.Clerk || !window.Clerk.user) {
-        alert('Please sign in or create an account to order 25,000+ units.');
-        if (window.Clerk) {
-          window.Clerk.openSignIn();
-        } else {
-          window.location.href = '/sign-in';
-        }
-        return;
+    if (requiresAuth && !isAuthenticated) {
+      alert('Please sign in or create an account to order 25,000+ units.');
+      if (window.Clerk) {
+        window.Clerk.openSignIn();
       }
+      return;
     }
 
     let cart = loadCart();
