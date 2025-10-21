@@ -75,6 +75,18 @@
             <form id="ship-form" class="ship-form" onsubmit="return false;">
               <div class="grid-2">
                 <label class="field">
+                  <span>Email Address *</span>
+                  <input id="ship-email" class="input" type="email" autocomplete="email" placeholder="your@email.com" required>
+                </label>
+
+                <label class="field">
+                  <span>Phone Number *</span>
+                  <input id="ship-phone" class="input" type="tel" autocomplete="tel" placeholder="(555) 555-5555" required>
+                </label>
+              </div>
+
+              <div class="grid-2">
+                <label class="field">
                   <span>Country</span>
                   <select id="ship-country" class="select" required>
                     <option value="US">United States</option>

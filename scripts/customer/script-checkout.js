@@ -8,6 +8,7 @@
   const fmtMoney = (n)=> (Number(n)||0).toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2});
   const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 
+  const emailInp=$('#ship-email'), phoneInp=$('#ship-phone');
   const countrySel=$('#ship-country'), stateSel=$('#ship-state'), cityInp=$('#ship-city'), postalInp=$('#ship-postal'), streetInp=$('#ship-street');
   const btnRates=$('#btn-get-rates'), ratesList=$('#rates-list');
   const subtotalEl=$('#summary-subtotal'), shipEl=$('#summary-shipping'), grandEl=$('#summary-grand');
@@ -137,6 +138,12 @@
     btnCheckout.addEventListener('click', async ()=>{
       const items=loadCart(); if(!items.length){ alert('Your cart is empty.'); return; }
 
+      // Validate email and phone
+      const email = emailInp?.value?.trim();
+      const phone = phoneInp?.value?.trim();
+      if(!email){ alert('Please enter your email address.'); return; }
+      if(!phone){ alert('Please enter your phone number.'); return; }
+
       // Check if cart only contains test product
       const onlyTestProduct = items.length === 1 && items[0].type === 'test';
 
@@ -148,7 +155,7 @@
 
       const prev=btnCheckout.textContent; btnCheckout.disabled=true; btnCheckout.textContent='Loading…';
       try{
-        const payload = {items};
+        const payload = {items, customerEmail: email, customerPhone: phone};
         if(rate) payload.shipping = {carrier:rate.carrier,service:rate.service,amount:rate.amount,currency:rate.currency||'USD'};
         const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         if(!res.ok){ console.error('Checkout failed',await res.text()); alert('A server error occurred creating your checkout. Please try again.'); return; }

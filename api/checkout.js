@@ -107,6 +107,8 @@ export default async function handler(req, res) {
   const body = safeParseBody(req);
   const items = Array.isArray(body.items) ? body.items : [];
   const shipping = body.shipping || null; // { amount, carrier, service, currency }
+  const customerEmail = toStr(body.customerEmail);
+  const customerPhone = toStr(body.customerPhone);
   const { bulkUnits, kits, testProduct } = validateItems(items);
 
   if (!bulkUnits && !kits && !testProduct) {
@@ -196,7 +198,7 @@ export default async function handler(req, res) {
       ship_service: shipping?.service || '',
     };
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionOptions = {
       mode: 'payment',
       payment_method_types: ['card'],
       line_items,
@@ -205,7 +207,17 @@ export default async function handler(req, res) {
       metadata,
       // You can enable tax here later if desired:
       // automatic_tax: { enabled: true },
-    });
+    };
+
+    // Pre-fill customer email and phone if provided
+    if (customerEmail) {
+      sessionOptions.customer_email = customerEmail;
+    }
+    if (customerPhone) {
+      sessionOptions.phone_number_collection = { enabled: true };
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionOptions);
 
     return asJSON(res, 200, { url: session.url });
   } catch (err) {

@@ -86,9 +86,32 @@
   // tier clicks — set qty to each tier's minimum and highlight only that button
   tierButtons.forEach(btn => {
     btn.addEventListener('click', () => {
-      setActiveTier(btn);
-      const min = Number(btn.dataset.min || MIN_QTY);
-      setQtyAndRecalc(min);
+      // Check if this tier requires authentication
+      const requiresAuth = btn.dataset.requiresAuth === 'true';
+
+      if (requiresAuth) {
+        // Check if user is signed in (Clerk sets window.Clerk)
+        if (window.Clerk && window.Clerk.user) {
+          // User is authenticated, allow selection
+          setActiveTier(btn);
+          const min = Number(btn.dataset.min || MIN_QTY);
+          setQtyAndRecalc(min);
+        } else {
+          // User not authenticated, redirect to sign up
+          alert('Please sign in or create an account to access this pricing tier.');
+          if (window.Clerk) {
+            window.Clerk.openSignIn();
+          } else {
+            // Fallback if Clerk isn't loaded
+            window.location.href = '/sign-in';
+          }
+        }
+      } else {
+        // No auth required, allow selection
+        setActiveTier(btn);
+        const min = Number(btn.dataset.min || MIN_QTY);
+        setQtyAndRecalc(min);
+      }
     });
   });
 
