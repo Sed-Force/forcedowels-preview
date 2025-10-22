@@ -20,11 +20,19 @@ export default async function handler(req, res) {
       throw new Error('Database not configured');
     }
 
+    // Add phone column to customers if it doesn't exist
+    try {
+      await sql`ALTER TABLE customers ADD COLUMN IF NOT EXISTS phone TEXT`;
+    } catch (e) {
+      // Column may already exist, ignore
+    }
+
     // Fetch all customers with their stats
     const customersData = await sql`
       SELECT
         email,
         name,
+        phone,
         total_orders,
         total_spent_cents,
         first_order_date,
@@ -52,6 +60,7 @@ export default async function handler(req, res) {
       customers.push({
         email: customer.email,
         name: customer.name,
+        phone: customer.phone,
         order_count: customer.total_orders,
         total_spent: formatMoney(customer.total_spent_cents),
         first_order_date: new Date(customer.first_order_date).toLocaleDateString('en-US', {

@@ -523,11 +523,11 @@
           <div class="order-header">
             <div class="order-info">
               <h3>${order.customer_name || order.customer_email}</h3>
-              <p>${order.customer_email}</p>
+              <p>${order.customer_email}${order.customer_phone ? ' • ' + order.customer_phone : ''}</p>
             </div>
             <span class="status-badge status-${order.status}">${order.status === 'pending' ? 'Pending' : 'Shipped'}</span>
           </div>
-          
+
           <div class="order-details">
             <div class="detail-item">
               <span class="detail-label">Order ID</span>

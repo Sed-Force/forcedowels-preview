@@ -202,7 +202,9 @@ function buildInternalNotificationHTML({ invoiceNumber, orderId, customerName, c
             <td style="padding:24px;background:#f9fafb;">
               <h3 style="margin:0 0 16px;color:#111827;font-size:16px;font-weight:600;border-bottom:2px solid #1C4A99;padding-bottom:8px;">Shipping Information</h3>
               <p style="margin:0;color:#111827;font-size:14px;line-height:1.6;">
-                ${shippingAddress.name || ''}<br>
+                ${shippingAddress.name || customerName || ''}<br>
+                ${customerEmail || ''}<br>
+                ${shippingAddress.phone || customerPhone || ''}<br>
                 ${shippingAddress.line1 || ''}<br>
                 ${shippingAddress.line2 ? `${shippingAddress.line2}<br>` : ''}
                 ${shippingAddress.city || ''}, ${shippingAddress.state || ''} ${shippingAddress.postal_code || ''}<br>
@@ -431,6 +433,8 @@ export default async function handler(req, res) {
 
     // Extract customer and address information
     const customerName = session.customer_details?.name || session.shipping?.name || '';
+    const customerEmail = session.customer_details?.email || session.customer_email || '';
+    const customerPhone = session.customer_details?.phone || session.shipping?.phone || '';
     let shippingAddress = session.shipping?.address || session.customer_details?.address || {};
 
     // Fallback to metadata if Stripe didn't collect address
@@ -507,11 +511,19 @@ export default async function handler(req, res) {
           quantity = totalUnits;
         }
 
+        // Add phone column if it doesn't exist
+        try {
+          await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone TEXT`;
+        } catch (e) {
+          // Column may already exist, ignore
+        }
+
         await sql`
           INSERT INTO orders (
             invoice_number,
             customer_name,
             customer_email,
+            customer_phone,
             items_summary,
             shipping_method,
             quantity,
@@ -525,6 +537,7 @@ export default async function handler(req, res) {
             ${invoiceNumber},
             ${customerName},
             ${customerEmail},
+            ${customerPhone},
             ${itemsSummary},
             ${shippingMethod},
             ${quantity},

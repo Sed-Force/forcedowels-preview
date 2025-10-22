@@ -275,11 +275,11 @@
           <div class="customer-header">
             <div>
               <div class="customer-name">${customer.name || customer.email}</div>
-              <div class="customer-email">${customer.email}</div>
+              <div class="customer-email">${customer.email}${customer.phone ? ' • ' + customer.phone : ''}</div>
             </div>
             <span class="expand-icon" id="icon-${btoa(customer.email)}">▼</span>
           </div>
-          
+
           <div class="customer-stats">
             <div class="stat">
               <span class="stat-label">Total Orders:</span>
