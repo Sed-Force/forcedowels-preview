@@ -105,6 +105,7 @@ export default async function handler(req, res) {
   const body = safeParseBody(req);
   const items = Array.isArray(body.items) ? body.items : [];
   const shipping = body.shipping || null; // { amount, carrier, service, currency }
+  const shippingAddress = body.shippingAddress || null; // { name, line1, city, state, postal_code, country }
   const customerEmail = toStr(body.customerEmail);
   const customerPhone = toStr(body.customerPhone);
   const { bulkUnits, kits } = validateItems(items);
@@ -179,6 +180,7 @@ export default async function handler(req, res) {
       summary: JSON.stringify({ bulkUnits, kits }),
       ship_carrier: shipping?.carrier || '',
       ship_service: shipping?.service || '',
+      ship_address: shippingAddress ? JSON.stringify(shippingAddress) : '',
     };
 
     const sessionOptions = {
@@ -198,6 +200,27 @@ export default async function handler(req, res) {
     }
     if (customerPhone) {
       sessionOptions.phone_number_collection = { enabled: true };
+    }
+
+    // Pre-fill shipping address if provided
+    if (shippingAddress && shippingAddress.line1) {
+      sessionOptions.shipping_address_collection = {
+        allowed_countries: ['US', 'CA', 'MX']
+      };
+      sessionOptions.shipping_options = [{
+        shipping_rate_data: {
+          type: 'fixed_amount',
+          fixed_amount: {
+            amount: shipAmountCents,
+            currency: 'usd'
+          },
+          display_name: shipping?.carrier && shipping?.service
+            ? `${shipping.carrier} ${shipping.service}`
+            : 'Shipping',
+        }
+      }];
+      // Store the address in metadata since we can't pre-fill in checkout
+      // The address will be collected fresh by Stripe's form
     }
 
     const session = await stripe.checkout.sessions.create(sessionOptions);

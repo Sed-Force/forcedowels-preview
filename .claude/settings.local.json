@@ -35,7 +35,12 @@
       "Bash(for file in admin.html admin-sales.html admin-customers.html admin-distributors.html)",
       "Bash(vercel deploy:*)",
       "Bash(vercel env:*)",
-      "Bash(cmd.exe /c \"taskkill /F /IM node.exe\")"
+      "Bash(cmd.exe /c \"taskkill /F /IM node.exe\")",
+      "Bash(timeout 10 bash:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 10284 -Force\")",
+      "Bash(powershell -Command \"Get-Process node | Stop-Process -Force\")",
+      "Bash(powershell:*)",
+      "Bash(Out-Null)"
     ],
     "deny": [],
     "ask": []

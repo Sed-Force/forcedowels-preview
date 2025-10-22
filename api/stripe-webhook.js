@@ -431,7 +431,25 @@ export default async function handler(req, res) {
 
     // Extract customer and address information
     const customerName = session.customer_details?.name || session.shipping?.name || '';
-    const shippingAddress = session.shipping?.address || session.customer_details?.address || {};
+    let shippingAddress = session.shipping?.address || session.customer_details?.address || {};
+
+    // Fallback to metadata if Stripe didn't collect address
+    if (!shippingAddress?.line1 && session.metadata?.ship_address) {
+      try {
+        const metaAddress = JSON.parse(session.metadata.ship_address);
+        shippingAddress = {
+          line1: metaAddress.line1 || '',
+          line2: metaAddress.line2 || '',
+          city: metaAddress.city || '',
+          state: metaAddress.state || '',
+          postal_code: metaAddress.postal_code || '',
+          country: metaAddress.country || ''
+        };
+      } catch (e) {
+        console.error('Failed to parse shipping address from metadata:', e);
+      }
+    }
+
     const billingAddress = session.customer_details?.address || {};
     const taxCents = Number(session.total_details?.amount_tax || 0);
 

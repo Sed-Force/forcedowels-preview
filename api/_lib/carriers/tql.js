@@ -1,11 +1,9 @@
-// TQL (Total Quality Logistics) carrier integration for freight shipments
+// TQL (Total Quality Logistics) API Service for LTL shipping quotes
 export const config = { runtime: 'nodejs' };
 
-const TQL_CLIENT_ID = process.env.TQL_CLIENT_ID;
-const TQL_CLIENT_SECRET = process.env.TQL_CLIENT_SECRET;
-const TQL_USERNAME = process.env.TQL_USERNAME;
-const TQL_PASSWORD = process.env.TQL_PASSWORD;
-const TQL_BASE_URL = process.env.TQL_BASE_URL ?? 'https://public.api.tql.com';
+import { getTQLToken } from './tql-auth.js';
+
+const TQL_BASE_URL = process.env.TQL_BASE_URL || 'https://public.api.tql.com';
 const TQL_SUBSCRIPTION_KEY = process.env.NEXT_PUBLIC_TQL_SUBSCRIPTION_KEY;
 
 // Validate origin configuration
@@ -18,73 +16,178 @@ if (!SHIP_FROM_CITY || !SHIP_FROM_STATE || !SHIP_FROM_ZIP) {
   throw new Error('Missing required SHIP_FROM environment variables for TQL');
 }
 
-let _tqlToken = null;
-let _tqlTokenExp = 0;
+/**
+ * @typedef {Object} TQLAddress
+ * @property {string} city
+ * @property {string} state
+ * @property {string} postalCode
+ * @property {string} country
+ * @property {string} [name]
+ * @property {string} [streetAddress]
+ * @property {string} [contactName]
+ * @property {string} [contactPhone]
+ * @property {string} [hoursOpen]
+ * @property {string} [hoursClosed]
+ */
 
-async function getTqlAccessToken() {
-  if (!TQL_CLIENT_ID || !TQL_CLIENT_SECRET) {
-    throw new Error('TQL credentials missing: TQL_CLIENT_ID and TQL_CLIENT_SECRET are required');
+/**
+ * @typedef {Object} TQLItem
+ * @property {string} description
+ * @property {number} weight
+ * @property {number} dimensionLength
+ * @property {number} dimensionWidth
+ * @property {number} dimensionHeight
+ * @property {number} quantity
+ * @property {string} freightClassCode
+ * @property {string} [unitTypeCode]
+ * @property {string} [nmfc]
+ * @property {boolean} [isHazmat]
+ * @property {boolean} [isStackable]
+ */
+
+/**
+ * @typedef {Object} TQLQuoteRequest
+ * @property {TQLAddress} origin
+ * @property {TQLAddress} destination
+ * @property {TQLItem[]} quoteCommodities
+ * @property {string} [shipmentDate]
+ * @property {string} [pickLocationType]
+ * @property {string} [dropLocationType]
+ * @property {string[]} [accessorials]
+ */
+
+/**
+ * @typedef {Object} TQLRate
+ * @property {number} id
+ * @property {string} carrier
+ * @property {string} scac
+ * @property {number} customerRate
+ * @property {string} [carrierQuoteId]
+ * @property {string} serviceLevel
+ * @property {string} serviceType
+ * @property {number} transitDays
+ * @property {number} maxLiabilityNew
+ * @property {number} maxLiabilityUsed
+ * @property {string} serviceLevelDescription
+ * @property {any[]} priceCharges
+ * @property {boolean} isPreferred
+ * @property {boolean} isCarrierOfTheYear
+ * @property {boolean} isEconomy
+ */
+
+/**
+ * @typedef {Object} TQLQuoteResponse
+ * @property {Object} content
+ * @property {number} content.quoteId
+ * @property {TQLRate[]} content.carrierPrices
+ * @property {any[]} content.quoteCommodities
+ * @property {string} content.createdDate
+ * @property {string} content.shipmentDate
+ * @property {string} content.expirationDate
+ * @property {number} statusCode
+ * @property {string} informationalMessage
+ */
+
+/**
+ * TQL Service Class
+ */
+export class TQLService {
+  constructor() {
+    this.baseUrl = TQL_BASE_URL;
+    this.subscriptionKey = TQL_SUBSCRIPTION_KEY;
   }
 
-  if (!TQL_USERNAME || !TQL_PASSWORD) {
-    throw new Error('TQL user credentials missing: TQL_USERNAME and TQL_PASSWORD are required');
+  /**
+   * Create a new LTL quote
+   * @param {TQLQuoteRequest} quoteData
+   * @returns {Promise<TQLQuoteResponse>}
+   */
+  async createQuote(quoteData) {
+    const token = await getTQLToken();
+
+    const endpoint = `${this.baseUrl}/ltl/quotes`;
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Ocp-Apim-Subscription-Key': this.subscriptionKey,
+        'Authorization': `Bearer ${token.access_token}`
+      },
+      body: JSON.stringify(quoteData)
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(`TQL quote creation failed: ${response.status} - ${JSON.stringify(error)}`);
+    }
+
+    const result = await response.json();
+    return result;
   }
 
-  if (!TQL_SUBSCRIPTION_KEY) {
-    throw new Error('TQL subscription key missing: NEXT_PUBLIC_TQL_SUBSCRIPTION_KEY is required');
+  /**
+   * Get an existing quote by ID
+   * @param {string} quoteId
+   * @returns {Promise<TQLQuoteResponse>}
+   */
+  async getQuote(quoteId) {
+    const token = await getTQLToken();
+
+    const response = await fetch(`${this.baseUrl}/ltl/quotes/${quoteId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Ocp-Apim-Subscription-Key': this.subscriptionKey,
+        'Authorization': `Bearer ${token.access_token}`
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(`TQL quote retrieval failed: ${response.status} - ${JSON.stringify(error)}`);
+    }
+
+    return response.json();
   }
-
-  // Check cached token (expire 5 minutes early for safety)
-  const nowSec = Math.floor(Date.now() / 1000);
-  if (_tqlToken && nowSec < _tqlTokenExp - 300) {
-    return _tqlToken;
-  }
-
-  console.log('[TQL] Requesting OAuth token...');
-
-  // TQL uses OAuth 2.0 password grant with form-urlencoded
-  // Production scopes - full URLs required
-  const scopes = [
-    'https://tqlidentity.onmicrosoft.com/services_combined/LTLQuotes.Read',
-    'https://tqlidentity.onmicrosoft.com/services_combined/LTLQuotes.Write'
-  ].join(' ');
-
-  const body = new URLSearchParams({
-    grant_type: 'password',
-    client_id: TQL_CLIENT_ID,
-    client_secret: TQL_CLIENT_SECRET,
-    username: TQL_USERNAME,
-    password: TQL_PASSWORD,
-    scope: scopes,
-  });
-
-  const response = await fetch(`${TQL_BASE_URL}/identity/token`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Ocp-Apim-Subscription-Key': TQL_SUBSCRIPTION_KEY,
-    },
-    body: body.toString(),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`TQL OAuth failed (${response.status}): ${errorText}`);
-  }
-
-  const data = await response.json();
-
-  if (!data.access_token) {
-    throw new Error('TQL OAuth response missing access_token');
-  }
-
-  _tqlToken = data.access_token;
-  _tqlTokenExp = nowSec + (data.expires_in ?? 3600);
-
-  console.log('[TQL] OAuth token obtained successfully');
-  return _tqlToken;
 }
 
+/**
+ * Determine freight class based on weight and dimensions
+ * @param {number} weight - Weight in pounds
+ * @param {number[]} dimensions - Dimensions in inches [length, width, height]
+ * @returns {string} Freight class code
+ */
+function determineFreightClass(weight, dimensions) {
+  const [length, width, height] = dimensions;
+  const volume = (length * width * height) / 1728; // cubic feet
+  const density = weight / volume; // lbs per cubic foot
+
+  // Standard freight class determination for wooden products
+  if (density >= 30) return '55';
+  if (density >= 22.5) return '60';
+  if (density >= 15) return '65';
+  if (density >= 13.5) return '70';
+  if (density >= 12) return '77.5';
+  if (density >= 10.5) return '85';
+  if (density >= 9) return '92.5';
+  if (density >= 8) return '100';
+  if (density >= 6) return '110';
+  if (density >= 5) return '125';
+  if (density >= 4) return '150';
+  if (density >= 3) return '175';
+  if (density >= 2) return '200';
+  if (density >= 1) return '250';
+  return '300'; // lowest density class
+}
+
+/**
+ * Get TQL shipping rates (main export function)
+ * @param {Object} options
+ * @param {Object} options.to - Destination address
+ * @param {Array} options.pallets - Array of pallet objects
+ * @returns {Promise<Array>} Array of rate objects
+ */
 export async function getTqlRates({ to, pallets }) {
   if (!to) {
     throw new Error('Destination address is required');
@@ -113,32 +216,14 @@ export async function getTqlRates({ to, pallets }) {
 
   console.log('[TQL] Getting freight rates for', pallets.length, 'pallet(s)');
 
-  // Get OAuth token
-  const token = await getTqlAccessToken();
-
   // Calculate freight class based on density (weight / volume)
   // For Force Dowels: use NMFC 161030, freight class based on density
   const quoteCommodities = pallets.map((pallet, index) => {
-    const volumeCuFt = (pallet.length * pallet.width * pallet.height) / 1728; // Convert cubic inches to cubic feet
-    const density = pallet.weightLb / volumeCuFt;
-
-    // Freight class based on density (common NMFC classifications)
-    let freightClassCode = '50';
-    if (density >= 30) freightClassCode = '55';
-    else if (density >= 22.5) freightClassCode = '60';
-    else if (density >= 15) freightClassCode = '65';
-    else if (density >= 13.5) freightClassCode = '70';
-    else if (density >= 12) freightClassCode = '77.5';
-    else if (density >= 10.5) freightClassCode = '85';
-    else if (density >= 9) freightClassCode = '92.5';
-    else if (density >= 8) freightClassCode = '100';
-    else if (density >= 6) freightClassCode = '110';
-    else if (density >= 5) freightClassCode = '125';
-    else if (density >= 4) freightClassCode = '150';
-    else if (density >= 3) freightClassCode = '175';
-    else if (density >= 2) freightClassCode = '200';
-    else if (density >= 1) freightClassCode = '250';
-    else freightClassCode = '300';
+    const freightClassCode = determineFreightClass(pallet.weightLb, [
+      pallet.length,
+      pallet.width,
+      pallet.height
+    ]);
 
     return {
       description: `Force Dowels - Pallet ${index + 1}`,
@@ -161,13 +246,13 @@ export async function getTqlRates({ to, pallets }) {
       city: SHIP_FROM_CITY,
       state: SHIP_FROM_STATE,
       postalCode: SHIP_FROM_ZIP,
-      country: SHIP_FROM_COUNTRY,
+      country: SHIP_FROM_COUNTRY === 'US' ? 'USA' : SHIP_FROM_COUNTRY,
     },
     destination: {
       city: to.city,
       state: to.state,
       postalCode: to.postal ?? to.zip,
-      country: to.country,
+      country: to.country === 'US' ? 'USA' : (to.country || 'USA'),
     },
     quoteCommodities,
     shipmentDate: new Date().toISOString().split('T')[0],
@@ -179,22 +264,8 @@ export async function getTqlRates({ to, pallets }) {
   console.log('[TQL] Requesting LTL freight quote...');
 
   // Submit freight quote request to TQL LTL endpoint
-  const response = await fetch(`${TQL_BASE_URL}/ltl/quotes`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      'Ocp-Apim-Subscription-Key': TQL_SUBSCRIPTION_KEY,
-    },
-    body: JSON.stringify(quoteRequest),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`TQL LTL quote request failed (${response.status}): ${errorText}`);
-  }
-
-  const data = await response.json();
+  const tqlService = new TQLService();
+  const data = await tqlService.createQuote(quoteRequest);
 
   // Parse TQL response - content.carrierPrices is an array of rate options
   if (!data.content || !data.content.carrierPrices || !Array.isArray(data.content.carrierPrices)) {

@@ -151,7 +151,20 @@
 
       const prev=btnCheckout.textContent; btnCheckout.disabled=true; btnCheckout.textContent='Loading…';
       try{
-        const payload = {items, customerEmail: email, customerPhone: phone};
+        const dest = currentDestFromForm();
+        const payload = {
+          items,
+          customerEmail: email,
+          customerPhone: phone,
+          shippingAddress: {
+            name: email, // Use email as name if no separate name field
+            line1: dest.street,
+            city: dest.city,
+            state: dest.state,
+            postal_code: dest.postal,
+            country: dest.country
+          }
+        };
         if(rate) payload.shipping = {carrier:rate.carrier,service:rate.service,amount:rate.amount,currency:rate.currency||'USD'};
         const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         if(!res.ok){ console.error('Checkout failed',await res.text()); alert('A server error occurred creating your checkout. Please try again.'); return; }
