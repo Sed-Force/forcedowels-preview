@@ -227,6 +227,28 @@
       margin-top: 8px;
       display: none;
     }
+    .status-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #f3f4f6;
+    }
+    .btn-secondary {
+      background: #6b7280;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
     .add-invoice-btn {
       background: #059669;
       color: white;
@@ -552,7 +574,7 @@
           </div>
 
           ${order.status === 'pending' ? `
-            <form class="shipping-form" onsubmit="markAsShipped(event, '${order.session_id}')">
+            <form class="shipping-form" onsubmit="markAsShipped(event, '${order.session_id}', ${order.invoice_number})">
               <div class="form-group">
                 <label for="carrier-${order.session_id}">Carrier</label>
                 <select
@@ -593,6 +615,11 @@
                 <span class="detail-value">${order.tracking_number || 'N/A'}</span>
               </div>
             </div>
+            <div class="status-actions">
+              <button class="btn-secondary" onclick="changeOrderStatus(${order.invoice_number}, 'pending')">
+                Change to Pending
+              </button>
+            </div>
           `}
         </div>
       `).join('');
@@ -609,7 +636,7 @@
       }
     }
 
-    async function markAsShipped(event, sessionId) {
+    async function markAsShipped(event, sessionId, invoiceNumber) {
       event.preventDefault();
       const form = event.target;
       const btn = form.querySelector('button');
@@ -632,6 +659,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             session_id: sessionId,
+            invoice_number: invoiceNumber,
             carrier: carrier,
             tracking_number: tracking || null
           })
@@ -663,6 +691,41 @@
         alert('Error: ' + err.message);
         btn.disabled = false;
         btn.textContent = 'Mark as Shipped';
+      }
+    }
+
+    async function changeOrderStatus(invoiceNumber, newStatus) {
+      if (!confirm(`Are you sure you want to change order #${invoiceNumber} to ${newStatus}?`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/admin/update-order-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            invoice_number: invoiceNumber,
+            status: newStatus
+          })
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'Failed to update order status');
+        }
+
+        // Update local data
+        const order = allOrders.find(o => o.invoice_number === invoiceNumber);
+        if (order) {
+          order.status = newStatus;
+        }
+
+        // Re-render orders
+        renderOrders();
+        alert(`Order #${invoiceNumber} status changed to ${newStatus}`);
+
+      } catch (err) {
+        alert('Error: ' + err.message);
       }
     }
 

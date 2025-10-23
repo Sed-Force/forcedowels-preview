@@ -541,7 +541,7 @@ export default async function handler(req, res) {
             ${itemsSummary},
             ${shippingMethod},
             ${quantity},
-            'paid',
+            'pending',
             CURRENT_DATE,
             ${totalCents},
             '',
