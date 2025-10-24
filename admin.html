@@ -416,6 +416,9 @@
       <input type="text" id="search-email" placeholder="Customer email or name...">
 
       <button class="add-invoice-btn" onclick="openAddInvoiceModal()">+ Add Manual Invoice</button>
+      <button class="btn-secondary" onclick="backfillAddresses()" style="background: #0284c7; color: white; padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;">
+        Import Addresses from Stripe
+      </button>
     </div>
 
     <div id="orders-container">
@@ -811,6 +814,42 @@
         alert('Error: ' + err.message);
         submitBtn.disabled = false;
         submitBtn.textContent = 'Add Invoice';
+      }
+    }
+
+    // Backfill addresses from Stripe
+    async function backfillAddresses() {
+      if (!confirm('This will import billing and shipping addresses from Stripe for all existing orders that don\'t have addresses. This may take a minute. Continue?')) {
+        return;
+      }
+
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Importing...';
+
+      try {
+        const res = await fetch('/api/admin/backfill-addresses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to backfill addresses');
+        }
+
+        alert(`Success! ${data.results.updated} orders updated with addresses from Stripe.\n${data.results.failed > 0 ? `${data.results.failed} orders failed to update.` : ''}`);
+
+        // Reload orders to show updated addresses
+        await loadOrders();
+
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
       }
     }
 
