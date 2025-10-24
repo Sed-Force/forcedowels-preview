@@ -443,6 +443,18 @@
         </div>
 
         <div class="form-row">
+          <label for="invoice-billing-address">Billing Address</label>
+          <input type="text" id="invoice-billing-address" name="billing_address" placeholder="123 Main St, City, ST 12345, USA">
+          <small>Optional - Full billing address</small>
+        </div>
+
+        <div class="form-row">
+          <label for="invoice-shipping-address">Shipping Address</label>
+          <input type="text" id="invoice-shipping-address" name="shipping_address" placeholder="123 Main St, City, ST 12345, USA">
+          <small>Optional - Full shipping address</small>
+        </div>
+
+        <div class="form-row">
           <label for="invoice-quantity">Quantity (Units) *</label>
           <input type="number" id="invoice-quantity" name="quantity" min="1" required>
           <small>Total number of units ordered</small>
@@ -756,6 +768,8 @@
       const data = {
         customer_name: formData.get('customer_name'),
         customer_email: formData.get('customer_email'),
+        billing_address: formData.get('billing_address') || '',
+        shipping_address: formData.get('shipping_address') || '',
         quantity: parseInt(formData.get('quantity')),
         amount_cents: Math.round(parseFloat(formData.get('amount')) * 100),
         order_date: formData.get('order_date'),
@@ -886,9 +900,15 @@
                 <div style="font-weight: 600; margin-bottom: 4px;">${order.customer_name || order.customer_email}</div>
                 <div>${order.customer_email}</div>
                 ${order.customer_phone ? `<div>${order.customer_phone}</div>` : ''}
+                ${order.billing_address ? `
+                  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
+                    <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px; font-weight: 600;">Billing Address:</div>
+                    <div>${order.billing_address}</div>
+                  </div>
+                ` : ''}
                 ${order.shipping_address ? `
                   <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
-                    <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">Shipping Address:</div>
+                    <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px; font-weight: 600;">Shipping Address:</div>
                     <div>${order.shipping_address}</div>
                   </div>
                 ` : ''}

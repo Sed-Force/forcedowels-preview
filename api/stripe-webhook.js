@@ -518,6 +518,31 @@ export default async function handler(req, res) {
           // Column may already exist, ignore
         }
 
+        // Add address columns if they don't exist
+        try {
+          await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_address TEXT`;
+          await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS billing_address TEXT`;
+        } catch (e) {
+          // Columns may already exist, ignore
+        }
+
+        // Format addresses as strings
+        const formatAddress = (addr) => {
+          if (!addr || !addr.line1) return '';
+          const parts = [
+            addr.line1,
+            addr.line2,
+            addr.city,
+            addr.state,
+            addr.postal_code,
+            addr.country
+          ].filter(Boolean);
+          return parts.join(', ');
+        };
+
+        const shippingAddressStr = formatAddress(shippingAddress);
+        const billingAddressStr = formatAddress(billingAddress);
+
         await sql`
           INSERT INTO orders (
             invoice_number,
@@ -532,7 +557,9 @@ export default async function handler(req, res) {
             amount_cents,
             tracking_number,
             carrier,
-            session_id
+            session_id,
+            shipping_address,
+            billing_address
           ) VALUES (
             ${invoiceNumber},
             ${customerName},
@@ -546,7 +573,9 @@ export default async function handler(req, res) {
             ${totalCents},
             '',
             ${shipCarrier},
-            ${sessionId}
+            ${sessionId},
+            ${shippingAddressStr},
+            ${billingAddressStr}
           )
         `;
         console.log(`[Webhook] Saved order #${invoiceNumber} to database`);
