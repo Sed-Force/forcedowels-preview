@@ -10,6 +10,15 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Ensure address columns exist
+    try {
+      await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_address TEXT`;
+      await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS billing_address TEXT`;
+      console.log('[Backfill] Address columns verified/created');
+    } catch (e) {
+      console.log('[Backfill] Columns may already exist:', e.message);
+    }
+
     // Get all orders that have a session_id and don't have addresses
     const orders = await sql`
       SELECT invoice_number, session_id, customer_email
@@ -89,9 +98,11 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('[Backfill] Error:', error);
+    console.error('[Backfill] Error stack:', error.stack);
     return res.status(500).json({
       error: 'Failed to backfill addresses',
-      details: error.message
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
