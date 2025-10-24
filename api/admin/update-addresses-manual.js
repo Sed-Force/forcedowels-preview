@@ -211,10 +211,11 @@ export default async function handler(req, res) {
       errors: []
     };
 
-    // Ensure address columns exist
+    // Ensure columns exist
     try {
       await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_address TEXT`;
       await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS billing_address TEXT`;
+      await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone TEXT`;
     } catch (e) {
       console.log('[Manual Update] Columns already exist');
     }
@@ -228,9 +229,11 @@ export default async function handler(req, res) {
         let billingAddr = data.billing || data.address || '';
         let shippingAddr = data.shipping || data.address || '';
 
-        // Get existing order data
+        // Get existing order data - check if columns exist first
         const existingOrder = await sql`
-          SELECT customer_name, customer_phone
+          SELECT
+            customer_name,
+            COALESCE(customer_phone, '') as customer_phone
           FROM orders
           WHERE invoice_number = ${invoiceNum}
         `;
