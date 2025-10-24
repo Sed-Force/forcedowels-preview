@@ -583,6 +583,18 @@
               <span class="detail-label">Items</span>
               <span class="detail-value">${order.items_summary}</span>
             </div>
+            ${order.billing_address ? `
+              <div class="detail-item">
+                <span class="detail-label">Billing Address</span>
+                <span class="detail-value">${order.billing_address}</span>
+              </div>
+            ` : ''}
+            ${order.shipping_address ? `
+              <div class="detail-item">
+                <span class="detail-label">Shipping Address</span>
+                <span class="detail-value">${order.shipping_address}</span>
+              </div>
+            ` : ''}
           </div>
 
           ${order.status === 'pending' ? `
