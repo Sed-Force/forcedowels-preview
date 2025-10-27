@@ -75,7 +75,10 @@ export default async function handler(req, res) {
 
   const {
     action, // 'request' or 'reserve'
-    quantity,
+    order_type, // 'kit' or 'bulk'
+    quantity, // number of kits or units
+    units, // total units
+    display, // display string for email
     business_name,
     contact_name,
     email,
@@ -87,7 +90,7 @@ export default async function handler(req, res) {
   } = body || {};
 
   // Validate required fields
-  if (!action || !quantity || !business_name || !contact_name || !email || !phone || !shipping_address || !tax_id) {
+  if (!action || !order_type || !quantity || !business_name || !contact_name || !email || !phone || !shipping_address || !tax_id) {
     return json(res, 400, { error: 'Missing required fields' });
   }
 
@@ -122,7 +125,7 @@ export default async function handler(req, res) {
 
   const html = buildEmailHtml({
     action,
-    quantity,
+    quantity_display: display || `${quantity} ${order_type === 'kit' ? 'kit(s)' : 'units'}`,
     business_name,
     contact_name,
     email,
@@ -140,7 +143,7 @@ export default async function handler(req, res) {
   const text = [
     `International Order ${action === 'reserve' ? '(Stock Reserved)' : 'Request'}`,
     '',
-    `Quantity: ${quantity}`,
+    `Quantity: ${display || quantity}`,
     `Business: ${business_name}`,
     `Contact: ${contact_name}`,
     `Email: ${email}`,
@@ -192,25 +195,12 @@ export default async function handler(req, res) {
     // If action is 'reserve', create Stripe checkout session
     if (action === 'reserve') {
       try {
-        // Get quantity info
-        const quantityInfo = QUANTITY_MAP[quantity];
-
-        if (!quantityInfo || quantity === 'custom') {
-          // For custom quantities, we can't create a checkout session
-          return json(res, 200, {
-            ok: true,
-            emailSent: true,
-            emailId: sent?.id || null,
-            requiresManualProcessing: true,
-            note: 'Email sent. Custom quantity requires manual quote - no checkout session created.'
-          });
-        }
-
-        // Build line items using dynamic pricing (same as regular checkout)
+        // Build line items using dynamic pricing based on order type
         const line_items = [];
+        const totalUnits = units || quantity;
 
-        if (quantityInfo.type === 'bulk') {
-          const cents = bulkTotalCents(quantityInfo.units);
+        if (order_type === 'bulk') {
+          const cents = bulkTotalCents(quantity);
           if (cents <= 0) {
             return json(res, 400, { error: 'Invalid bulk amount' });
           }
@@ -220,22 +210,22 @@ export default async function handler(req, res) {
               unit_amount: cents,
               product_data: {
                 name: 'Force Dowels — Bulk (International Order)',
-                description: `${tierLabel(quantityInfo.units)} • ${quantityInfo.units.toLocaleString()} units • Awaiting shipping quote`,
+                description: `${tierLabel(quantity)} • ${quantity.toLocaleString()} units • Awaiting shipping quote`,
               },
             },
             quantity: 1,
           });
-        } else if (quantityInfo.type === 'kit') {
+        } else if (order_type === 'kit') {
           line_items.push({
             price_data: {
               currency: 'usd',
               unit_amount: 3600, // $36 per kit
               product_data: {
                 name: 'Force Dowels — Starter Kit (International Order)',
-                description: '300 units • Awaiting shipping quote',
+                description: `300 units per kit • Awaiting shipping quote`,
               },
             },
-            quantity: 1,
+            quantity: quantity, // quantity is the number of kits
           });
         }
 
@@ -319,7 +309,7 @@ function escapeHtml(s = '') {
 
 function buildEmailHtml({
   action,
-  quantity,
+  quantity_display,
   business_name,
   contact_name,
   email,
@@ -337,8 +327,8 @@ function buildEmailHtml({
   const addressHtml = esc(shipping_address || '').replace(/\n/g, '<br/>');
   const commentsHtml = comments ? esc(comments).replace(/\n/g, '<br/>') : '';
 
-  // Get human-readable quantity label
-  const quantityLabel = QUANTITY_MAP[quantity]?.label || quantity;
+  // Use the display string passed from frontend
+  const quantityLabel = esc(quantity_display || 'Not specified');
 
   return `
   <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#f7f7f7; padding:24px;">

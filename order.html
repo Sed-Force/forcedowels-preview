@@ -306,17 +306,26 @@
 
     <form id="international-order-form" onsubmit="submitInternationalOrder(event)">
       <div class="form-row">
-        <label for="intl-quantity">Quantity of Dowels for Your Order *</label>
-        <select id="intl-quantity" name="quantity" required>
-          <option value="">Select quantity...</option>
-          <option value="kit-300">Ship Kits: 300 dowels</option>
-          <option value="box-5000">Standard Boxes: 5,000 dowels</option>
-          <option value="box-10000">Standard Boxes: 10,000 dowels</option>
-          <option value="box-15000">Standard Boxes: 15,000 dowels</option>
-          <option value="box-20000">Standard Boxes: 20,000 dowels</option>
-          <option value="box-25000">Standard Boxes: 25,000 dowels</option>
-          <option value="custom">Custom quantity (specify in comments)</option>
+        <label for="intl-order-type">Order Type *</label>
+        <select id="intl-order-type" name="order_type" required onchange="toggleQuantityFields()">
+          <option value="">Select order type...</option>
+          <option value="kit">Ship Kits (300 dowels each)</option>
+          <option value="bulk">Bulk Boxes (5,000+ dowels in 5,000 increments)</option>
         </select>
+      </div>
+
+      <!-- Ship Kit Quantity -->
+      <div id="kit-quantity-section" class="form-row" style="display: none;">
+        <label for="intl-kit-qty">Number of Ship Kits *</label>
+        <input type="number" id="intl-kit-qty" name="kit_quantity" min="1" max="100" placeholder="e.g., 5 kits = 1,500 dowels">
+        <small>Each kit contains 300 dowels ($36.00 per kit)</small>
+      </div>
+
+      <!-- Bulk Quantity -->
+      <div id="bulk-quantity-section" class="form-row" style="display: none;">
+        <label for="intl-bulk-qty">Bulk Quantity (units) *</label>
+        <input type="number" id="intl-bulk-qty" name="bulk_quantity" min="5000" step="5000" max="960000" placeholder="e.g., 35000">
+        <small>Minimum 5,000 units in 5,000 unit increments (max 960,000)</small>
       </div>
 
       <div class="form-row">
@@ -537,6 +546,36 @@
     document.getElementById('international-modal').style.display = 'none';
     document.body.style.overflow = '';
     document.getElementById('international-order-form').reset();
+    // Hide both quantity sections on reset
+    document.getElementById('kit-quantity-section').style.display = 'none';
+    document.getElementById('bulk-quantity-section').style.display = 'none';
+  }
+
+  function toggleQuantityFields() {
+    const orderType = document.getElementById('intl-order-type').value;
+    const kitSection = document.getElementById('kit-quantity-section');
+    const bulkSection = document.getElementById('bulk-quantity-section');
+    const kitInput = document.getElementById('intl-kit-qty');
+    const bulkInput = document.getElementById('intl-bulk-qty');
+
+    if (orderType === 'kit') {
+      kitSection.style.display = 'block';
+      bulkSection.style.display = 'none';
+      kitInput.required = true;
+      bulkInput.required = false;
+      bulkInput.value = '';
+    } else if (orderType === 'bulk') {
+      kitSection.style.display = 'none';
+      bulkSection.style.display = 'block';
+      kitInput.required = false;
+      bulkInput.required = true;
+      kitInput.value = '';
+    } else {
+      kitSection.style.display = 'none';
+      bulkSection.style.display = 'none';
+      kitInput.required = false;
+      bulkInput.required = false;
+    }
   }
 
   // Close modal when clicking outside
@@ -562,9 +601,31 @@
 
     try {
       const formData = new FormData(form);
+      const orderType = formData.get('order_type');
+
+      // Build quantity data based on order type
+      let quantityData = {};
+      if (orderType === 'kit') {
+        const kitQty = parseInt(formData.get('kit_quantity')) || 1;
+        quantityData = {
+          order_type: 'kit',
+          quantity: kitQty,
+          units: kitQty * 300,
+          display: `${kitQty} Ship Kit${kitQty > 1 ? 's' : ''} (${kitQty * 300} dowels)`
+        };
+      } else if (orderType === 'bulk') {
+        const bulkQty = parseInt(formData.get('bulk_quantity')) || 5000;
+        quantityData = {
+          order_type: 'bulk',
+          quantity: bulkQty,
+          units: bulkQty,
+          display: `${bulkQty.toLocaleString()} dowels (Bulk)`
+        };
+      }
+
       const data = {
         action: action,
-        quantity: formData.get('quantity'),
+        ...quantityData,
         business_name: formData.get('business_name'),
         contact_name: formData.get('contact_name'),
         email: formData.get('email'),
