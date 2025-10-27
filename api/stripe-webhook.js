@@ -5,6 +5,7 @@
 // - Sends email via Resend (preferred) or SendGrid (fallback).
 
 import { buildInternationalOrderConfirmationEmail } from './_lib/email/internationalOrderConfirmation.js';
+import { buildInternationalInternalNotificationHTML } from './_lib/email/internationalInternalNotification.js';
 
 export const config = { runtime: 'nodejs' };
 
@@ -727,24 +728,73 @@ export default async function handler(req, res) {
 
     // Send internal notification to Force Dowels with different template
     if (EMAIL_BCC) {
-      const internalSubject = `New Order Received - Invoice #${invoiceNumber}`;
-      const internalHtml = buildInternalNotificationHTML({
-        invoiceNumber,
-        orderId: shortId,
-        customerName,
-        customerEmail,
-        orderDate,
-        sessionId,
-        items: lineItems,
-        subtotalCents,
-        shippingCents,
-        taxCents,
-        totalCents,
-        metaSummary,
-        shippingMethod,
-        shippingAddress,
-        billingAddress
-      });
+      let internalSubject, internalHtml;
+
+      if (isInternational) {
+        // Use international internal notification template
+        const { bulkUnits = 0, kits = 0 } = metaSummary || {};
+        const totalUnits = Number(session.metadata?.units || bulkUnits || (kits * 300) || 0);
+        const orderType = session.metadata?.order_type || (kits > 0 ? 'kit' : 'bulk');
+
+        // Calculate unit price and tier
+        let unitPrice = '0.0000';
+        let tierLabelText = '';
+        if (orderType === 'bulk' && totalUnits >= 5000) {
+          const mills = unitPriceMillsForInternational(totalUnits);
+          unitPrice = (mills / 10000).toFixed(4);
+          tierLabelText = tierLabelFor(totalUnits);
+        } else if (orderType === 'kit') {
+          unitPrice = '36.0000';
+          tierLabelText = 'Starter Kit';
+        }
+
+        const lineTotal = (subtotalCents / 100).toFixed(2);
+
+        internalSubject = `🌍 New International Order - Invoice #${invoiceNumber}`;
+        internalHtml = buildInternationalInternalNotificationHTML({
+          invoiceNumber,
+          orderId: shortId,
+          customerName,
+          customerEmail,
+          customerPhone,
+          orderDate,
+          sessionId,
+          units: totalUnits,
+          unitPrice,
+          tierLabel: tierLabelText,
+          lineTotal,
+          subtotalCents,
+          taxCents,
+          totalCents,
+          orderType,
+          shippingAddress,
+          billingAddress,
+          businessName: session.metadata?.business_name || '',
+          taxId: session.metadata?.tax_id || '',
+          comments: session.metadata?.comments || '',
+          shippingLabel: session.metadata?.shipping_label || ''
+        });
+      } else {
+        // Use standard internal notification template
+        internalSubject = `New Order Received - Invoice #${invoiceNumber}`;
+        internalHtml = buildInternalNotificationHTML({
+          invoiceNumber,
+          orderId: shortId,
+          customerName,
+          customerEmail,
+          orderDate,
+          sessionId,
+          items: lineItems,
+          subtotalCents,
+          shippingCents,
+          taxCents,
+          totalCents,
+          metaSummary,
+          shippingMethod,
+          shippingAddress,
+          billingAddress
+        });
+      }
 
       // Split EMAIL_BCC into array of email addresses
       const bccEmails = EMAIL_BCC.split(',').map(e => e.trim()).filter(Boolean);

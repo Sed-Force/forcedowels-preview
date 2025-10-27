@@ -141,7 +141,7 @@ export function buildInternationalOrderConfirmationEmail(data = {}) {
                   <tr>
                     <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06);">
                       <div style="font:600 14px/1.2 Inter,Segoe UI,Roboto,Arial,sans-serif;color:#fff;">Order Summary</div>
-                      <div style="font:400 12px/1.6 Inter,Segoe UI,Roboto,Arial,sans-serif;color:#9ca3af;margin-top:4px;">Placed on ${order_date}</div>
+                      <div style="font:400 12px/1.6 Inter,Segoe UI,Roboto,Arial,sans-serif;color:#9ca3af;margin-top:4px;">Invoice #${order_number} • Placed on ${order_date}</div>
                     </td>
                   </tr>
                   <tr>
