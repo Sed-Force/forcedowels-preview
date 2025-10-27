@@ -247,11 +247,11 @@ export default async function handler(req, res) {
             contact_name,
             phone,
             tax_id,
-            quantity_selection: quantity,
+            quantity_selection: String(quantity),
             shipping_address,
             awaiting_shipping_quote: 'true',
-            units: String(quantityInfo.units),
-            order_type: quantityInfo.type
+            units: String(totalUnits),
+            order_type: order_type
           }
         });
 
