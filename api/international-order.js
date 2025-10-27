@@ -205,6 +205,7 @@ export default async function handler(req, res) {
             ok: true,
             emailSent: true,
             emailId: sent?.id || null,
+            requiresManualProcessing: true,
             note: 'Email sent. Custom quantity requires manual quote - no checkout session created.'
           });
         }
@@ -242,11 +243,14 @@ export default async function handler(req, res) {
         });
       } catch (stripeErr) {
         console.error('[International Order] Stripe error:', stripeErr);
-        return json(res, 502, {
-          error: 'Failed to create checkout session',
-          detail: stripeErr?.message || String(stripeErr),
+        // If Stripe fails, still return success since email was sent
+        // International orders can be processed manually
+        return json(res, 200, {
+          ok: true,
           emailSent: true,
-          emailId: sent?.id || null
+          emailId: sent?.id || null,
+          requiresManualProcessing: true,
+          note: 'Request submitted successfully. Our team will contact you to complete payment and arrange shipping.'
         });
       }
     }
