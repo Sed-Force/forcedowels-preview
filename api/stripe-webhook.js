@@ -543,42 +543,78 @@ export default async function handler(req, res) {
         const shippingAddressStr = formatAddress(shippingAddress);
         const billingAddressStr = formatAddress(billingAddress);
 
-        await sql`
-          INSERT INTO orders (
-            invoice_number,
-            customer_name,
-            customer_email,
-            customer_phone,
-            items_summary,
-            shipping_method,
-            quantity,
-            status,
-            order_date,
-            amount_cents,
-            tracking_number,
-            carrier,
-            session_id,
-            shipping_address,
-            billing_address
-          ) VALUES (
-            ${invoiceNumber},
-            ${customerName},
-            ${customerEmail},
-            ${customerPhone},
-            ${itemsSummary},
-            ${shippingMethod},
-            ${quantity},
-            'pending',
-            CURRENT_DATE,
-            ${totalCents},
-            '',
-            ${shipCarrier},
-            ${sessionId},
-            ${shippingAddressStr},
-            ${billingAddressStr}
-          )
-        `;
-        console.log(`[Webhook] Saved order #${invoiceNumber} to database`);
+        // Try to insert with all columns including addresses
+        try {
+          await sql`
+            INSERT INTO orders (
+              invoice_number,
+              customer_name,
+              customer_email,
+              customer_phone,
+              items_summary,
+              shipping_method,
+              quantity,
+              status,
+              order_date,
+              amount_cents,
+              tracking_number,
+              carrier,
+              session_id,
+              shipping_address,
+              billing_address
+            ) VALUES (
+              ${invoiceNumber},
+              ${customerName},
+              ${customerEmail},
+              ${customerPhone},
+              ${itemsSummary},
+              ${shippingMethod},
+              ${quantity},
+              'pending',
+              CURRENT_DATE,
+              ${totalCents},
+              '',
+              ${shipCarrier},
+              ${sessionId},
+              ${shippingAddressStr},
+              ${billingAddressStr}
+            )
+          `;
+          console.log(`[Webhook] Saved order #${invoiceNumber} to database with addresses`);
+        } catch (insertErr) {
+          // If columns don't exist, try without address and phone columns
+          console.log('[Webhook] Failed to insert with new columns, trying legacy insert:', insertErr.message);
+          await sql`
+            INSERT INTO orders (
+              invoice_number,
+              customer_name,
+              customer_email,
+              items_summary,
+              shipping_method,
+              quantity,
+              status,
+              order_date,
+              amount_cents,
+              tracking_number,
+              carrier,
+              session_id
+            ) VALUES (
+              ${invoiceNumber},
+              ${customerName},
+              ${customerEmail},
+              ${itemsSummary},
+              ${shippingMethod},
+              ${quantity},
+              'pending',
+              CURRENT_DATE,
+              ${totalCents},
+              '',
+              ${shipCarrier},
+              ${sessionId}
+            )
+          `;
+          console.log(`[Webhook] Saved order #${invoiceNumber} to database (legacy format)`);
+        }
       }
     } catch (err) {
       console.error('Failed to save order to database:', err);
