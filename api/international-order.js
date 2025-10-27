@@ -39,10 +39,10 @@ const QUANTITY_MAP = {
   'box-25000': { units: 25000, type: 'bulk', label: 'Standard Box: 25,000 dowels' }
 };
 
-// Pricing functions (same as checkout.js)
+// Pricing functions (matching order page display: 5k-24,999 | 25k-164,999 | 165k+)
 function unitPriceMillsFor(units) {
-  if (units >= 160000) return 63;  // $0.0630 = 6.3 cents = 63 mills
-  if (units >= 20000)  return 67.5;  // $0.0675 = 6.75 cents = 67.5 mills
+  if (units >= 165000) return 63;  // $0.0630 = 6.3 cents = 63 mills
+  if (units >= 25000)  return 67.5;  // $0.0675 = 6.75 cents = 67.5 mills
   return 72;                       // $0.0720 = 7.2 cents = 72 mills
 }
 
@@ -54,9 +54,9 @@ function bulkTotalCents(units) {
 }
 
 function tierLabel(units) {
-  if (units >= 160000) return 'Tier: 160,000–960,000';
-  if (units >= 20000)  return 'Tier: 20,000–159,999';
-  return 'Tier: 5,000–19,999';
+  if (units >= 165000) return 'Tier: 165,000–960,000';
+  if (units >= 25000)  return 'Tier: 25,000–164,999';
+  return 'Tier: 5,000–24,999';
 }
 
 // ---------- Handler ----------
