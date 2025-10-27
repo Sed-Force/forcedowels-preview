@@ -4,6 +4,8 @@
 // - Separates Subtotal vs Shipping.
 // - Sends email via Resend (preferred) or SendGrid (fallback).
 
+import { buildInternationalOrderConfirmationEmail } from './_lib/email/internationalOrderConfirmation.js';
+
 export const config = { runtime: 'nodejs' };
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
@@ -45,10 +47,18 @@ function formatMoney(cents) {
 // Recompute exact bulk cents (mirrors /api/checkout.js)
 const BULK_MIN = 5000;
 function unitPriceMillsFor(units) {
-  if (units >= 160000) return 63;   // 0.063 * 1000
+  if (units >= 160000) return 63;   // 0.063 * 1000 (old checkout.js thresholds)
   if (units >= 20000)  return 67.5; // 0.0675 * 1000
   return 72;                        // 0.072 * 1000
 }
+
+// International orders use correct thresholds from order page (25k/165k)
+function unitPriceMillsForInternational(units) {
+  if (units >= 165000) return 63;   // $0.0630 = 6.3 cents = 63 mills
+  if (units >= 25000)  return 67.5; // $0.0675 = 6.75 cents = 67.5 mills
+  return 72;                        // $0.0720 = 7.2 cents = 72 mills
+}
+
 function bulkTotalCents(units) {
   if (!Number.isFinite(units) || units < BULK_MIN) return 0;
   const mills = unitPriceMillsFor(units);
@@ -59,6 +69,13 @@ function tierLabel(units) {
   if (units >= 160000) return '>160,000–960,000';
   if (units >= 20000)  return '>20,000–160,000';
   return '5,000–20,000';
+}
+
+// International orders use the correct tier thresholds from order page
+function tierLabelFor(units) {
+  if (units >= 165000) return 'Tier: 165,000–960,000';
+  if (units >= 25000)  return 'Tier: 25,000–164,999';
+  return 'Tier: 5,000–24,999';
 }
 
 // Internal notification email for Force Dowels team
@@ -623,18 +640,73 @@ export default async function handler(req, res) {
 
     // Build + send email
     const shortId = `#${sessionId.slice(-8)}`;
-    const subject = `Force Dowels Order ${shortId}`;
-    const html = buildEmailHTML({
-      invoiceNumber,
-      orderId: shortId,
-      email: customerEmail,
-      items: lineItems,
-      subtotalCents,
-      shippingCents,
-      totalCents,
-      metaSummary,
-      shippingMethod
-    });
+
+    // Detect international order from metadata
+    const isInternational = session.metadata?.international_order === 'true';
+
+    let subject, html;
+    if (isInternational) {
+      // Use international order template
+      const { bulkUnits = 0, kits = 0 } = metaSummary || {};
+      const totalUnits = Number(session.metadata?.units || bulkUnits || (kits * 300) || 0);
+      const orderType = session.metadata?.order_type || (kits > 0 ? 'kit' : 'bulk');
+
+      // Calculate unit price and tier
+      let unitUsd = '0.0000';
+      let tierLabelText = '';
+      if (orderType === 'bulk' && totalUnits >= 5000) {
+        const mills = unitPriceMillsForInternational(totalUnits);
+        unitUsd = (mills / 10000).toFixed(4); // mills to dollars
+        tierLabelText = tierLabelFor(totalUnits);
+      } else if (orderType === 'kit') {
+        unitUsd = '36.0000';
+        tierLabelText = 'Starter Kit';
+      }
+
+      const lineTotal = (subtotalCents / 100).toFixed(2);
+      const subtotalFormatted = (subtotalCents / 100).toFixed(2);
+      const taxFormatted = (taxCents / 100).toFixed(2);
+      const totalFormatted = (totalCents / 100).toFixed(2);
+
+      const emailData = buildInternationalOrderConfirmationEmail({
+        customer_name: customerName || 'Customer',
+        order_number: String(invoiceNumber),
+        order_date: orderDate,
+        units: totalUnits,
+        unit_usd: unitUsd,
+        tier_label: tierLabelText,
+        line_total: lineTotal,
+        subtotal: subtotalFormatted,
+        tax: taxFormatted,
+        total: totalFormatted,
+        ship_name: shippingAddress.name || customerName || '',
+        ship_address1: shippingAddress.line1 || '',
+        ship_address2: shippingAddress.line2 || '',
+        ship_city: shippingAddress.city || '',
+        ship_state: shippingAddress.state || '',
+        ship_postal: shippingAddress.postal_code || '',
+        ship_country: shippingAddress.country || '',
+        order_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels.com'}/order-status.html?session=${sessionId}`,
+        is_test: process.env.VERCEL_ENV !== 'production'
+      });
+
+      subject = emailData.subject;
+      html = emailData.html;
+    } else {
+      // Use standard order template
+      subject = `Force Dowels Order ${shortId}`;
+      html = buildEmailHTML({
+        invoiceNumber,
+        orderId: shortId,
+        email: customerEmail,
+        items: lineItems,
+        subtotalCents,
+        shippingCents,
+        totalCents,
+        metaSummary,
+        shippingMethod
+      });
+    }
 
     // Send email to customer
     let sent = { ok: false };
