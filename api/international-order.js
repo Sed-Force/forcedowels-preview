@@ -29,39 +29,35 @@ const WHITELIST = parseList(process.env.EMAIL_WHITELIST).map(s => s.toLowerCase(
 const HAS_RESEND = !!process.env.RESEND_API_KEY;
 const resend = HAS_RESEND ? new Resend(process.env.RESEND_API_KEY) : null;
 
-// Map quantity selections to prices
-const QUANTITY_PRICE_MAP = {
-  'kit-300': {
-    priceId: process.env.STRIPE_PRICE_FD_KIT_300,
-    label: 'Ship Kit: 300 dowels',
-    quantity: 1
-  },
-  'box-5000': {
-    priceId: process.env.STRIPE_PRICE_FORCE_100,
-    label: 'Standard Box: 5,000 dowels',
-    quantity: 1
-  },
-  'box-10000': {
-    priceId: process.env.STRIPE_PRICE_FORCE_100,
-    label: 'Standard Box: 10,000 dowels',
-    quantity: 2
-  },
-  'box-15000': {
-    priceId: process.env.STRIPE_PRICE_FORCE_100,
-    label: 'Standard Box: 15,000 dowels',
-    quantity: 3
-  },
-  'box-20000': {
-    priceId: process.env.STRIPE_PRICE_FORCE_100,
-    label: 'Standard Box: 20,000 dowels',
-    quantity: 4
-  },
-  'box-25000': {
-    priceId: process.env.STRIPE_PRICE_FORCE_500,
-    label: 'Standard Box: 25,000 dowels',
-    quantity: 1
-  }
+// Map quantity selections to actual unit counts
+const QUANTITY_MAP = {
+  'kit-300': { units: 300, type: 'kit', label: 'Ship Kit: 300 dowels' },
+  'box-5000': { units: 5000, type: 'bulk', label: 'Standard Box: 5,000 dowels' },
+  'box-10000': { units: 10000, type: 'bulk', label: 'Standard Box: 10,000 dowels' },
+  'box-15000': { units: 15000, type: 'bulk', label: 'Standard Box: 15,000 dowels' },
+  'box-20000': { units: 20000, type: 'bulk', label: 'Standard Box: 20,000 dowels' },
+  'box-25000': { units: 25000, type: 'bulk', label: 'Standard Box: 25,000 dowels' }
 };
+
+// Pricing functions (same as checkout.js)
+function unitPriceMillsFor(units) {
+  if (units >= 165000) return 630;  // $0.0630
+  if (units >= 25000)  return 675;  // $0.0675
+  return 720;                       // $0.0720
+}
+
+function bulkTotalCents(units) {
+  if (!Number.isFinite(units) || units < 5000) return 0;
+  const mills = unitPriceMillsFor(units);
+  const cents = Math.round((units * mills) / 10);
+  return cents;
+}
+
+function tierLabel(units) {
+  if (units >= 165000) return 'Tier: 165,000–960,000';
+  if (units >= 25000)  return 'Tier: 25,000–164,999';
+  return 'Tier: 5,000–24,999';
+}
 
 // ---------- Handler ----------
 export default async function handler(req, res) {
@@ -196,10 +192,10 @@ export default async function handler(req, res) {
     // If action is 'reserve', create Stripe checkout session
     if (action === 'reserve') {
       try {
-        // Get price mapping for the selected quantity
-        const priceInfo = QUANTITY_PRICE_MAP[quantity];
+        // Get quantity info
+        const quantityInfo = QUANTITY_MAP[quantity];
 
-        if (!priceInfo || !priceInfo.priceId) {
+        if (!quantityInfo || quantity === 'custom') {
           // For custom quantities, we can't create a checkout session
           return json(res, 200, {
             ok: true,
@@ -210,27 +206,62 @@ export default async function handler(req, res) {
           });
         }
 
+        // Build line items using dynamic pricing (same as regular checkout)
+        const line_items = [];
+
+        if (quantityInfo.type === 'bulk') {
+          const cents = bulkTotalCents(quantityInfo.units);
+          if (cents <= 0) {
+            return json(res, 400, { error: 'Invalid bulk amount' });
+          }
+          line_items.push({
+            price_data: {
+              currency: 'usd',
+              unit_amount: cents,
+              product_data: {
+                name: 'Force Dowels — Bulk (International Order)',
+                description: `${tierLabel(quantityInfo.units)} • ${quantityInfo.units.toLocaleString()} units • Awaiting shipping quote`,
+              },
+            },
+            quantity: 1,
+          });
+        } else if (quantityInfo.type === 'kit') {
+          line_items.push({
+            price_data: {
+              currency: 'usd',
+              unit_amount: 3600, // $36 per kit
+              product_data: {
+                name: 'Force Dowels — Starter Kit (International Order)',
+                description: '300 units • Awaiting shipping quote',
+              },
+            },
+            quantity: 1,
+          });
+        }
+
         const base = (process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/$/, '');
-        const success_url = `${base || 'https://forcedowels.com'}/thank-you.html?session_id={CHECKOUT_SESSION_ID}&international=true`;
+        const success_url = `${base || 'https://forcedowels.com'}/order-success.html?session_id={CHECKOUT_SESSION_ID}`;
         const cancel_url = `${base || 'https://forcedowels.com'}/order.html`;
 
         const session = await stripe.checkout.sessions.create({
           mode: 'payment',
-          line_items: [{
-            price: priceInfo.priceId,
-            quantity: priceInfo.quantity,
-            adjustable_quantity: { enabled: false }
-          }],
+          payment_method_types: ['card'],
+          line_items,
           success_url,
           cancel_url,
           customer_email: email,
+          phone_number_collection: { enabled: true },
           metadata: {
             international_order: 'true',
             business_name,
             contact_name,
             phone,
             tax_id,
-            quantity_selection: quantity
+            quantity_selection: quantity,
+            shipping_address,
+            awaiting_shipping_quote: 'true',
+            units: String(quantityInfo.units),
+            order_type: quantityInfo.type
           }
         });
 
@@ -307,7 +338,7 @@ function buildEmailHtml({
   const commentsHtml = comments ? esc(comments).replace(/\n/g, '<br/>') : '';
 
   // Get human-readable quantity label
-  const quantityLabel = QUANTITY_PRICE_MAP[quantity]?.label || quantity;
+  const quantityLabel = QUANTITY_MAP[quantity]?.label || quantity;
 
   return `
   <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#f7f7f7; padding:24px;">
