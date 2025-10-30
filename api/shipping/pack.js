@@ -15,8 +15,8 @@ const BULK_MAX   = 960000;
 // Per 5,000 bulk: ~19 lb (rounded up) – you asked to round to 19.
 const LBS_PER_5K = 19;
 
-// Small bulk box (5k–10k): 15" x 15" x 12"
-const SMALL_BOX  = { length: 15, width: 15, height: 12 };
+// Small bulk box (5k–10k): 15" x 15" x 10"
+const SMALL_BOX  = { length: 15, width: 15, height: 10 };
 
 // Large bulk box (15k–20k): 22" x 22" x 12"
 const LARGE_BOX  = { length: 22, width: 22, height: 12 };
