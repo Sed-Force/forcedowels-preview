@@ -40,7 +40,8 @@
       "Bash(powershell -Command \"Stop-Process -Id 10284 -Force\")",
       "Bash(powershell -Command \"Get-Process node | Stop-Process -Force\")",
       "Bash(powershell:*)",
-      "Bash(Out-Null)"
+      "Bash(Out-Null)",
+      "Bash(psql:*)"
     ],
     "deny": [],
     "ask": []
