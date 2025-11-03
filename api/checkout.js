@@ -152,10 +152,13 @@ export default async function handler(req, res) {
     }
 
     // Shipping (optional explicit line item)
+    // NOTE: Only add shipping as line item if NO shipping address provided
+    // If shipping address exists, we'll use shipping_options instead
     let shipAmountCents = 0;
     if (shipping && Number.isFinite(Number(shipping.amount))) {
       shipAmountCents = Math.max(0, Math.round(Number(shipping.amount) * 100));
-      if (shipAmountCents > 0) {
+      // Only add as line item if no shipping address (to avoid double-charging)
+      if (shipAmountCents > 0 && !shippingAddress) {
         line_items.push({
           price_data: {
             currency: (shipping.currency || 'USD').toLowerCase(),
