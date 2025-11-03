@@ -23,19 +23,25 @@ export default async function handler(req, res) {
 
     const session = sessions.data[0];
 
-    // Get next invoice number
-    const counterRows = await sql`
-      SELECT counter FROM invoice_counter WHERE id = 1 FOR UPDATE
+    // Get next invoice number using same logic as webhook
+    const counterKey = process.env.VERCEL_ENV === 'production' ? 'invoice_prod' : 'invoice_preview';
+
+    // Ensure counter table exists
+    await sql`
+      CREATE TABLE IF NOT EXISTS order_counter (
+        id TEXT PRIMARY KEY,
+        seq INTEGER NOT NULL DEFAULT 0
+      )
     `;
 
-    let invoiceNumber;
-    if (counterRows.length === 0) {
-      await sql`INSERT INTO invoice_counter (id, counter) VALUES (1, 48)`;
-      invoiceNumber = 48;
-    } else {
-      invoiceNumber = counterRows[0].counter;
-      await sql`UPDATE invoice_counter SET counter = counter + 1 WHERE id = 1`;
-    }
+    const counterRows = await sql`
+      INSERT INTO order_counter (id, seq)
+      VALUES (${counterKey}, 1)
+      ON CONFLICT (id) DO UPDATE SET seq = order_counter.seq + 1
+      RETURNING seq
+    `;
+
+    const invoiceNumber = Number(counterRows[0]?.seq ?? 0);
 
     // Extract order details from session
     const customerName = session.customer_details?.name || 'Unknown';
