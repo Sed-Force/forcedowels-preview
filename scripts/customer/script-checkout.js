@@ -8,7 +8,7 @@
   const fmtMoney = (n)=> (Number(n)||0).toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2});
   const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 
-  const companyInp=$('#ship-company'), emailInp=$('#ship-email'), phoneInp=$('#ship-phone');
+  const companyInp=$('#ship-company'), contactInp=$('#ship-contact'), emailInp=$('#ship-email'), phoneInp=$('#ship-phone');
   const countrySel=$('#ship-country'), stateSel=$('#ship-state'), cityInp=$('#ship-city'), postalInp=$('#ship-postal'), streetInp=$('#ship-street');
   const btnRates=$('#btn-get-rates'), ratesList=$('#rates-list');
   const subtotalEl=$('#summary-subtotal'), shipEl=$('#summary-shipping'), grandEl=$('#summary-grand');
@@ -153,11 +153,13 @@
       try{
         const dest = currentDestFromForm();
         const company = companyInp?.value?.trim() || '';
+        const contact = contactInp?.value?.trim() || '';
         const payload = {
           items,
           customerEmail: email,
           customerPhone: phone,
           customerName: company, // Use company name as primary name
+          contactName: contact, // Contact person name
           shippingAddress: {
             name: company || email, // Use company name, fallback to email
             line1: dest.street,

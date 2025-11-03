@@ -452,6 +452,7 @@ export default async function handler(req, res) {
     // Extract customer and address information
     // Prioritize company name from metadata, then Stripe's customer details
     const customerName = session.metadata?.customer_name || session.customer_details?.name || session.shipping?.name || '';
+    const contactName = session.metadata?.contact_name || '';
     const customerEmail = session.customer_details?.email || session.customer_email || '';
     const customerPhone = session.customer_details?.phone || session.shipping?.phone || '';
     let shippingAddress = session.shipping?.address || session.customer_details?.address || {};
@@ -568,6 +569,7 @@ export default async function handler(req, res) {
             INSERT INTO orders (
               invoice_number,
               customer_name,
+              contact_name,
               customer_email,
               customer_phone,
               items_summary,
@@ -586,6 +588,7 @@ export default async function handler(req, res) {
             ) VALUES (
               ${invoiceNumber},
               ${customerName},
+              ${contactName},
               ${customerEmail},
               ${customerPhone},
               ${itemsSummary},

@@ -109,6 +109,7 @@ export default async function handler(req, res) {
   const customerEmail = toStr(body.customerEmail);
   const customerPhone = toStr(body.customerPhone);
   const customerName = toStr(body.customerName); // Company name from checkout form
+  const contactName = toStr(body.contactName); // Contact person name from checkout form
   const { bulkUnits, kits } = validateItems(items);
 
   if (!bulkUnits && !kits) {
@@ -186,6 +187,7 @@ export default async function handler(req, res) {
       ship_service: shipping?.service || '',
       ship_address: shippingAddress ? JSON.stringify(shippingAddress) : '',
       customer_name: customerName || '', // Store company name in metadata
+      contact_name: contactName || '', // Store contact person name in metadata
     };
 
     const sessionOptions = {
