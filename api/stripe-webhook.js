@@ -450,7 +450,8 @@ export default async function handler(req, res) {
     const shippingMethod = [shipCarrier, shipService].filter(Boolean).join(' ');
 
     // Extract customer and address information
-    const customerName = session.customer_details?.name || session.shipping?.name || '';
+    // Prioritize company name from metadata, then Stripe's customer details
+    const customerName = session.metadata?.customer_name || session.customer_details?.name || session.shipping?.name || '';
     const customerEmail = session.customer_details?.email || session.customer_email || '';
     const customerPhone = session.customer_details?.phone || session.shipping?.phone || '';
     let shippingAddress = session.shipping?.address || session.customer_details?.address || {};

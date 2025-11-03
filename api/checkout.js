@@ -108,6 +108,7 @@ export default async function handler(req, res) {
   const shippingAddress = body.shippingAddress || null; // { name, line1, city, state, postal_code, country }
   const customerEmail = toStr(body.customerEmail);
   const customerPhone = toStr(body.customerPhone);
+  const customerName = toStr(body.customerName); // Company name from checkout form
   const { bulkUnits, kits } = validateItems(items);
 
   if (!bulkUnits && !kits) {
@@ -184,6 +185,7 @@ export default async function handler(req, res) {
       ship_carrier: shipping?.carrier || '',
       ship_service: shipping?.service || '',
       ship_address: shippingAddress ? JSON.stringify(shippingAddress) : '',
+      customer_name: customerName || '', // Store company name in metadata
     };
 
     const sessionOptions = {
