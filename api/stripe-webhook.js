@@ -636,7 +636,13 @@ export default async function handler(req, res) {
       }
     } catch (err) {
       console.error('Failed to save order to database:', err);
-      // Don't fail the webhook if database save fails
+      // Return error so Stripe will retry
+      return asJSON(res, 500, {
+        received: false,
+        error: 'database_save_failed',
+        message: err.message,
+        invoiceNumber
+      });
     }
 
     // Build + send email
