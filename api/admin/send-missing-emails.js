@@ -351,7 +351,14 @@ export default async function handler(req, res) {
     if (EMAIL_BCC) {
       const bccEmails = EMAIL_BCC.split(',').map(e => e.trim()).filter(Boolean);
 
-      for (const email of bccEmails) {
+      for (let i = 0; i < bccEmails.length; i++) {
+        const email = bccEmails[i];
+
+        // Add 600ms delay between emails to respect rate limits (2 req/sec)
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 600));
+        }
+
         if (RESEND_API_KEY) {
           const sent = await sendViaResend({
             to: email,
