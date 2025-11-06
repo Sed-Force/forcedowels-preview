@@ -6,6 +6,14 @@
 
 export const config = { runtime: 'nodejs' };
 
+import Stripe from 'stripe';
+import { sql, nextCounter } from './_lib/db.js';
+import { buildInternationalOrderConfirmationEmail } from './_lib/email/internationalOrderConfirmation.js';
+import { buildInternationalInternalNotificationHTML } from './_lib/email/internationalInternalNotification.js';
+
+const stripeSecret = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeSecret ? new Stripe(stripeSecret) : null;
+
 const RESEND_API_KEY   = process.env.RESEND_API_KEY;
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 const EMAIL_FROM       = process.env.EMAIL_FROM || 'orders@forcedowels.com';
@@ -388,18 +396,8 @@ async function sendViaSendgrid({ to, subject, html }) {
 }
 
 export default async function handler(req, res) {
-  // Dynamic imports to avoid Vercel compilation issues
-  const Stripe = (await import('stripe')).default;
-  const { buildInternationalOrderConfirmationEmail } = await import('./_lib/email/internationalOrderConfirmation.js');
-  const { buildInternationalInternalNotificationHTML } = await import('./_lib/email/internationalInternalNotification.js');
-  const { sql } = await import('./_lib/db.js');
-
   if (req.method !== 'POST') return asJSON(res, 405, { error: 'Method not allowed' });
-
-  const stripeSecret = process.env.STRIPE_SECRET_KEY;
-  if (!stripeSecret) return asJSON(res, 500, { error: 'Stripe not configured (missing STRIPE_SECRET_KEY).' });
-
-  const stripe = new Stripe(stripeSecret);
+  if (!stripe) return asJSON(res, 500, { error: 'Stripe not configured (missing STRIPE_SECRET_KEY).' });
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) return asJSON(res, 500, { error: 'Missing STRIPE_WEBHOOK_SECRET' });
 
@@ -495,8 +493,6 @@ export default async function handler(req, res) {
     const counterKey = process.env.VERCEL_ENV === 'production' ? 'invoice_prod' : 'invoice_preview';
     let invoiceNumber = 0;
     try {
-      // Dynamic import to avoid module loading issues
-      const { nextCounter } = await import('./_lib/db.js');
       invoiceNumber = await nextCounter(counterKey);
     } catch (err) {
       console.error('Failed to generate invoice number:', err);
