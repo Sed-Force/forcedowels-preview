@@ -4,13 +4,7 @@
 // - Separates Subtotal vs Shipping.
 // - Sends email via Resend (preferred) or SendGrid (fallback).
 
-import { buildInternationalOrderConfirmationEmail } from './_lib/email/internationalOrderConfirmation.js';
-import { buildInternationalInternalNotificationHTML } from './_lib/email/internationalInternalNotification.js';
-
 export const config = { runtime: 'nodejs' };
-
-const stripeSecret = process.env.STRIPE_SECRET_KEY;
-const stripe = stripeSecret ? require('stripe')(stripeSecret) : null;
 
 const RESEND_API_KEY   = process.env.RESEND_API_KEY;
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
@@ -394,9 +388,17 @@ async function sendViaSendgrid({ to, subject, html }) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return asJSON(res, 405, { error: 'Method not allowed' });
-  if (!stripe) return asJSON(res, 500, { error: 'Stripe not configured (missing STRIPE_SECRET_KEY).' });
+  // Dynamic imports to avoid Vercel compilation issues
+  const Stripe = (await import('stripe')).default;
+  const { buildInternationalOrderConfirmationEmail } = await import('./_lib/email/internationalOrderConfirmation.js');
+  const { buildInternationalInternalNotificationHTML } = await import('./_lib/email/internationalInternalNotification.js');
 
+  if (req.method !== 'POST') return asJSON(res, 405, { error: 'Method not allowed' });
+
+  const stripeSecret = process.env.STRIPE_SECRET_KEY;
+  if (!stripeSecret) return asJSON(res, 500, { error: 'Stripe not configured (missing STRIPE_SECRET_KEY).' });
+
+  const stripe = new Stripe(stripeSecret);
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) return asJSON(res, 500, { error: 'Missing STRIPE_WEBHOOK_SECRET' });
 
