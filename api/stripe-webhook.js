@@ -392,6 +392,7 @@ export default async function handler(req, res) {
   const Stripe = (await import('stripe')).default;
   const { buildInternationalOrderConfirmationEmail } = await import('./_lib/email/internationalOrderConfirmation.js');
   const { buildInternationalInternalNotificationHTML } = await import('./_lib/email/internationalInternalNotification.js');
+  const { sql } = await import('./_lib/db.js');
 
   if (req.method !== 'POST') return asJSON(res, 405, { error: 'Method not allowed' });
 
