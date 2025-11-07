@@ -41,7 +41,11 @@
       "Bash(powershell -Command \"Get-Process node | Stop-Process -Force\")",
       "Bash(powershell:*)",
       "Bash(Out-Null)",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git checkout:*)",
+      "Bash(timeout 30 bash -c 'while true; do curl -s https://forcedowels-preview.vercel.app/api/test-webhook-init && break || sleep 2; done')"
     ],
     "deny": [],
     "ask": []

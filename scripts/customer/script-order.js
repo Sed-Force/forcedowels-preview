@@ -66,6 +66,7 @@
   const totalEl   = $('#price-total');
   const addBtn    = $('#btn-add-to-cart');
   const kitBtn    = $('#starter-kit');
+  const testKitBtn = $('#test-kit');
   const tierButtons = $$('.tier');
 
   function setActiveTier(btn) {
@@ -209,6 +210,26 @@
       cart.push({ type: 'kit', qty: 1, price: 36.0, title: 'Force Dowels — Starter Kit (300)' });
     }
     saveCart(cart);
+  });
+
+  // Add test kit ($1 test order)
+  testKitBtn?.addEventListener('click', () => {
+    let cart = loadCart();
+    // Remove any existing test kit
+    cart = cart.filter(i => i.type !== 'test');
+    // Add new test kit
+    cart.push({ type: 'test', qty: 1, price: 1.0, title: '🧪 Webhook Test Order (1 unit)' });
+    saveCart(cart);
+    // Show confirmation
+    const originalText = testKitBtn.innerHTML;
+    testKitBtn.innerHTML = '<div style="text-align:center;"><strong>✓ Added to Cart</strong><div class="muted">Go to checkout to test webhook</div></div>';
+    testKitBtn.style.background = '#10b981';
+    testKitBtn.style.color = '#fff';
+    setTimeout(() => {
+      testKitBtn.innerHTML = originalText;
+      testKitBtn.style.background = '';
+      testKitBtn.style.color = '';
+    }, 2000);
   });
 
 })();

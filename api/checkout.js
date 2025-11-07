@@ -61,7 +61,7 @@ function safeParseBody(req) {
 }
 
 function validateItems(items) {
-  const out = { bulkUnits: 0, kits: 0 };
+  const out = { bulkUnits: 0, kits: 0, tests: 0 };
 
   for (const it of Array.isArray(items) ? items : []) {
     if (it && it.type === 'bulk') {
@@ -74,6 +74,8 @@ function validateItems(items) {
       let q = Number(it.qty || 0);
       if (!Number.isFinite(q) || q < 1) q = 1;
       out.kits += q;
+    } else if (it && it.type === 'test') {
+      out.tests = 1;
     }
   }
   return out;
@@ -110,9 +112,9 @@ export default async function handler(req, res) {
   const customerPhone = toStr(body.customerPhone);
   const customerName = toStr(body.customerName); // Company name from checkout form
   const contactName = toStr(body.contactName); // Contact person name from checkout form
-  const { bulkUnits, kits } = validateItems(items);
+  const { bulkUnits, kits, tests } = validateItems(items);
 
-  if (!bulkUnits && !kits) {
+  if (!bulkUnits && !kits && !tests) {
     return asJSON(res, 400, { error: 'Cart is empty.' });
   }
 
@@ -153,6 +155,21 @@ export default async function handler(req, res) {
       });
     }
 
+    // Test kit ($1)
+    if (tests > 0) {
+      line_items.push({
+        price_data: {
+          currency: 'usd',
+          unit_amount: 100,
+          product_data: {
+            name: '🧪 Webhook Test Order',
+            description: 'Test order for webhook verification',
+          },
+        },
+        quantity: 1,
+      });
+    }
+
     // Shipping (optional explicit line item)
     // NOTE: Only add shipping as line item if NO shipping address provided
     // If shipping address exists, we'll use shipping_options instead
@@ -182,7 +199,7 @@ export default async function handler(req, res) {
     // Basic metadata for webhook/email rendering
     const metadata = {
       ship_amount_cents: String(shipAmountCents || 0),
-      summary: JSON.stringify({ bulkUnits, kits }),
+      summary: JSON.stringify({ bulkUnits, kits, tests }),
       ship_carrier: shipping?.carrier || '',
       ship_service: shipping?.service || '',
       ship_address: shippingAddress ? JSON.stringify(shippingAddress) : '',

@@ -34,12 +34,13 @@
       return arr.map(it=>{
         if(it?.type==='bulk'){ let u=Number(it.units||0); if(!Number.isFinite(u)||u<BULK_MIN)u=BULK_MIN; if(u>BULK_MAX)u=BULK_MAX; u=Math.round(u/BULK_STEP)*BULK_STEP; return {type:'bulk',units:u}; }
         if(it?.type==='kit'){ let q=Number(it.qty||0); if(!Number.isFinite(q)||q<1)q=1; return {type:'kit',qty:q}; }
+        if(it?.type==='test'){ return {type:'test',qty:1}; }
         return null;
       }).filter(Boolean);
     }catch{return [];}
   }
-  function updateBadge(items){ if(!badgeEl)return; let t=0; for(const it of items){ if(it.type==='bulk')t+=it.units; else if(it.type==='kit')t+=(it.qty*300); } badgeEl.textContent=t>0?t.toLocaleString():''; badgeEl.style.display=t>0?'inline-block':'none'; }
-  function computeSubtotal(items){ let c=0; for(const it of items){ if(it.type==='bulk') c+=Math.round(unitPriceFor(it.units)*it.units*100); else if(it.type==='kit') c+=3600*it.qty; } return c/100; }
+  function updateBadge(items){ if(!badgeEl)return; let t=0; for(const it of items){ if(it.type==='bulk')t+=it.units; else if(it.type==='kit')t+=(it.qty*300); else if(it.type==='test')t+=1; } badgeEl.textContent=t>0?t.toLocaleString():''; badgeEl.style.display=t>0?'inline-block':'none'; }
+  function computeSubtotal(items){ let c=0; for(const it of items){ if(it.type==='bulk') c+=Math.round(unitPriceFor(it.units)*it.units*100); else if(it.type==='kit') c+=3600*it.qty; else if(it.type==='test') c+=100; } return c/100; }
   function getDest(){ try{return JSON.parse(localStorage.getItem(KEY_DEST)||'{}');}catch{return{};} }
   function setDest(d){ localStorage.setItem(KEY_DEST, JSON.stringify(d||{})); }
   function getChosenRate(){ try{return JSON.parse(localStorage.getItem(KEY_RATE)||'null');}catch{return null;} }
@@ -143,9 +144,12 @@
       if(!email){ alert('Please enter your email address.'); return; }
       if(!phone){ alert('Please enter your phone number.'); return; }
 
-      // Require shipping
+      // Check if cart contains only test order
+      const isTestOnly = items.length === 1 && items[0].type === 'test';
+
+      // Require shipping (skip for test orders only)
       const rate = getChosenRate();
-      if(!rate){ alert('Please choose a shipping option first.'); return; }
+      if(!rate && !isTestOnly){ alert('Please choose a shipping option first.'); return; }
 
       setDest(currentDestFromForm());
 
@@ -160,15 +164,20 @@
           customerPhone: phone,
           customerName: company, // Use company name as primary name
           contactName: contact, // Contact person name
-          shippingAddress: {
+        };
+
+        // Only add shipping address for non-test orders
+        if(!isTestOnly) {
+          payload.shippingAddress = {
             name: company || email, // Use company name, fallback to email
             line1: dest.street,
             city: dest.city,
             state: dest.state,
             postal_code: dest.postal,
             country: dest.country
-          }
-        };
+          };
+        }
+
         if(rate) payload.shipping = {carrier:rate.carrier,service:rate.service,amount:rate.amount,currency:rate.currency||'USD'};
         const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         if(!res.ok){ console.error('Checkout failed',await res.text()); alert('A server error occurred creating your checkout. Please try again.'); return; }

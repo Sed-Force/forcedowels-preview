@@ -62,6 +62,9 @@
             if (!Number.isFinite(q) || q < 1) q = 1;
             return { type: 'kit', qty: q };
           }
+          if (it.type === 'test') {
+            return { type: 'test', qty: 1 };
+          }
           // Handle legacy format
           if ('units' in it) {
             const u = Number(it.units);
@@ -90,6 +93,7 @@
     for (const it of items) {
       if (it.type === 'bulk') total += it.units; // total dowel units
       else if (it.type === 'kit') total += it.qty * 300; // kits have 300 dowels each
+      else if (it.type === 'test') total += 1; // test order
     }
     badgeEl.textContent = total > 0 ? total.toLocaleString() : '';
     badgeEl.style.display = total > 0 ? 'inline-block' : 'none';
@@ -114,6 +118,8 @@
         cents += lineTotalCentsForBulk(it.units);
       } else if (it.type === 'kit') {
         cents += Math.round(36.00 * 100) * it.qty; // $36.00 per kit
+      } else if (it.type === 'test') {
+        cents += 100; // $1.00 test order
       }
     }
     return cents / 100;
@@ -190,6 +196,29 @@
 
             <td class="col-total">
               <span class="line-total">${fmtMoney(lineTotal)}</span>
+              <button class="btn-remove" type="button" aria-label="Remove item">Remove</button>
+            </td>
+          `;
+        } else if (it.type === 'test') {
+          tr.innerHTML = `
+            <td class="col-item">
+              <div class="item-title"><strong>🧪 Webhook Test Order</strong></div>
+              <div class="muted">Test order for webhook verification</div>
+            </td>
+
+            <td class="col-qty">
+              <div class="qtywrap">
+                <span style="padding: 0 12px;">1</span>
+                <span class="units-label">test</span>
+              </div>
+            </td>
+
+            <td class="col-unitprice">
+              <span class="unit-price">$1.0000</span>
+            </td>
+
+            <td class="col-total">
+              <span class="line-total">${fmtMoney(1.0)}</span>
               <button class="btn-remove" type="button" aria-label="Remove item">Remove</button>
             </td>
           `;
