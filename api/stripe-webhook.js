@@ -219,21 +219,14 @@ export default async function handler(req, res) {
 
     // Send emails
     const bccList = EMAIL_BCC ? EMAIL_BCC.split(',').map(e => e.trim()) : [];
-
-    // Skip emails for test orders
-    if (tests > 0) {
-      console.log('[Webhook] Skipping emails for test order');
-      return asJSON(res, 200, {
-        success: true,
-        invoice: invoiceNumber,
-        message: 'Test order processed, emails skipped'
-      });
-    }
+    const isTestOrder = tests > 0;
 
     // Customer email
     try {
-      const customerSubject = `Order Confirmation #${invoiceNumber} – Force Dowels`;
+      const testBadge = isTestOrder ? ' [TEST ORDER]' : '';
+      const customerSubject = `Order Confirmation #${invoiceNumber}${testBadge} – Force Dowels`;
       const customerHtml = `
+        ${isTestOrder ? '<div style="background:#fbbf24;color:#1b2437;padding:12px;text-align:center;font-weight:bold;">🧪 TEST ORDER - This is a test email</div>' : ''}
         <h1>Thank you for your order!</h1>
         <p>Order #${invoiceNumber}</p>
         <p>Date: ${orderDate}</p>
@@ -254,8 +247,10 @@ export default async function handler(req, res) {
     // Team notification emails (send to each BCC address individually)
     for (const teamEmail of bccList) {
       try {
-        const teamSubject = `New Order #${invoiceNumber} – ${customerName || customerEmail}`;
+        const testBadge = isTestOrder ? ' [TEST]' : '';
+        const teamSubject = `New Order #${invoiceNumber}${testBadge} – ${customerName || customerEmail}`;
         const teamHtml = `
+          ${isTestOrder ? '<div style="background:#fbbf24;color:#1b2437;padding:12px;text-align:center;font-weight:bold;">🧪 TEST ORDER - Email System Verification</div>' : ''}
           <h1>New Order Received</h1>
           <p><strong>Invoice #${invoiceNumber}</strong></p>
           <p><strong>Customer:</strong> ${customerName || customerEmail}</p>
