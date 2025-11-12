@@ -65,8 +65,8 @@ export class UnifiedShippingService {
     const carrierPromises = [];
 
     // USPS - for all parcels under 70 lbs (no pallets)
-    // Only call USPS for kits or lightweight parcels (bulk orders typically fail USPS validation)
-    const isKitsOnly = packages.meta.bulkUnits === 0 && packages.meta.kitQty > 0;
+    // Only call USPS for kits, test orders, or lightweight parcels (bulk orders typically fail USPS validation)
+    const isKitsOnly = packages.meta.bulkUnits === 0 && (packages.meta.kitQty > 0 || packages.meta.testQty > 0);
 
     if (packages.parcels.length > 0 && packages.pallets.length === 0) {
       // Check if any parcel exceeds USPS weight limit (70 lbs)
@@ -164,6 +164,9 @@ export class UnifiedShippingService {
           throw new Error('Kit items must have a positive qty value');
         }
         return sum + item.qty;
+      } else if (item.type === 'test') {
+        // Test orders count as 1 unit for shipping calculation purposes
+        return sum + 1;
       } else {
         throw new Error(`Unknown item type: ${item.type}`);
       }
@@ -178,6 +181,7 @@ export class UnifiedShippingService {
     const pallets = [];
     let bulkUnits = 0;
     let kitQty = 0;
+    let testQty = 0;
 
     // Aggregate quantities by type
     for (const item of items) {
@@ -191,6 +195,9 @@ export class UnifiedShippingService {
           throw new Error('Kit items must have numeric qty');
         }
         kitQty += item.qty;
+      } else if (item.type === 'test') {
+        // Test items are treated as minimal shipping (like a kit)
+        testQty += 1;
       }
     }
 
@@ -218,10 +225,19 @@ export class UnifiedShippingService {
       parcels.push(...kitPackages);
     }
 
+    // Convert test items to packages (use kit package as template)
+    if (testQty > 0) {
+      // Test items ship as a minimal parcel (same as 1 kit)
+      const testPackages = getPackagesForKits(1);
+      if (testPackages && testPackages.length > 0) {
+        parcels.push(...testPackages);
+      }
+    }
+
     return {
       parcels,
       pallets,
-      meta: { bulkUnits, kitQty }
+      meta: { bulkUnits, kitQty, testQty }
     };
   }
 
