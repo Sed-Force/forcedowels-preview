@@ -179,6 +179,13 @@
     }
 
     let cart = loadCart();
+
+    // Cannot add real products if test order is in cart
+    if (cart.some(i => i.type === 'test')) {
+      alert('Please remove the test order from your cart before adding products.');
+      return;
+    }
+
     const bulk = cart.find(i => i.type === 'bulk');
     if (bulk) {
       // REPLACE the quantity instead of adding to it
@@ -203,6 +210,13 @@
   // Add ONE starter kit per click (no auto-redirect)
   kitBtn?.addEventListener('click', () => {
     let cart = loadCart();
+
+    // Cannot add real products if test order is in cart
+    if (cart.some(i => i.type === 'test')) {
+      alert('Please remove the test order from your cart before adding products.');
+      return;
+    }
+
     const kit = cart.find(i => i.type === 'kit');
     if (kit) {
       kit.qty = (Number(kit.qty) || 0) + 1;
@@ -214,10 +228,8 @@
 
   // Add test kit ($1 test order)
   testKitBtn?.addEventListener('click', () => {
-    let cart = loadCart();
-    // Remove any existing test kit
-    cart = cart.filter(i => i.type !== 'test');
-    // Add new test kit
+    // Test orders cannot be mixed with real orders - clear cart completely
+    let cart = [];
     cart.push({ type: 'test', qty: 1, price: 1.0, title: '🧪 Webhook Test Order (1 unit)' });
     saveCart(cart);
     // Show confirmation

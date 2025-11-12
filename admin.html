@@ -583,6 +583,12 @@
               <span class="detail-label">Items</span>
               <span class="detail-value">${order.items_summary}</span>
             </div>
+            ${order.shipping_method ? `
+              <div class="detail-item">
+                <span class="detail-label">Shipping Method</span>
+                <span class="detail-value">${order.shipping_method}</span>
+              </div>
+            ` : ''}
             ${order.billing_address ? `
               <div class="detail-item">
                 <span class="detail-label">Billing Address</span>

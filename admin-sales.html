@@ -390,6 +390,12 @@
                     <span class="order-detail-label">Quantity</span>
                     <span class="order-detail-value">${order.quantity.toLocaleString()}</span>
                   </div>
+                  ${order.shipping_method ? `
+                  <div class="order-detail-item">
+                    <span class="order-detail-label">Shipping Method</span>
+                    <span class="order-detail-value">${order.shipping_method}</span>
+                  </div>
+                  ` : ''}
                   <div class="order-detail-item">
                     <span class="order-detail-label">Carrier</span>
                     <span class="order-detail-value">${order.carrier || 'N/A'}</span>
