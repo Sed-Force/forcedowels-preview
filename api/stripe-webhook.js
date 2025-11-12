@@ -4,6 +4,7 @@ export const config = { runtime: 'nodejs' };
 
 import Stripe from 'stripe';
 import { sql, nextCounter } from './_lib/db.js';
+import { buildOrderConfirmationEmail } from './_lib/email/orderConfirmation.js';
 import { buildInternationalOrderConfirmationEmail } from './_lib/email/internationalOrderConfirmation.js';
 import { buildInternationalInternalNotificationHTML } from './_lib/email/internationalInternalNotification.js';
 
@@ -38,6 +39,18 @@ function formatMoney(cents) {
     currency: 'USD',
     minimumFractionDigits: 2
   });
+}
+
+function unitPriceMillsFor(units) {
+  if (units >= 160000) return 63;   // $0.063
+  if (units >= 20000)  return 67.5; // $0.0675
+  return 72;                        // $0.072
+}
+
+function tierLabel(units) {
+  if (units >= 160000) return '160,000–960,000';
+  if (units >= 20000)  return '20,000–160,000';
+  return '5,000–20,000';
 }
 
 async function sendViaResend({ to, subject, html, text, bcc }) {
@@ -205,7 +218,7 @@ export default async function handler(req, res) {
           ${shippingMethod},
           ${JSON.stringify(shippingAddress)},
           ${new Date(session.created * 1000).toISOString().split('T')[0]},
-          ${'completed'}
+          ${'pending'}
         )
       `;
       console.log(`[Webhook] Order saved to DB: Invoice #${invoiceNumber}`);
@@ -217,23 +230,56 @@ export default async function handler(req, res) {
     const bccList = EMAIL_BCC ? EMAIL_BCC.split(',').map(e => e.trim()) : [];
     const isTestOrder = tests > 0;
 
-    // Customer email
+    // Customer email - use professional template
     try {
-      const testBadge = isTestOrder ? ' [TEST ORDER]' : '';
-      const customerSubject = `Order Confirmation #${invoiceNumber}${testBadge} – Force Dowels`;
-      const customerHtml = `
-        ${isTestOrder ? '<div style="background:#fbbf24;color:#1b2437;padding:12px;text-align:center;font-weight:bold;">🧪 TEST ORDER - This is a test email</div>' : ''}
-        <h1>Thank you for your order!</h1>
-        <p>Order #${invoiceNumber}</p>
-        <p>Date: ${orderDate}</p>
-        <p>Total: ${formatMoney(totalCents)}</p>
-        <p>We'll process your order and send you tracking information soon.</p>
-      `;
+      // Calculate unit price and tier for email
+      let unitUsd = '0.0000';
+      let tierLabelText = '';
+      let units = quantity;
+
+      if (orderType === 'bulk' && bulkUnits >= 5000) {
+        const mills = unitPriceMillsFor(bulkUnits);
+        unitUsd = (mills / 10000).toFixed(4); // mills to dollars
+        tierLabelText = tierLabel(bulkUnits);
+      } else if (orderType === 'kit') {
+        unitUsd = '36.0000';
+        tierLabelText = 'Starter Kit';
+        units = kits * 300;
+      } else if (orderType === 'test') {
+        unitUsd = '1.0000';
+        tierLabelText = 'Test Order';
+        units = 1;
+      }
+
+      const lineTotal = (subtotalCents / 100).toFixed(2);
+      const emailData = buildOrderConfirmationEmail({
+        customer_name: customerName || contactName || 'Customer',
+        order_number: String(invoiceNumber),
+        order_date: orderDate,
+        units: units,
+        unit_usd: unitUsd,
+        tier_label: tierLabelText,
+        line_total: lineTotal,
+        subtotal: (subtotalCents / 100).toFixed(2),
+        shipping: (shippingCents / 100).toFixed(2),
+        tax: (taxCents / 100).toFixed(2),
+        total: (totalCents / 100).toFixed(2),
+        ship_name: shippingAddress.name || customerName || '',
+        ship_address1: shippingAddress.line1 || '',
+        ship_address2: shippingAddress.line2 || '',
+        ship_city: shippingAddress.city || '',
+        ship_state: shippingAddress.state || '',
+        ship_postal: shippingAddress.postal_code || '',
+        ship_country: shippingAddress.country || '',
+        order_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels.com'}/order-status.html?session=${sessionId}`,
+        is_test: isTestOrder
+      });
 
       await sendViaResend({
         to: customerEmail,
-        subject: customerSubject,
-        html: customerHtml
+        subject: emailData.subject,
+        html: emailData.html,
+        text: emailData.text
       });
       console.log(`[Webhook] Customer email sent to ${customerEmail}`);
     } catch (emailErr) {
