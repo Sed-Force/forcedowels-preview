@@ -11,15 +11,12 @@ export default async function handler(req, res) {
     // Import database
     const { sql } = await import('../_lib/db.js');
 
-    // The 4 invoice numbers to update
-    const invoiceNumbers = [51, 52, 53, 54];
-
     // Update all 4 orders to 'shipped' status
     const result = await sql`
       UPDATE orders
       SET status = 'shipped',
           updated_at = NOW()
-      WHERE invoice_number IN ${sql(invoiceNumbers)}
+      WHERE invoice_number IN (51, 52, 53, 54)
       RETURNING invoice_number, customer_email, customer_name, status
     `;
 
