@@ -432,6 +432,42 @@ export default async function handler(req, res) {
         )
       `;
       console.log(`[Webhook] Order saved to DB: Invoice #${invoiceNumber}`);
+
+      // Update customers table with aggregated data
+      try {
+        const orderDate = new Date(session.created * 1000).toISOString().split('T')[0];
+
+        await sql`
+          INSERT INTO customers (
+            email,
+            name,
+            phone,
+            total_orders,
+            total_spent_cents,
+            first_order_date,
+            last_order_date
+          )
+          VALUES (
+            ${customerEmail},
+            ${customerName || ''},
+            ${customerPhone || ''},
+            1,
+            ${totalCents},
+            ${orderDate},
+            ${orderDate}
+          )
+          ON CONFLICT (email)
+          DO UPDATE SET
+            name = COALESCE(NULLIF(EXCLUDED.name, ''), customers.name),
+            phone = COALESCE(NULLIF(EXCLUDED.phone, ''), customers.phone),
+            total_orders = customers.total_orders + 1,
+            total_spent_cents = customers.total_spent_cents + EXCLUDED.total_spent_cents,
+            last_order_date = EXCLUDED.last_order_date
+        `;
+        console.log(`[Webhook] Customer record updated for ${customerEmail}`);
+      } catch (custErr) {
+        console.error('[Webhook] Failed to update customer record:', custErr);
+      }
     } catch (dbErr) {
       console.error('[Webhook] Failed to save order to database:', dbErr);
     }

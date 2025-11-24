@@ -68,8 +68,8 @@ export default async function handler(req, res) {
     const orderDetailsByDate = {};
 
     fullOrders.forEach(order => {
-      // Only count paid or shipped orders (not pending/cancelled)
-      if (order.status === 'paid' || order.status === 'shipped') {
+      // Count all orders except cancelled ones (include pending, paid, and shipped)
+      if (order.status !== 'cancelled') {
         totalOrders++;
         totalRevenue += order.amount_cents || 0;
         totalItems += order.quantity || 0;
