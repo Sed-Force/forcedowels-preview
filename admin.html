@@ -512,6 +512,44 @@
   <script>
     let allOrders = [];
 
+    // Helper function to format address (handles both JSON objects and strings)
+    function formatAddress(address) {
+      if (!address) return '';
+
+      // If it's already a formatted string, return it
+      if (typeof address === 'string' && !address.startsWith('{')) {
+        return address;
+      }
+
+      // If it's a JSON string, parse it
+      let addrObj = address;
+      if (typeof address === 'string') {
+        try {
+          addrObj = JSON.parse(address);
+        } catch (e) {
+          return address; // Return as-is if can't parse
+        }
+      }
+
+      // Format as clean address string
+      const parts = [];
+      if (addrObj.name) parts.push(addrObj.name);
+      if (addrObj.line1) parts.push(addrObj.line1);
+      if (addrObj.line2) parts.push(addrObj.line2);
+
+      // City, State ZIP format
+      const cityStateZip = [
+        addrObj.city,
+        addrObj.state,
+        addrObj.postal_code
+      ].filter(Boolean).join(', ');
+
+      if (cityStateZip) parts.push(cityStateZip);
+      if (addrObj.country) parts.push(addrObj.country);
+
+      return parts.join(' ');
+    }
+
     async function loadOrders() {
       try {
         const res = await fetch('/api/admin/orders');
@@ -592,13 +630,13 @@
             ${order.billing_address ? `
               <div class="detail-item">
                 <span class="detail-label">Billing Address</span>
-                <span class="detail-value">${order.billing_address}</span>
+                <span class="detail-value">${formatAddress(order.billing_address)}</span>
               </div>
             ` : ''}
             ${order.shipping_address ? `
               <div class="detail-item">
                 <span class="detail-label">Shipping Address</span>
-                <span class="detail-value">${order.shipping_address}</span>
+                <span class="detail-value">${formatAddress(order.shipping_address)}</span>
               </div>
             ` : ''}
           </div>
