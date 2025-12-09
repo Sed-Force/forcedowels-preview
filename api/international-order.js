@@ -120,11 +120,106 @@ export default async function handler(req, res) {
     if (blocked.length) return json(res, 200, { ok: true, mode: 'skipped_by_whitelist', blocked });
   }
 
-  // Compose email
-  const subject = `${PREFIX}International Order ${action === 'reserve' ? '(Stock Reserved)' : 'Request'} - ${business_name}`;
+  // If action is 'reserve', create Stripe checkout session FIRST
+  if (action === 'reserve') {
+    try {
+      // Build line items using dynamic pricing based on order type
+      const line_items = [];
+      const totalUnits = units || quantity;
+
+      if (order_type === 'bulk') {
+        const cents = bulkTotalCents(quantity);
+        if (cents <= 0) {
+          return json(res, 400, { error: 'Invalid bulk amount' });
+        }
+        line_items.push({
+          price_data: {
+            currency: 'usd',
+            unit_amount: cents,
+            product_data: {
+              name: 'Force Dowels — Bulk (International Order)',
+              description: `${tierLabel(quantity)} • ${quantity.toLocaleString()} units • Awaiting shipping quote`,
+            },
+          },
+          quantity: 1,
+        });
+      } else if (order_type === 'kit') {
+        line_items.push({
+          price_data: {
+            currency: 'usd',
+            unit_amount: 3600, // $36 per kit
+            product_data: {
+              name: 'Force Dowels — Starter Kit (International Order)',
+              description: `300 units per kit • Awaiting shipping quote`,
+            },
+          },
+          quantity: quantity, // quantity is the number of kits
+        });
+      }
+
+      const base = (process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/$/, '');
+      const success_url = `${base || 'https://forcedowels.com'}/order-success.html?session_id={CHECKOUT_SESSION_ID}`;
+      const cancel_url = `${base || 'https://forcedowels.com'}/order.html`;
+
+      const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        payment_method_types: ['card'],
+        line_items,
+        success_url,
+        cancel_url,
+        customer_email: email,
+        phone_number_collection: { enabled: true },
+        metadata: {
+          international_order: 'true',
+          business_name,
+          contact_name,
+          customer_name: business_name, // Add for webhook compatibility
+          phone,
+          tax_id,
+          quantity_selection: String(quantity),
+          ship_address: JSON.stringify({ // Store as JSON for webhook
+            name: contact_name,
+            line1: shipping_address,
+            city: '',
+            state: '',
+            postal_code: '',
+            country: 'International'
+          }),
+          awaiting_shipping_quote: 'true',
+          summary: JSON.stringify({ // Add for webhook compatibility
+            bulkUnits: order_type === 'bulk' ? quantity : 0,
+            kits: order_type === 'kit' ? quantity : 0,
+            tests: 0
+          }),
+          units: String(totalUnits),
+          order_type: order_type
+        }
+      });
+
+      console.log('[International Order] Stripe checkout session created:', session.id);
+      // Return checkout URL immediately - webhook will send confirmation emails after payment
+      return json(res, 200, {
+        ok: true,
+        checkoutUrl: session.url,
+        status: 'checkout_created',
+        note: 'Redirecting to Stripe checkout for payment...'
+      });
+    } catch (stripeErr) {
+      console.error('[International Order] Stripe error:', stripeErr);
+      // If Stripe fails, return error - don't mislead the customer
+      return json(res, 500, {
+        error: 'Failed to create checkout session',
+        detail: stripeErr?.message || String(stripeErr),
+        note: 'Please try again or contact us directly at info@forcedowels.com'
+      });
+    }
+  }
+
+  // For 'request' action, send email notification
+  const subject = `${PREFIX}International Order Request - ${business_name}`;
 
   const html = buildEmailHtml({
-    action,
+    action: 'request',
     quantity_display: display || `${quantity} ${order_type === 'kit' ? 'kit(s)' : 'units'}`,
     business_name,
     contact_name,
@@ -141,7 +236,7 @@ export default async function handler(req, res) {
   });
 
   const text = [
-    `International Order ${action === 'reserve' ? '(Stock Reserved)' : 'Request'}`,
+    `International Order Request`,
     '',
     `Quantity: ${display || quantity}`,
     `Business: ${business_name}`,
@@ -171,7 +266,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // Send email
+  // Send email for request action
   try {
     const [primary, ...bccList] = INTL_ORDER_RECIPIENTS;
     const emailPayload = {
@@ -190,93 +285,8 @@ export default async function handler(req, res) {
     }
 
     const sent = await resend.emails.send(emailPayload);
-    console.log('[International Order] Email sent:', sent?.id);
+    console.log('[International Order] Request email sent:', sent?.id);
 
-    // If action is 'reserve', create Stripe checkout session
-    if (action === 'reserve') {
-      try {
-        // Build line items using dynamic pricing based on order type
-        const line_items = [];
-        const totalUnits = units || quantity;
-
-        if (order_type === 'bulk') {
-          const cents = bulkTotalCents(quantity);
-          if (cents <= 0) {
-            return json(res, 400, { error: 'Invalid bulk amount' });
-          }
-          line_items.push({
-            price_data: {
-              currency: 'usd',
-              unit_amount: cents,
-              product_data: {
-                name: 'Force Dowels — Bulk (International Order)',
-                description: `${tierLabel(quantity)} • ${quantity.toLocaleString()} units • Awaiting shipping quote`,
-              },
-            },
-            quantity: 1,
-          });
-        } else if (order_type === 'kit') {
-          line_items.push({
-            price_data: {
-              currency: 'usd',
-              unit_amount: 3600, // $36 per kit
-              product_data: {
-                name: 'Force Dowels — Starter Kit (International Order)',
-                description: `300 units per kit • Awaiting shipping quote`,
-              },
-            },
-            quantity: quantity, // quantity is the number of kits
-          });
-        }
-
-        const base = (process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/$/, '');
-        const success_url = `${base || 'https://forcedowels.com'}/order-success.html?session_id={CHECKOUT_SESSION_ID}`;
-        const cancel_url = `${base || 'https://forcedowels.com'}/order.html`;
-
-        const session = await stripe.checkout.sessions.create({
-          mode: 'payment',
-          payment_method_types: ['card'],
-          line_items,
-          success_url,
-          cancel_url,
-          customer_email: email,
-          phone_number_collection: { enabled: true },
-          metadata: {
-            international_order: 'true',
-            business_name,
-            contact_name,
-            phone,
-            tax_id,
-            quantity_selection: String(quantity),
-            shipping_address,
-            awaiting_shipping_quote: 'true',
-            units: String(totalUnits),
-            order_type: order_type
-          }
-        });
-
-        return json(res, 200, {
-          ok: true,
-          emailSent: true,
-          emailId: sent?.id || null,
-          checkoutUrl: session.url,
-          status: 'reserved'
-        });
-      } catch (stripeErr) {
-        console.error('[International Order] Stripe error:', stripeErr);
-        // If Stripe fails, still return success since email was sent
-        // International orders can be processed manually
-        return json(res, 200, {
-          ok: true,
-          emailSent: true,
-          emailId: sent?.id || null,
-          requiresManualProcessing: true,
-          note: 'Request submitted successfully. Our team will contact you to complete payment and arrange shipping.'
-        });
-      }
-    }
-
-    // For 'request' action, just return success
     return json(res, 200, {
       ok: true,
       emailSent: true,

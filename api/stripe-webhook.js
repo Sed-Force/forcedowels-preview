@@ -323,6 +323,10 @@ export default async function handler(req, res) {
     const subtotalCents = Math.max(0, totalCents - (shippingCents || 0));
     const taxCents = Number(session.total_details?.amount_tax || 0);
 
+    // Check if this is an international order
+    const isInternationalOrder = session.metadata?.international_order === 'true';
+    const awaitingShippingQuote = session.metadata?.awaiting_shipping_quote === 'true';
+
     // Parse metadata
     let metaSummary = {};
     try { metaSummary = JSON.parse(session.metadata?.summary || '{}'); } catch {}
@@ -332,9 +336,9 @@ export default async function handler(req, res) {
     const shipService = session.metadata?.ship_service || '';
     const shippingMethod = [shipCarrier, shipService].filter(Boolean).join(' ');
 
-    const customerName = session.metadata?.customer_name || '';
+    const customerName = session.metadata?.customer_name || session.metadata?.business_name || '';
     const contactName = session.metadata?.contact_name || '';
-    const customerPhone = session.customer_details?.phone || '';
+    const customerPhone = session.customer_details?.phone || session.metadata?.phone || '';
 
     // Parse shipping address
     let shippingAddress = {};
@@ -476,50 +480,79 @@ export default async function handler(req, res) {
     const bccList = EMAIL_BCC ? EMAIL_BCC.split(',').map(e => e.trim()) : [];
     const isTestOrder = tests > 0;
 
-    // Customer email - use professional template
+    // Calculate unit price and tier for email
+    let unitUsd = '0.0000';
+    let tierLabelText = '';
+    let units = quantity;
+
+    if (orderType === 'bulk' && bulkUnits >= 5000) {
+      const mills = unitPriceMillsFor(bulkUnits);
+      unitUsd = (mills / 10000).toFixed(4); // mills to dollars
+      tierLabelText = tierLabel(bulkUnits);
+    } else if (orderType === 'kit') {
+      unitUsd = '36.0000';
+      tierLabelText = 'Starter Kit';
+      units = kits * 300;
+    } else if (orderType === 'test') {
+      unitUsd = '1.0000';
+      tierLabelText = 'Test Order';
+      units = 1;
+    }
+
+    const lineTotal = (subtotalCents / 100).toFixed(2);
+
+    // Customer email - use international template if applicable
     try {
-      // Calculate unit price and tier for email
-      let unitUsd = '0.0000';
-      let tierLabelText = '';
-      let units = quantity;
+      let emailData;
 
-      if (orderType === 'bulk' && bulkUnits >= 5000) {
-        const mills = unitPriceMillsFor(bulkUnits);
-        unitUsd = (mills / 10000).toFixed(4); // mills to dollars
-        tierLabelText = tierLabel(bulkUnits);
-      } else if (orderType === 'kit') {
-        unitUsd = '36.0000';
-        tierLabelText = 'Starter Kit';
-        units = kits * 300;
-      } else if (orderType === 'test') {
-        unitUsd = '1.0000';
-        tierLabelText = 'Test Order';
-        units = 1;
+      if (isInternationalOrder && awaitingShippingQuote) {
+        // Use international order confirmation template
+        emailData = buildInternationalOrderConfirmationEmail({
+          customer_name: customerName || contactName || 'Customer',
+          order_number: String(invoiceNumber),
+          order_date: orderDate,
+          units: units,
+          unit_usd: unitUsd,
+          tier_label: tierLabelText,
+          line_total: lineTotal,
+          subtotal: (subtotalCents / 100).toFixed(2),
+          tax: (taxCents / 100).toFixed(2),
+          total: (totalCents / 100).toFixed(2),
+          ship_name: shippingAddress.name || customerName || contactName || '',
+          ship_address1: shippingAddress.line1 || '',
+          ship_address2: shippingAddress.line2 || '',
+          ship_city: shippingAddress.city || '',
+          ship_state: shippingAddress.state || '',
+          ship_postal: shippingAddress.postal_code || '',
+          ship_country: shippingAddress.country || 'International',
+          order_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels.com'}/order-status.html?session=${sessionId}`,
+          is_test: isTestOrder
+        });
+      } else {
+        // Use standard domestic order confirmation template
+        emailData = buildOrderConfirmationEmail({
+          customer_name: customerName || contactName || 'Customer',
+          order_number: String(invoiceNumber),
+          order_date: orderDate,
+          units: units,
+          unit_usd: unitUsd,
+          tier_label: tierLabelText,
+          line_total: lineTotal,
+          subtotal: (subtotalCents / 100).toFixed(2),
+          shipping: (shippingCents / 100).toFixed(2),
+          tax: (taxCents / 100).toFixed(2),
+          total: (totalCents / 100).toFixed(2),
+          ship_name: shippingAddress.name || customerName || '',
+          ship_address1: shippingAddress.line1 || '',
+          ship_address2: shippingAddress.line2 || '',
+          ship_city: shippingAddress.city || '',
+          ship_state: shippingAddress.state || '',
+          ship_postal: shippingAddress.postal_code || '',
+          ship_country: shippingAddress.country || '',
+          order_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels.com'}/order-status.html?session=${sessionId}`,
+          is_test: isTestOrder
+        });
       }
-
-      const lineTotal = (subtotalCents / 100).toFixed(2);
-      const emailData = buildOrderConfirmationEmail({
-        customer_name: customerName || contactName || 'Customer',
-        order_number: String(invoiceNumber),
-        order_date: orderDate,
-        units: units,
-        unit_usd: unitUsd,
-        tier_label: tierLabelText,
-        line_total: lineTotal,
-        subtotal: (subtotalCents / 100).toFixed(2),
-        shipping: (shippingCents / 100).toFixed(2),
-        tax: (taxCents / 100).toFixed(2),
-        total: (totalCents / 100).toFixed(2),
-        ship_name: shippingAddress.name || customerName || '',
-        ship_address1: shippingAddress.line1 || '',
-        ship_address2: shippingAddress.line2 || '',
-        ship_city: shippingAddress.city || '',
-        ship_state: shippingAddress.state || '',
-        ship_postal: shippingAddress.postal_code || '',
-        ship_country: shippingAddress.country || '',
-        order_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels.com'}/order-status.html?session=${sessionId}`,
-        is_test: isTestOrder
-      });
 
       await sendViaResend({
         to: customerEmail,
@@ -527,41 +560,77 @@ export default async function handler(req, res) {
         html: emailData.html,
         text: emailData.text
       });
-      console.log(`[Webhook] Customer email sent to ${customerEmail}`);
+      console.log(`[Webhook] Customer email sent to ${customerEmail} (${isInternationalOrder ? 'International' : 'Domestic'})`);
     } catch (emailErr) {
       console.error('[Webhook] Failed to send customer email:', emailErr);
     }
 
-    // Team notification emails (send to each BCC address individually) - use professional template
+    // Team notification emails (send to each BCC address individually)
     for (const teamEmail of bccList) {
       try {
         const testBadge = isTestOrder ? ' [TEST]' : '';
-        const teamSubject = `New Order #${invoiceNumber}${testBadge} – ${customerName || customerEmail}`;
+        const intlBadge = isInternationalOrder ? ' 🌍 INTERNATIONAL' : '';
+        const teamSubject = `New Order #${invoiceNumber}${testBadge}${intlBadge} – ${customerName || customerEmail}`;
 
-        const teamHtml = buildInternalNotificationHTML({
-          invoiceNumber,
-          customerName: customerName || contactName || customerEmail,
-          customerEmail,
-          customerPhone,
-          orderDate,
-          sessionId,
-          subtotalCents,
-          shippingCents,
-          taxCents,
-          totalCents,
-          metaSummary: { bulkUnits, kits, tests },
-          shippingMethod,
-          shippingAddress,
-          billingAddress,
-          isTest: isTestOrder
-        });
+        let teamHtml;
+        if (isInternationalOrder && awaitingShippingQuote) {
+          // Use international internal notification template
+          teamHtml = buildInternationalInternalNotificationHTML({
+            invoiceNumber,
+            customerName: contactName || customerName || customerEmail,
+            customerEmail,
+            customerPhone,
+            orderDate,
+            sessionId,
+            units: units,
+            unitPrice: unitUsd,
+            tierLabel: tierLabelText,
+            lineTotal: lineTotal,
+            subtotalCents,
+            taxCents,
+            totalCents,
+            orderType: orderType,
+            shippingAddress: {
+              name: shippingAddress.name || contactName || customerName || '',
+              line1: shippingAddress.line1 || '',
+              line2: shippingAddress.line2 || '',
+              city: shippingAddress.city || '',
+              state: shippingAddress.state || '',
+              postal_code: shippingAddress.postal_code || '',
+              country: shippingAddress.country || 'International',
+              phone: customerPhone
+            },
+            billingAddress,
+            businessName: session.metadata?.business_name || customerName || '',
+            taxId: session.metadata?.tax_id || ''
+          });
+        } else {
+          // Use standard domestic internal notification template
+          teamHtml = buildInternalNotificationHTML({
+            invoiceNumber,
+            customerName: customerName || contactName || customerEmail,
+            customerEmail,
+            customerPhone,
+            orderDate,
+            sessionId,
+            subtotalCents,
+            shippingCents,
+            taxCents,
+            totalCents,
+            metaSummary: { bulkUnits, kits, tests },
+            shippingMethod,
+            shippingAddress,
+            billingAddress,
+            isTest: isTestOrder
+          });
+        }
 
         await sendViaResend({
           to: teamEmail,
           subject: teamSubject,
           html: teamHtml
         });
-        console.log(`[Webhook] Team email sent to ${teamEmail}`);
+        console.log(`[Webhook] Team email sent to ${teamEmail} (${isInternationalOrder ? 'International' : 'Domestic'})`);
 
         // Rate limit: 600ms between emails
         await new Promise(resolve => setTimeout(resolve, 600));

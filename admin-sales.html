@@ -360,10 +360,8 @@
         return;
       }
 
-      // Reverse to show most recent first
-      const reversedData = [...chartData].reverse();
-
-      tbody.innerHTML = reversedData.map((item, index) => {
+      // Data already sorted newest first from API
+      tbody.innerHTML = chartData.map((item, index) => {
         const dateId = `date-${index}`;
         const formattedDate = new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 

@@ -56,7 +56,7 @@ export default async function handler(req, res) {
         shipped_date
       FROM orders
       WHERE order_date >= ${startDateStr}
-      ORDER BY order_date ASC, invoice_number ASC
+      ORDER BY order_date DESC, invoice_number DESC
     `;
 
     // Calculate metrics
@@ -103,9 +103,12 @@ export default async function handler(req, res) {
     // Calculate average order value
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-    // Prepare chart data
+    // Prepare chart data (sort dates descending - newest first)
     const chartData = [];
-    const sortedDates = Object.keys(revenueByDate).sort();
+    const sortedDates = Object.keys(revenueByDate).sort((a, b) => {
+      // Sort dates in descending order (newest first)
+      return new Date(b) - new Date(a);
+    });
 
     sortedDates.forEach(date => {
       chartData.push({
