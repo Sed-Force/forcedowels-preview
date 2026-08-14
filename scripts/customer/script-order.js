@@ -1,31 +1,53 @@
-/* v47 – Order page: tiers, calculator, add-to-cart */
+/* v48 – Order page: sizes, tiers, calculator, add-to-cart */
 (function () {
   'use strict';
 
-  // ---- constants ----
-  const FD_CART_KEY = 'fd_cart';
-  const STEP = 5000;
-  const MIN_QTY = 5000;
-  const MAX_QTY = 960000;
-
-  // price ladder
-  function pricePerUnit(qty) {
-    if (qty >= 165000) return 0.0630;
-    if (qty >= 25000)  return 0.0675;
-    return 0.0720;
+  const catalog = window.FDProducts;
+  if (!catalog) {
+    console.error('FDProducts catalog missing');
+    return;
   }
 
-  // helpers
+  const FD_CART_KEY = 'fd_cart';
+  const STEP = catalog.STEP;
+  const MIN_QTY = catalog.MIN_UNITS;
+  const MAX_QTY = catalog.MAX_UNITS;
+
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  // Track authentication state
+  const KIT_MIN = 1;
+  const KIT_MAX = 999;
+
   let isAuthenticated = false;
+  let currentSizeId = catalog.DEFAULT_SIZE_ID;
+  let orderMode = 'bulk'; // 'bulk' | 'kit'
+  let bulkQty = MIN_QTY;
+  let kitQty = KIT_MIN;
+
+  function guestMaxQty() {
+    const size = catalog.getSize(currentSizeId);
+    const firstLocked = size.bulkTiers.find((tier) => tier.requiresAuth);
+    if (!firstLocked) return MAX_QTY;
+    return firstLocked.min - STEP;
+  }
+
+  function maxAllowedQty() {
+    return isAuthenticated ? MAX_QTY : guestMaxQty();
+  }
 
   function clampToStep(val) {
     let n = Math.round(Number(val) / STEP) * STEP;
     if (!isFinite(n) || n < MIN_QTY) n = MIN_QTY;
-    if (n > MAX_QTY) n = MAX_QTY;
+    const max = maxAllowedQty();
+    if (n > max) n = max;
+    return n;
+  }
+
+  function clampKitQty(val) {
+    let n = Math.round(Number(val));
+    if (!isFinite(n) || n < KIT_MIN) n = KIT_MIN;
+    if (n > KIT_MAX) n = KIT_MAX;
     return n;
   }
 
@@ -40,16 +62,14 @@
   function saveCart(items) {
     localStorage.setItem(FD_CART_KEY, JSON.stringify(items));
     updateHeaderBadge(items);
-    // Dispatch custom event so other scripts can sync badge
     window.dispatchEvent(new CustomEvent('fd_cart_updated', { detail: items }));
   }
 
   function updateHeaderBadge(items = loadCart()) {
-    // Badge shows total *dowel units* (bulk units + kits*300)
     const units =
       items.reduce((sum, it) => {
         if (it.type === 'bulk') return sum + (Number(it.units) || Number(it.qty) || 0);
-        if (it.type === 'kit')  return sum + (Number(it.qty) || 0) * 300;
+        if (it.type === 'kit') return sum + (Number(it.qty) || 0) * catalog.kitUnits(it.sizeId);
         return sum;
       }, 0) || 0;
     const badge = $('#cart-count');
@@ -58,148 +78,278 @@
     badge.setAttribute('title', units > 0 ? `${units.toLocaleString()} dowels` : '');
   }
 
-  // ---- elements ----
   const qtyInput = $('#qty-units');
   const minusBtn = $('#qty-minus');
-  const plusBtn  = $('#qty-plus');
+  const plusBtn = $('#qty-plus');
   const perUnitEl = $('#price-per-unit');
-  const totalEl   = $('#price-total');
-  const addBtn    = $('#btn-add-to-cart');
-  const kitBtn    = $('#starter-kit');
+  const totalEl = $('#price-total');
+  const addBtn = $('#btn-add-to-cart');
+  const kitBtn = $('#starter-kit');
   const testKitBtn = $('#test-kit');
-  const tierButtons = $$('.tier');
+  const tierList = $('#tier-list');
+  const sizePicker = $('#size-picker');
+  const qtyLabel = $('#qty-label');
+  const qtyUnitLabel = $('#qty-unit-label');
+  const priceLabel = $('#price-per-label');
+  const calcCallout = $('#calc-callout');
+
+  function tierButtons() {
+    return $$('.tier', tierList || document);
+  }
 
   function setActiveTier(btn) {
-    tierButtons.forEach(b => b.classList.toggle('active', b === btn));
+    tierButtons().forEach((b) => b.classList.toggle('active', b === btn));
+  }
+
+  function setActiveSize(sizeId) {
+    currentSizeId = catalog.normalizeSizeId(sizeId);
+    $$('.size-option', sizePicker || document).forEach((btn) => {
+      const on = btn.dataset.size === currentSizeId;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    renderTiers();
+    renderKit();
+    if (orderMode === 'kit') {
+      renderKitCalc();
+    } else {
+      setQtyAndRecalc(bulkQty);
+    }
+  }
+
+  function renderTiers() {
+    if (!tierList) return;
+    const size = catalog.getSize(currentSizeId);
+    const activeTier = catalog.pickTier(currentSizeId, bulkQty);
+    const showActive = orderMode === 'bulk';
+
+    tierList.innerHTML = size.bulkTiers.map((tier) => {
+      const locked = tier.requiresAuth && !isAuthenticated;
+      const isActive = showActive && !locked && tier.min === activeTier.min;
+      const lock = tier.requiresAuth
+        ? `<span class="tier-lock"${locked ? '' : ' hidden'}>Members-Only</span>`
+        : '';
+      const authAttr = tier.requiresAuth ? ' data-requires-auth="true"' : '';
+      const lockClass = locked ? ' locked' : '';
+      const activeClass = isActive ? ' active' : '';
+      const disabledAttr = locked ? ' disabled aria-disabled="true"' : ' aria-disabled="false"';
+      const titleAttr = locked ? ' title="Sign in to unlock this pricing tier"' : '';
+      return `
+        <button class="tier${lockClass}${activeClass}" type="button" data-min="${tier.min}"${authAttr}${disabledAttr}${titleAttr}>
+          <span class="tier-main">
+            <span class="tier-range">${tier.label}</span>
+            ${lock}
+          </span>
+          <span class="tier-price">$${tier.unitUSD.toFixed(4)}/Unit</span>
+        </button>`;
+    }).join('');
+
+    bindTierClicks();
+    updateAuthUI();
+  }
+
+  function renderKit() {
+    if (!kitBtn) return;
+    const size = catalog.getSize(currentSizeId);
+    const kit = size.kit;
+    const perUnit = kit.priceUSD / kit.units;
+    const titleEl = $('#kit-title');
+    const priceEl = $('#kit-price');
+    const metaEl = $('#kit-meta');
+    if (titleEl) titleEl.textContent = `${kit.title} — ${size.label}`;
+    if (priceEl) priceEl.textContent = `$${kit.priceUSD.toFixed(2)}`;
+    if (metaEl) metaEl.textContent = `${kit.units} dowels • $${perUnit.toFixed(2)}/unit`;
+  }
+
+  function applyModeUI(mode) {
+    orderMode = mode;
+    if (mode === 'kit') {
+      kitBtn?.classList.add('active');
+      tierButtons().forEach((b) => b.classList.remove('active'));
+      if (qtyInput) {
+        qtyInput.step = '1';
+        qtyInput.min = String(KIT_MIN);
+        qtyInput.max = String(KIT_MAX);
+      }
+      if (qtyLabel) qtyLabel.textContent = 'Quantity (kits)';
+      if (qtyUnitLabel) qtyUnitLabel.textContent = 'kits';
+      if (priceLabel) priceLabel.textContent = 'Price per kit:';
+      if (calcCallout) {
+        calcCallout.innerHTML = '<strong>Kit Orders:</strong> Each Starter Kit ships 300 dowels. Choose how many kits you’d like below.';
+      }
+    } else {
+      kitBtn?.classList.remove('active');
+      if (qtyInput) {
+        qtyInput.step = String(STEP);
+        qtyInput.min = String(MIN_QTY);
+        qtyInput.max = String(maxAllowedQty());
+      }
+      if (qtyLabel) qtyLabel.textContent = 'Quantity (units)';
+      if (qtyUnitLabel) qtyUnitLabel.textContent = 'units';
+      if (priceLabel) priceLabel.textContent = 'Price per unit:';
+      if (calcCallout) {
+        calcCallout.innerHTML = '<strong>Ordering Requirements:</strong> Orders are available in 5,000-unit increments only. Minimum 5,000 units, maximum 960,000 units.';
+      }
+    }
+  }
+
+  function renderKitCalc() {
+    const size = catalog.getSize(currentSizeId);
+    const kitPrice = size.kit.priceUSD;
+    if (qtyInput) qtyInput.value = kitQty;
+    if (perUnitEl) perUnitEl.textContent = `$${kitPrice.toFixed(2)}`;
+    if (totalEl) totalEl.textContent = `$${(kitQty * kitPrice).toFixed(2)}`;
+  }
+
+  function setKitQtyAndRecalc(newQty) {
+    kitQty = clampKitQty(newQty);
+    renderKitCalc();
   }
 
   function setQtyAndRecalc(newQty) {
     const qty = clampToStep(newQty);
-    qtyInput.value = qty;
-    const ppu = pricePerUnit(qty);
-    perUnitEl.textContent = `$${ppu.toFixed(4)}`;
-    const total = qty * ppu;
-    totalEl.textContent = `$${total.toFixed(2)}`;
-  }
+    bulkQty = qty;
+    if (qtyInput) qtyInput.value = qty;
+    const ppu = catalog.unitPriceUSD(currentSizeId, qty);
+    if (perUnitEl) perUnitEl.textContent = `$${ppu.toFixed(4)}`;
+    if (totalEl) totalEl.textContent = `$${(qty * ppu).toFixed(2)}`;
 
-  // Update UI based on authentication state
-  function updateAuthUI() {
-    tierButtons.forEach(btn => {
-      const requiresAuth = btn.dataset.requiresAuth === 'true';
-      const lockIcon = btn.querySelector('.tier-lock');
-
-      if (requiresAuth && lockIcon) {
-        // Show/hide lock based on auth state
-        lockIcon.style.display = isAuthenticated ? 'none' : 'inline';
-      }
+    const active = catalog.pickTier(currentSizeId, qty);
+    tierButtons().forEach((btn) => {
+      const on = !btn.disabled && Number(btn.dataset.min) === active.min;
+      btn.classList.toggle('active', on);
     });
   }
 
-  // Initialize Clerk and set up auth listener
+  function updateAuthUI() {
+    tierButtons().forEach((btn) => {
+      const requiresAuth = btn.dataset.requiresAuth === 'true';
+      const locked = requiresAuth && !isAuthenticated;
+      btn.classList.toggle('locked', locked);
+      btn.disabled = locked;
+      btn.setAttribute('aria-disabled', locked ? 'true' : 'false');
+      if (locked) {
+        btn.title = 'Sign in to unlock this pricing tier';
+      } else {
+        btn.removeAttribute('title');
+      }
+      const lockLabel = btn.querySelector('.tier-lock');
+      if (lockLabel) lockLabel.hidden = !locked;
+    });
+
+    if (orderMode === 'bulk' && qtyInput) {
+      qtyInput.max = String(maxAllowedQty());
+      if (bulkQty > maxAllowedQty()) setQtyAndRecalc(maxAllowedQty());
+    }
+  }
+
+  function bindTierClicks() {
+    tierButtons().forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (btn.disabled || (btn.dataset.requiresAuth === 'true' && !isAuthenticated)) return;
+        applyModeUI('bulk');
+        setActiveTier(btn);
+        setQtyAndRecalc(Number(btn.dataset.min || MIN_QTY));
+      });
+    });
+  }
+
   function initClerk() {
     if (window.Clerk) {
       window.Clerk.load().then(() => {
         isAuthenticated = !!window.Clerk.user;
         updateAuthUI();
-
-        // Listen for auth changes
         window.Clerk.addListener((clerk) => {
           isAuthenticated = !!clerk.user;
           updateAuthUI();
         });
       });
     } else {
-      // Retry if Clerk hasn't loaded yet
       setTimeout(initClerk, 100);
     }
   }
 
-  // Start Clerk initialization
   initClerk();
-
-  // initial
-  setQtyAndRecalc(qtyInput.value || MIN_QTY);
+  applyModeUI('bulk');
+  setActiveSize(currentSizeId);
   updateHeaderBadge();
 
-  // tier clicks — set qty to each tier's minimum and highlight only that button
-  tierButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      // Check if this tier requires authentication
-      const requiresAuth = btn.dataset.requiresAuth === 'true';
-
-      if (requiresAuth && !isAuthenticated) {
-        // User not authenticated, show alert and open sign-in
-        alert('Please sign in or create an account to access this pricing tier.');
-        if (window.Clerk) {
-          window.Clerk.openSignIn();
-        }
-        return;
-      }
-
-      // Allow selection
-      setActiveTier(btn);
-      const min = Number(btn.dataset.min || MIN_QTY);
-      setQtyAndRecalc(min);
-    });
+  sizePicker?.querySelectorAll('.size-option').forEach((btn) => {
+    btn.addEventListener('click', () => setActiveSize(btn.dataset.size));
   });
 
   minusBtn?.addEventListener('click', () => {
-    const current = clampToStep(qtyInput.value);
-    setQtyAndRecalc(current - STEP);
+    if (orderMode === 'kit') setKitQtyAndRecalc(kitQty - 1);
+    else setQtyAndRecalc(clampToStep(qtyInput.value) - STEP);
   });
   plusBtn?.addEventListener('click', () => {
-    const current = clampToStep(qtyInput.value);
-    setQtyAndRecalc(current + STEP);
+    if (orderMode === 'kit') setKitQtyAndRecalc(kitQty + 1);
+    else setQtyAndRecalc(clampToStep(qtyInput.value) + STEP);
   });
 
   qtyInput?.addEventListener('change', () => {
-    setQtyAndRecalc(qtyInput.value);
+    if (orderMode === 'kit') setKitQtyAndRecalc(qtyInput.value);
+    else setQtyAndRecalc(qtyInput.value);
   });
   qtyInput?.addEventListener('input', () => {
-    // keep it snappy while typing; clamp on change
     const v = Number(qtyInput.value);
     if (!isFinite(v)) return;
-    const ppu = pricePerUnit(Math.min(Math.max(v, MIN_QTY), MAX_QTY));
-    perUnitEl.textContent = `$${ppu.toFixed(4)}`;
+    if (orderMode === 'kit') {
+      const kitPrice = catalog.getSize(currentSizeId).kit.priceUSD;
+      const q = Math.min(Math.max(v, KIT_MIN), KIT_MAX);
+      if (totalEl) totalEl.textContent = `$${(q * kitPrice).toFixed(2)}`;
+    } else {
+      const ppu = catalog.unitPriceUSD(currentSizeId, Math.min(Math.max(v, MIN_QTY), MAX_QTY));
+      if (perUnitEl) perUnitEl.textContent = `$${ppu.toFixed(4)}`;
+    }
   });
 
-  // Add bulk selection to cart (replaces existing bulk order)
   addBtn?.addEventListener('click', () => {
-    const qty = clampToStep(qtyInput.value);
-
-    // Check if quantity requires authentication (25,000+)
-    const requiresAuth = qty >= 25000;
-
-    if (requiresAuth && !isAuthenticated) {
-      alert('Please sign in or create an account to order 25,000+ units.');
-      if (window.Clerk) {
-        window.Clerk.openSignIn();
-      }
-      return;
-    }
-
     let cart = loadCart();
 
-    // Cannot add real products if test order is in cart
-    if (cart.some(i => i.type === 'test')) {
+    if (cart.some((i) => i.type === 'test')) {
       alert('Please remove the test order from your cart before adding products.');
       return;
     }
 
-    const bulk = cart.find(i => i.type === 'bulk');
-    if (bulk) {
-      // REPLACE the quantity instead of adding to it
-      console.log('Replacing bulk order:', bulk.units, '->', qty);
-      bulk.units = qty;
-      delete bulk.qty; // Remove old property if it exists
+    if (orderMode === 'kit') {
+      const size = catalog.getSize(currentSizeId);
+      const existing = cart.find((i) => i.type === 'kit' && catalog.normalizeSizeId(i.sizeId) === currentSizeId);
+      if (existing) {
+        existing.qty = kitQty;
+        existing.sizeId = currentSizeId;
+      } else {
+        cart.push({
+          type: 'kit',
+          sizeId: currentSizeId,
+          qty: kitQty,
+          price: size.kit.priceUSD,
+          title: catalog.kitProductName(currentSizeId)
+        });
+      }
     } else {
-      console.log('Adding new bulk order:', qty);
-      cart.push({ type: 'bulk', units: qty });
-    }
-    saveCart(cart);
-    console.log('Cart after save:', JSON.stringify(cart));
+      const qty = clampToStep(qtyInput.value);
+      const requiresAuth = catalog.pickTier(currentSizeId, qty).requiresAuth;
 
-    // Show feedback to user
+      if (requiresAuth && !isAuthenticated) {
+        alert('Please sign in or create an account to order 25,000+ units.');
+        if (window.Clerk) window.Clerk.openSignIn();
+        return;
+      }
+
+      const sizeId = currentSizeId;
+      const bulk = cart.find((i) => i.type === 'bulk' && catalog.normalizeSizeId(i.sizeId) === sizeId);
+      if (bulk) {
+        bulk.units = qty;
+        bulk.sizeId = sizeId;
+        delete bulk.qty;
+      } else {
+        cart.push({ type: 'bulk', sizeId, units: qty });
+      }
+    }
+
+    saveCart(cart);
+
     const originalText = addBtn.textContent;
     addBtn.textContent = '✓ Updated Cart';
     setTimeout(() => {
@@ -207,32 +357,14 @@
     }, 1500);
   });
 
-  // Add ONE starter kit per click (no auto-redirect)
   kitBtn?.addEventListener('click', () => {
-    let cart = loadCart();
-
-    // Cannot add real products if test order is in cart
-    if (cart.some(i => i.type === 'test')) {
-      alert('Please remove the test order from your cart before adding products.');
-      return;
-    }
-
-    const kit = cart.find(i => i.type === 'kit');
-    if (kit) {
-      kit.qty = (Number(kit.qty) || 0) + 1;
-    } else {
-      cart.push({ type: 'kit', qty: 1, price: 36.0, title: 'Force Dowels — Starter Kit (300)' });
-    }
-    saveCart(cart);
+    applyModeUI('kit');
+    renderKitCalc();
   });
 
-  // Add test kit ($1 test order)
   testKitBtn?.addEventListener('click', () => {
-    // Test orders cannot be mixed with real orders - clear cart completely
-    let cart = [];
-    cart.push({ type: 'test', qty: 1, price: 1.0, title: '🧪 Webhook Test Order (1 unit)' });
+    const cart = [{ type: 'test', qty: 1, price: 1.0, title: '🧪 Webhook Test Order (1 unit)' }];
     saveCart(cart);
-    // Show confirmation
     const originalText = testKitBtn.innerHTML;
     testKitBtn.innerHTML = '<div style="text-align:center;"><strong>✓ Added to Cart</strong><div class="muted">Go to checkout to test webhook</div></div>';
     testKitBtn.style.background = '#10b981';
@@ -243,5 +375,4 @@
       testKitBtn.style.color = '';
     }, 2000);
   });
-
 })();

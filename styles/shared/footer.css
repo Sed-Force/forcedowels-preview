@@ -1,0 +1,379 @@
+/* === Force Dowels — Footer (<site-footer> web component) ================
+   All styling for the site-wide footer lives in this one file: 4-column
+   layout (brand/tagline, quick links, contact, newsletter), the divider,
+   and the bottom bar. Markup is rendered by scripts/shared/site-footer.js.
+============================================================================ */
+
+footer { display: block; }
+
+#footer {
+  background: var(--brand);
+  color: #fff;
+  padding-bottom: 20px;
+}
+[data-theme="dark"] #footer {
+  background: var(--brand-ink);
+}
+
+/* Plain text (headings + body copy — everything but links/buttons) is
+   always white regardless of theme. styles.css has a sitewide
+   [data-theme] h1-h6/p/span/div rule that forces black in light mode /
+   white in dark, so this needs !important and to list every tag it hits
+   (li isn't in that sitewide rule directly, but it inherits through the
+   wrapping <div>s that are, so it needs its own explicit override too). */
+#footer h1,
+#footer h2,
+#footer h3,
+#footer h4,
+#footer h5,
+#footer h6,
+#footer p,
+#footer li,
+#footer span,
+#footer div,
+#footer label {
+  color: #fff !important;
+}
+
+#footer a {
+  font-weight: 600;
+  color: var(--accent) !important;
+}
+#footer a:hover {
+  color: var(--accent-light) !important;
+  text-decoration: underline;
+}
+
+/* Buttons: accent is the defining color. Buttons with their own solid
+   background (.btn--accent, e.g. Subscribe) keep dark text for contrast
+   against that background — there's a sitewide `.btn.btn--accent { color:
+   var(--text) }` rule that would otherwise win here and turn the text
+   white-on-gold in dark mode, so this is scoped + !important to beat it.
+   Anything without its own background still reads as accent-styled via
+   its border and text. */
+#footer .btn,
+#footer button {
+  border-color: var(--accent) !important;
+}
+#footer .btn.btn--accent {
+  color: #1b2540 !important;
+}
+#footer .btn:not(.btn--accent),
+#footer button:not(.btn--accent) {
+  color: var(--accent) !important;
+}
+
+#footer-content {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+  padding: 20px 0px;
+}
+#footer-content h4 {
+  margin: 0px;
+  font-size: 24px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+#company-info {
+  grid-column-start: 1;
+  grid-column-end: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+#footer-logo-wrapper {
+  display: inline-block;
+  border-radius: 8px;
+  overflow: hidden;
+  background: transparent;
+}
+
+#company-tagline {
+  text-align: left;
+}
+
+#site-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap:20px;
+  grid-column-start: 3;
+  grid-column-end: -1;
+  text-align: right;
+}
+
+#quick-links-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#quick-links {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#subscription {
+  text-align: right;
+}
+
+#subscription-form {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  align-items: center;
+}
+#subscription-email {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid;
+
+  color: #fff;
+  font: inherit;
+}
+
+#subscription-email::placeholder {
+  color: rgba(255,255,255,.75);
+}
+
+#subscription .btn {
+  background: var(--accent);
+}
+
+#subscription .btn:hover {
+  background: var(--accent-light);
+}
+
+#subscription-disclaimer {
+  font-size: smaller;
+}
+/* .footer-main {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.35fr) 1fr 1fr 1fr;
+  align-items: stretch;
+  column-gap: 20px;
+  row-gap: 20px;
+  padding: 40px 0 32px;
+} */
+
+/* Logo — sized to match the header logo, kept on a rounded chip */
+/* .site-footer .footer-brand-wrap,
+.site-footer .footer-logo {
+  display: inline-block;
+  border-radius: 12px;
+  overflow: hidden;
+  background: transparent;
+}
+.site-footer .footer-logo {
+  height: 42px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.footer-sec { display: flex; flex-direction: column; justify-content: flex-start; }
+.footer-sec h4 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.footer-sec--brand .footer-brand-wrap { display: inline-flex; align-items: center; }
+.footer-tagline { margin: 6px 0 0; opacity: .9; font-size: 15px; line-height: 1.5; }
+
+.footer-list { list-style: none; margin: 0; padding: 0; }
+.footer-list li { margin: 8px 0; }
+.footer-list a { color: #fff; opacity: .9; }
+.footer-list a:hover { opacity: 1; text-decoration: underline; } */
+
+/* Newsletter */
+/* .footer-note { margin: 0 0 10px; opacity: .9; }
+.footer-form { display: flex; gap: 10px; align-items: center; margin: 6px 0 8px; }
+.footer-form input {
+  flex: 1; min-width: 0;
+  padding: 12px 14px; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.35);
+  background: rgba(255,255,255,.06); color: #fff;
+  font: inherit;
+}
+.footer-form input::placeholder { color: rgba(255,255,255,.75); }
+.footer-privacy-note { margin: 0; opacity: .75; font-size: 13px; } */
+
+#subscription {
+  background:var(--brand-ink);
+  border-radius: 8px;
+  padding: 20px;
+}
+[data-theme="dark"] #subscription {
+  background: var(--brand);
+}
+
+/* Divider line */
+#footer-separator {
+  border-top: 3px solid var(--accent);
+  border-radius: 2px;
+  margin: 0;
+}
+
+/* Copyright, privacy & terms */
+#legal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 0;
+  line-height: 1.2;
+}
+#legal-links {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  justify-content: space-between;
+}
+.legal-link {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+.legal-link a {
+  text-align: center;
+  font-weight: 600;
+  color: var(--accent);
+  opacity: .9;
+}
+.legal-link a:hover {
+  opacity: 1;
+  color: var(--accent-light);
+  text-decoration: underline;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+/* CSS custom properties can't be used inside @media conditions in any
+   current browser, so these are literal px — keep them in sync with
+   --breakpoint-sm/md/lg/xl in styles.css :root. */
+@media (max-width: 1440px) { /* --breakpoint-xl */
+  
+}
+@media (max-width: 1280px) { /* --breakpoint-lg */
+  #footer-content {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+  #legal {
+    display: flex;
+    flex: 1;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  .legal-link {
+    flex: 1;
+    justify-content: flex-end;
+  }
+}
+@media (max-width: 1120px) { /* --breakpoint-md */
+  #footer-content {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  #company-info {
+    grid-column-end: 2;
+  }
+
+  #site-info {
+    grid-column-start: 2;
+    grid-column-end: -1;
+  }
+
+  #legal {
+    display: flex;
+    flex: 1;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  #legal-copyright-container {
+    /* flex: 1 1 100%; */
+    flex: 1;
+    text-align: left;
+    white-space: nowrap;
+  }
+  #legal-links {
+    flex-wrap: wrap;
+  }
+  .legal-link {
+    justify-content: flex-end;
+  }
+  .legal-link a {
+    /* flex: 1 1 100%; */
+    text-align: right;
+  }
+}
+@media (max-width: 768px) { /* --breakpoint-sm */
+  #footer-content {
+    grid-template-columns: repeat(1, 1fr);
+  }
+
+  #site-info {
+    flex-direction: column-reverse;
+    grid-column-start: 1;
+    grid-column-end: 1;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+
+  #subscription {
+    text-align: center;
+  }
+
+  #subscription-form {
+    flex-direction: column;
+  }
+  #subscription-email {
+    width: 100%;
+    text-align: center;
+  }
+
+  #company-tagline {
+    text-align: center;
+  }
+
+  .footer-main { grid-template-columns: 1fr; padding: 32px 0 24px; row-gap: 28px; }
+  .footer-form { flex-direction: column; align-items: stretch; }
+  .footer-form .btn { width: 100%; }
+  #legal {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  #legal-copyright-container {
+    flex: 1 1 100%;
+    text-align: center;
+    white-space: normal;
+  }
+  .legal-link {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}

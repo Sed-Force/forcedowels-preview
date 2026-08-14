@@ -1,4 +1,5 @@
 {
+  "devCommand": "npx serve . -l $PORT",
   "outputDirectory": ".",
   "cleanUrls": true,
   "trailingSlash": false,

@@ -1,0 +1,382 @@
+/* === Force Dowels — Navbar (<site-header> web component) ================
+   All styling for the site-wide header/nav lives in this one file:
+   logo, primary nav + Distributors dropdown, header actions (theme
+   toggle, cart, auth controls), the mobile hamburger drawer, and the
+   dark/light overrides the dropdown needs. Markup is rendered by
+   scripts/shared/site-header.js.
+============================================================================ */
+
+site-header { display: block; }
+
+.site-header {
+  position: sticky;
+  top: 0;
+  background: var(--brand);
+  border-bottom: 1px solid rgba(255,255,255,.12);
+  z-index: 99;
+}
+#nav {
+  /* display: flex;
+  flex-direction: row;
+  width: 100%; */
+  width: 100%;
+  min-height: 84px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* display: grid;
+  grid-template-columns: auto 1fr auto; */
+  align-items: center;
+  column-gap: 18px;
+}
+
+/* Logo */
+.site-header .brand {
+  display: flex;
+  gap: 12px;
+  flex-direction: row;
+  align-items: center;
+  line-height: 0;
+
+}
+.site-header .brand img {
+  height: 42px !important;
+  width: auto !important;
+  /* border-radius: 8px !important; */
+  display: block !important;
+  object-fit: contain !important;
+  max-width: none !important;
+}
+
+/* ── Primary nav ─────────────────────────────────────────────────────────── */
+.nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 22px;
+}
+.nav a,
+.nav .nav-dropbtn {
+  background: transparent;
+  border: none;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  opacity: .95;
+  cursor: pointer;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  position: relative;
+}
+.nav a:hover,
+.nav .nav-dropbtn:hover {
+  color: var(--accent-light);
+  opacity: 1;
+}
+
+/* Current page */
+.nav a.active,
+.nav .nav-dropbtn.active {
+  color: var(--accent);
+  opacity: 1;
+}
+
+.nav a.active:hover,
+.nav .nav-dropbtn.active:hover {
+  color: var(--accent-light);
+  opacity: 1;
+}
+
+/* Underline */
+.nav a::after,
+.nav .nav-dropbtn::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: -6px;
+  height: 2px; width: 0;
+  /* background: #fff; */
+  opacity: .7;
+  transition: width .18s ease;
+}
+.nav a:hover::after,
+.nav .nav-dropbtn:hover::after,
+.nav a.active::after,
+.nav .nav-dropbtn.active::after { width: 100%; }
+
+/* Distributors dropdown */
+.nav-dropdown { position: relative; }
+.nav-dropbtn { display: inline-flex; align-items: center; gap: 6px; }
+.nav-drop-label {
+  line-height: 1;
+  transform: translateY(0);
+}
+[data-theme="dark"] .nav-dropbtn span {
+  color: #ffffff !important;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+}
+[data-theme="dark"] .nav-dropbtn:hover span {
+  color: var(--accent-light) !important;
+}
+[data-theme="light"] .nav-dropbtn span {
+  color: #ffffff !important;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+}
+[data-theme="light"] .nav-dropbtn:hover span {
+  color: var(--accent-light) !important;
+}
+.nav-caret { font-size: 12px; opacity: .85; transform: translateY(1px); }
+.nav-dropmenu {
+  display: none;
+  position: absolute;
+  top: 56px;
+  right: 0;
+  min-width: 220px;
+  background: var(--brand-ink);
+  color: #ffffff;
+  border: 1px solid var(--brand);
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.15);
+  padding: 8px; z-index: 30;
+}
+.nav-dropmenu a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #ffffff;
+}
+.nav-dropmenu a:hover { background: var(--brand); }
+.nav-dropdown:focus-within .nav-dropmenu,
+.nav-dropdown:hover .nav-dropmenu,
+.nav-dropdown.is-open .nav-dropmenu { display: block; }
+
+/* [data-theme="dark"] .nav-dropmenu a { color: #ffffff !important; }
+[data-theme="light"] .nav-dropmenu a { color: #ffffff !important; } */
+
+/* ── Header actions (right side) ────────────────────────────────────────── */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.site-header .nav .btn {
+  min-height: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+
+/* Theme toggle button */
+#theme-toggle {
+  position: relative;
+  border-radius: 999px;
+  aspect-ratio: 1 / 1;
+}
+
+.theme-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.2s ease;
+}
+[data-theme="light"] .theme-icon-light,
+:root:not([data-theme]) .theme-icon-light { opacity: 1; }
+[data-theme="light"] .theme-icon-dark,
+:root:not([data-theme]) .theme-icon-dark { opacity: 0; }
+[data-theme="dark"] .theme-icon-light { opacity: 0; }
+[data-theme="dark"] .theme-icon-dark { opacity: 1; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .theme-icon-light { opacity: 0; }
+  :root:not([data-theme]) .theme-icon-dark { opacity: 1; }
+}
+
+/* Cart count badge */
+.badge { margin-left:6px; display:inline-block; min-width:18px; padding:2px 6px; border-radius:12px; background:#ffb300; color:#000000; font-weight:700; font-size:12px; text-align:center; }
+
+#btn-cart span:not(#cart-count) {
+  color: #ffffff !important;
+}
+#btn-cart #cart-count {
+  color: #000000 !important;
+}
+
+/* Hide labels next to icon-only buttons on small screens */
+@media (max-width: 560px) {
+  .hide-sm { display: none; }
+}
+
+/* Auth controls */
+.auth-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.authed .auth-buttons { display: none; }
+.authed #user-button { display: block; }
+
+/* Mobile nav toggle (hamburger) — hidden on desktop */
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.45);
+  border-radius: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.nav-toggle:hover { border-color: var(--accent); }
+.nav-toggle-bar {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: #fff;
+  border-radius: 1px;
+  transition: transform .18s ease, opacity .18s ease;
+}
+.nav-toggle[aria-expanded="true"] .nav-toggle-bar:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-toggle[aria-expanded="true"] .nav-toggle-bar:nth-child(2) { opacity: 0; }
+.nav-toggle[aria-expanded="true"] .nav-toggle-bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ── Mobile nav: collapse primary nav into a toggled drawer ─────────────── */
+@media (max-width: 900px) {
+  .site-header .container { padding: 0 14px; }
+  #nav { column-gap: 8px; }
+  .nav-toggle { display: inline-flex; width: 40px; height: 40px; }
+
+  /* The wordmark logo is very wide relative to its height; shrink it so
+     the logo + cart + hamburger all fit on narrow phone widths. */
+  .site-header .brand img { height: 28px !important; }
+
+  /* Icon-only header buttons: drop the wide desktop padding so cart +
+     theme toggle + hamburger fit next to the logo on narrow screens. */
+  .header-actions {
+    gap: 6px;
+  }
+  .header-actions .btn {
+    padding: 6px;
+    min-width: 32px;
+  }
+
+  .nav {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    background: var(--brand-ink);
+    padding: 16px;
+    box-shadow: 0 16px 28px rgba(0,0,0,.22);
+    border-bottom: 1px solid rgba(255,255,255,.12);
+    max-height: calc(100vh - 84px);
+    overflow-y: auto;
+  }
+  .nav.is-open { display: flex; }
+
+  .nav a,
+  .nav .nav-dropbtn {
+    width: 100%;
+    justify-content: space-between;
+    padding: 13px 4px;
+    font-size: 17px;
+  }
+  .nav a::after,
+  .nav .nav-dropbtn::after { display: none; }
+
+  .nav-dropdown { width: 100%; }
+  .nav-dropmenu {
+    position: static;
+    box-shadow: none;
+    border: none;
+    background: var(--brand);
+    border-radius: 10px;
+    padding: 6px;
+    margin: 6px 0 4px;
+    min-width: 0;
+  }
+  .nav-dropmenu a {
+    color: #ffffff;
+    padding: 10px 12px;
+    border-radius: 6px; 
+  }
+  .nav-dropmenu a:hover {
+    background: var(--brand-ink);
+    color: var(--accent-light);
+  }
+
+  /* Contact is a direct child of .nav; the relocated Sign Up button
+     (also .btn--accent) lives inside .auth-buttons, so the child
+     combinator keeps this scoped to Contact only. */
+  .site-header .nav > .btn.btn--accent {
+    margin-top: 10px;
+    justify-content: center;
+    width: 100%;
+  }
+
+  /* Theme toggle + auth controls move into the nav drawer on mobile (see
+     site-header.js) so the header row only has to fit the logo, cart,
+     and hamburger. The toggle and the auth control (login, or once
+     signed in, an empty .auth-buttons since sign-out/account move
+     separately below) share one row: a circular toggle on the left,
+     with a gap before the auth control, which fills the rest of the row. */
+  .mobile-auth-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    /* margin-top: 12px; */
+    padding-top: 16px;
+    border-top: 1px solid var(--brand);
+  }
+  .mobile-auth-row #theme-toggle {
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border-radius: 999px;
+    justify-content: center;
+  }
+  .mobile-auth-row .auth-buttons {
+    flex: 1;
+    min-width: 0;
+  }
+  .mobile-auth-row .auth-buttons .btn {
+    width: 100%;
+    height: 48px;
+    justify-content: center;
+    border-radius: 12px;
+  }
+  .nav #btn-signout,
+  .nav #user-button {
+    width: 100%;
+    justify-content: center;
+    margin-top: 10px;
+  }
+}
+
+/* Extra-narrow phones (iPhone SE and similar ~320px viewports) need the
+   logo shrunk further to avoid clipping the cart/hamburger buttons. */
+@media (max-width: 340px) {
+  .site-header .brand img { height: 22px !important; }
+
+  /* Bulk orders can push the cart badge to several digits (e.g.
+     "960,000"); give it a bit less padding/margin on the narrowest
+     phones so a long count doesn't push the header into overflow. */
+  .badge { margin-left: 4px; padding: 1px 3px; font-size: 11px; }
+  #btn-cart { gap: 4px; padding: 6px 5px; }
+}

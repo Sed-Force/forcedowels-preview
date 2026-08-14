@@ -11,62 +11,32 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=checkout-1">
+  <link rel="stylesheet" href="/styles.css?v=107">
+  <link rel="stylesheet" href="styles/shared/navbar.css?v=2">
+  <link rel="stylesheet" href="styles/shared/footer.css?v=1">
+
+  <!-- Clerk (Browser) -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_dmlhYmxlLWhhZGRvY2stMzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
+  </script>
+
+  <script defer src="scripts/shared/site-header.js?v=1"></script>
+  <script defer src="scripts/shared/site-footer.js?v=1"></script>
+  <script defer src="scripts/shared/script-badge.js?v=1"></script>
 </head>
-<body>
+<body class="checkout-page">
 
 <!-- Header -->
-<header class="site-header">
-  <div class="container header-inner">
-    <a class="brand" href="/" aria-label="Force Dowel Company">
-      <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" />
-    </a>
-
-    <nav class="nav" aria-label="Primary">
-      <a href="/">Home</a>
-      <a href="/order.html">Order</a>
-      <a href="/videos.html">Videos</a>
-      <a href="/faq.html">FAQ</a>
-      <div class="nav-dropdown">
-        <button class="nav-dropbtn" type="button" aria-haspopup="true" aria-expanded="false">
-          <span class="nav-drop-label">Distributors</span>
-          <span class="nav-caret">▾</span>
-        </button>
-        <div class="nav-dropmenu" role="menu">
-          <a href="/distributors" role="menuitem">Find a Distributor</a>
-          <a href="/distributor-application" role="menuitem">Become a Distributor</a>
-        </div>
-      </div>
-      <a href="/contact.html" class="btn btn--accent">Contact</a>
-    </nav>
-
-    <div class="header-actions">
-      <!-- Theme Toggle -->
-      <button class="btn btn--ghost btn--invert" id="theme-toggle" type="button" aria-label="Toggle theme">
-        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" class="theme-icon theme-icon-light">
-          <path fill="currentColor" d="M12 18a6 6 0 1 1 0-12a6 6 0 0 1 0 12M12 2a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1m0 18a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1M20.66 7.34a1 1 0 0 1 0 1.41l-.71.71a1 1 0 1 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 0M5.46 17.54a1 1 0 0 1 0 1.41l-.71.71a1 1 0 1 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 0M22 12a1 1 0 0 1-1 1h-1a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1M4 12a1 1 0 0 1-1 1H2a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1m16.66 4.66a1 1 0 0 1-1.41 0l-.71-.71a1 1 0 0 1 1.41-1.41l.71.71a1 1 0 0 1 0 1.41M7.75 6.25a1 1 0 0 1-1.41 0l-.71-.71a1 1 0 0 1 1.41-1.41l.71.71a1 1 0 0 1 0 1.41"/>
-        </svg>
-        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" class="theme-icon theme-icon-dark">
-          <path fill="currentColor" d="M12 21q-3.75 0-6.375-2.625T3 12q0-3.75 2.625-6.375T12 3q.35 0 .688.025t.662.075q-1.025.725-1.638 1.888T11.1 7.5q0 2.25 1.575 3.825T16.5 12.9q1.375 0 2.525-.613T20.9 10.65q.05.325.075.662T21 12q0 3.75-2.625 6.375T12 21"/>
-        </svg>
-      </button>
-
-      <a href="/cart.html" class="btn btn--ghost btn--invert" id="btn-cart" aria-label="Shopping cart">
-        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="currentColor" d="M7 18a2 2 0 1 0 0 4a2 2 0 0 0 0-4m10 0a2 2 0 1 0 0 4a2 2 0 0 0 0-4M6.2 6l.3 2h12.3a1 1 0 0 1 1 1l-1.2 6a2 2 0 0 1-2 1.6H8.7a2 2 0 0 1-2-1.7L5.3 5H3V3h3a1 1 0 0 1 1 .9L7.2 6Z"/>
-        </svg>
-        <span class="hide-sm">Cart</span>
-        <span id="cart-count" class="badge"></span>
-      </a>
-    </div>
-  </div>
-</header>
+<site-header></site-header>
 
 <main id="content">
   <section class="section">
     <div class="container">
-      <a href="/cart.html" class="muted" style="display:inline-block;margin-bottom:8px;">← Back to Cart</a>
       <h1>Checkout</h1>
+      <p class="page-back"><a href="/cart.html" class="muted">← Back to Cart</a></p>
 
       <div class="checkout-layout">
         <!-- LEFT: Shipping address + rates -->
@@ -76,69 +46,65 @@
 
             <form id="ship-form" class="ship-form" onsubmit="return false;">
               <label class="field">
-                <span>Company Name *</span>
+                <span>Company Name <b>*</b></span>
                 <input id="ship-company" class="input" type="text" autocomplete="organization" placeholder="Your Company Name" required>
               </label>
 
               <label class="field">
-                <span>Contact Name *</span>
+                <span>Contact Name <b>*</b></span>
                 <input id="ship-contact" class="input" type="text" autocomplete="name" placeholder="Contact Person Name" required>
               </label>
 
-              <div class="grid-2">
-                <label class="field">
-                  <span>Email Address *</span>
-                  <input id="ship-email" class="input" type="email" autocomplete="email" placeholder="your@email.com" required>
-                </label>
-
-                <label class="field">
-                  <span>Phone Number *</span>
-                  <input id="ship-phone" class="input" type="tel" autocomplete="tel" placeholder="(555) 555-5555" required>
-                </label>
-              </div>
-
-              <div class="grid-2">
-                <label class="field">
-                  <span>Country</span>
-                  <select id="ship-country" class="select" required>
-                    <option value="US">United States</option>
-                    <option value="CA">Canada</option>
-                    <option value="MX">Mexico</option>
-                  </select>
-                </label>
-
-                <label class="field">
-                  <span>State / Province</span>
-                  <!-- This is a SELECT and will be populated dynamically per country -->
-                  <select id="ship-state" class="select" required></select>
-                </label>
-              </div>
-
-              <div class="grid-2">
-                <label class="field">
-                  <span>City</span>
-                  <input id="ship-city" class="input" autocomplete="address-level2" placeholder="City" required>
-                </label>
-                <label class="field">
-                  <span>ZIP / Postal</span>
-                  <input id="ship-postal" class="input" inputmode="text" autocomplete="postal-code" placeholder="85142" required>
-                </label>
-              </div>
+              <label class="field">
+                <span>Email Address <b>*</b></span>
+                <input id="ship-email" class="input" type="email" autocomplete="email" placeholder="your@email.com" required>
+              </label>
 
               <label class="field">
-                <span>Street Address</span>
+                <span>Phone Number <b>*</b></span>
+                <input id="ship-phone" class="input" type="tel" autocomplete="tel" placeholder="(555) 555-5555" required>
+              </label>
+
+              <label class="field">
+                <span>Country <b>*</b></span>
+                <select id="ship-country" class="select" required>
+                  <option value="US">United States</option>
+                  <option value="CA">Canada</option>
+                  <option value="MX">Mexico</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>State / Province <b>*</b></span>
+                <select id="ship-state" class="select" required></select>
+              </label>
+
+              <label class="field">
+                <span>City <b>*</b></span>
+                <input id="ship-city" class="input" autocomplete="address-level2" placeholder="City" required>
+              </label>
+
+              <label class="field">
+                <span>ZIP / Postal <b>*</b></span>
+                <input id="ship-postal" class="input" inputmode="text" autocomplete="postal-code" placeholder="85142" required>
+              </label>
+
+              <label class="field field--full">
+                <span>Street Address <b>*</b></span>
                 <input id="ship-street" class="input" autocomplete="address-line1" placeholder="Street address" required>
               </label>
 
               <div class="actions">
-                <button id="btn-get-rates" type="button" class="btn btn--ghost">Get Rates</button>
+                <button id="btn-get-rates" type="button" class="btn btn--primary">Get Rates</button>
               </div>
             </form>
           </div>
 
           <div class="card">
             <h3>Shipping Options</h3>
-            <ul id="rates-list" class="rates-list"></ul>
+            <ul id="rates-list" class="rates-list">
+              <li class="rates-empty">No rates yet. Enter an address and click Get Rates.</li>
+            </ul>
           </div>
         </div>
 
@@ -165,17 +131,12 @@
               Proceed to Payment
             </button>
 
-            <!-- Test Mode (Preview Only) -->
-            <div id="test-mode-section" style="margin-top: 16px; padding: 12px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px; display: none;">
-              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" id="test-mode-checkbox" style="cursor: pointer;">
-                <span style="font-size: 14px; font-weight: 600; color: #92400e;">
-                  🧪 Test Mode (Free checkout - no payment required)
-                </span>
+            <div id="test-mode-section" class="checkout-test-mode" hidden>
+              <label class="checkout-test-mode-label">
+                <input type="checkbox" id="test-mode-checkbox">
+                <span>Test Mode (free checkout — no payment required)</span>
               </label>
-              <p style="margin: 8px 0 0 0; font-size: 12px; color: #78350f;">
-                Enable this to test the checkout flow without creating a real charge. Order confirmation and emails will still be sent.
-              </p>
+              <p>Enable this to test the checkout flow without creating a real charge. Order confirmation and emails will still be sent.</p>
             </div>
           </div>
         </aside>
@@ -185,68 +146,9 @@
 </main>
 
 <!-- Footer -->
-<footer class="site-footer">
-  <div class="container footer-main">
-    <section class="footer-sec footer-sec--brand">
-      <a href="/" aria-label="Force Dowels home" class="footer-brand-wrap">
-        <img src="/images/force-dowel-logo.jpg?v=4" alt="Force Dowels logo" class="footer-logo" />
-      </a>
-      <p class="footer-tagline">
-        Revolutionary cabinetry fasteners that deliver faster assembly, stronger connections, and flawless finishes.
-        Experience the next generation of cabinet construction.
-      </p>
-    </section>
+<site-footer></site-footer>
 
-    <section class="footer-sec">
-      <h4>Quick Links</h4>
-      <ul class="footer-list">
-        <li><a href="/">Home</a></li>
-        <li><a href="/order.html">Order Now</a></li>
-        <li><a href="/videos.html">Product Videos</a></li>
-        <li><a href="/distributors">Find a Distributor</a></li>
-        <li><a href="/distributor-application">Become a Distributor</a></li>
-      </ul>
-    </section>
-
-    <section class="footer-sec">
-      <h4>Contact Us</h4>
-      <ul class="footer-list">
-        <li>(480)-581-7145</li>
-        <li>Hours: Mon–Thurs 7:30AM–4:30PM; Friday 7:30AM–11:30AM</li>
-        <li><a href="mailto:info@forcedowels.com">info@forcedowels.com</a></li>
-        <li>4455 E Nunneley Rd, Ste 103<br>Gilbert, AZ 85296</li>
-      </ul>
-    </section>
-
-    <section class="footer-sec">
-      <h4>Stay Updated</h4>
-      <p class="footer-note">Get the latest updates on our patent-pending technology and new product releases.</p>
-      <form class="footer-form" onsubmit="return false;">
-        <label class="sr-only" for="newsletter-email">Enter your email</label>
-        <input id="newsletter-email" type="email" placeholder="Enter your email" required>
-        <button type="submit" class="btn btn--accent">Subscribe</button>
-      </form>
-      <p class="footer-privacy-note">We respect your privacy. Unsubscribe at any time.</p>
-    </section>
-  </div>
-
-  <div class="footer-separator"></div>
-
-  <div class="container footer-bottom">
-    <div class="footer-bottom-left">
-      <p>© <span id="year"></span> Force Dowels. All rights reserved.</p>
-      <p class="footer-patent">Patent Pending Technology - Revolutionary Cabinetry Fasteners</p>
-    </div>
-    <nav class="footer-bottom-right">
-      <a href="/privacy.html">Privacy Policy</a>
-      <a href="/terms.html">Terms of Service</a>
-    </nav>
-  </div>
-</footer>
-
-<script>
-  (function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})();
-</script>
-<script defer src="scripts/customer/script-checkout.js?v=20251023-fixed"></script>
+<script defer src="scripts/shared/products.js?v=1"></script>
+<script defer src="scripts/customer/script-checkout.js?v=checkout-20260814"></script>
 </body>
 </html>

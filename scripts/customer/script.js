@@ -1,86 +1,5 @@
-/* Theme Management */
-(function initTheme() {
-  // Get saved theme or default to system preference
-  const savedTheme = localStorage.getItem('theme');
-  const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-  // Apply theme
-  function applyTheme(theme) {
-    if (theme === 'auto') {
-      document.documentElement.removeAttribute('data-theme');
-    } else {
-      document.documentElement.setAttribute('data-theme', theme);
-    }
-    localStorage.setItem('theme', theme);
-  }
-
-  // Initialize theme
-  if (savedTheme) {
-    applyTheme(savedTheme);
-  }
-
-  // Theme toggle functionality
-  const themeToggle = document.getElementById('theme-toggle');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      const currentTheme = document.documentElement.getAttribute('data-theme');
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-      let newTheme;
-      if (!currentTheme) {
-        // Currently auto, switch to opposite of system
-        newTheme = systemPrefersDark ? 'light' : 'dark';
-      } else if (currentTheme === 'light') {
-        newTheme = 'dark';
-      } else {
-        newTheme = 'light';
-      }
-
-      applyTheme(newTheme);
-    });
-  }
-
-  // Listen for system theme changes
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    // Only update if using auto theme
-    if (!document.documentElement.hasAttribute('data-theme')) {
-      // Force a repaint by toggling a class
-      document.body.classList.add('theme-transition');
-      setTimeout(() => document.body.classList.remove('theme-transition'), 100);
-    }
-  });
-})();
-
-/* Clerk mount (kept safe) */
-window.addEventListener('load', async () => {
-  try {
-    if (window.Clerk) {
-      // Get current theme
-      const currentTheme = document.documentElement.getAttribute('data-theme') ||
-                          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-
-      // Configure Clerk appearance based on theme
-      await window.Clerk.load({
-        appearance: {
-          baseTheme: currentTheme === 'dark' ? 'dark' : 'light',
-          variables: {
-            colorPrimary: '#224d8f',
-            colorText: currentTheme === 'dark' ? '#ffffff' : '#000000',
-            colorBackground: currentTheme === 'dark' ? '#1e2a3f' : '#ffffff',
-            colorInputBackground: currentTheme === 'dark' ? '#0f1420' : '#ffffff',
-            colorInputText: currentTheme === 'dark' ? '#ffffff' : '#000000',
-          }
-        }
-      });
-
-      const userBtn = document.getElementById('user-button');
-      if (window.Clerk.user && userBtn) {
-        window.Clerk.mountUserButton(userBtn);
-        document.body.classList.add('authed');
-      }
-    }
-  } catch (_) {}
-});
+/* Theme management and Clerk auth wiring now live in
+   scripts/shared/site-header.js (owned by the <site-header> component). */
 
 /* ===== Slider (kept from home page; safe if not present) ===== */
 (function () {
@@ -99,7 +18,16 @@ window.addEventListener('load', async () => {
   dots.forEach(d=>d.addEventListener('click',()=>{ const i=+d.dataset.slide||0; goTo(i); restart();}));
   if (nextBtn) nextBtn.addEventListener('click', ()=>{ next(); restart();});
   if (prevBtn) prevBtn.addEventListener('click', ()=>{ prev(); restart();});
-  function start(){ timer=setInterval(next, AUTOPLAY_MS);} function stop(){ if(timer) clearInterval(timer); timer=null;} function restart(){ stop(); start();}
+  // start() always clears any existing timer first — it's called directly
+  // from mouseleave (not just via restart()), and without this guard a
+  // mouseleave firing while a timer is already running (e.g. during rapid
+  // clicking, where the browser's synthetic mouse-move-then-click can
+  // cross the slider boundary each time) leaks an extra interval that's
+  // never cleared. Enough of those stack up and the slide advances every
+  // few hundred ms instead of every 4.5s.
+  function stop(){ if(timer) clearInterval(timer); timer=null;}
+  function start(){ stop(); timer=setInterval(next, AUTOPLAY_MS);}
+  function restart(){ start(); }
   const slider=document.querySelector('.slider'); if(slider){ slider.addEventListener('mouseenter',stop); slider.addEventListener('mouseleave',start);}
   let sx=0, dx=0;
   viewport.addEventListener('touchstart',e=>{ if(e.touches.length!==1) return; sx=e.touches[0].clientX; dx=0; stop(); },{passive:true});
@@ -308,117 +236,6 @@ window.addEventListener('load', async () => {
       } catch (_) {}
     });
   }
-})();
-
-// === Clerk auth wiring (robust) ===
-(async function initClerkAuth() {
-  // Wait for Clerk script tag to load
-  if (!window.Clerk) {
-    await new Promise((resolve) => {
-      const t = setInterval(() => {
-        if (window.Clerk) { clearInterval(t); resolve(); }
-      }, 50);
-    });
-  }
-
-  try {
-    await window.Clerk.load();
-  } catch (e) {
-    console.error('[Clerk] load() failed:', e);
-    // If load fails, the redirect flows below will still work (they don’t need the modal)
-  }
-
-  const $ = (s) => document.querySelector(s);
-  const authWrap   = document.querySelector('.auth-buttons');
-  const btnLogin   = $('#btn-login');
-  const btnSignup  = $('#btn-signup');
-  const btnSignout = $('#btn-signout'); // optional
-  const userMount  = $('#user-button');
-
-  function render() {
-    const user = window.Clerk?.user;
-    const session = window.Clerk?.session;
-    const signedIn = !!(user && session);
-
-    if (authWrap)  authWrap.style.display  = signedIn ? 'none' : '';
-    if (btnSignout) btnSignout.style.display = signedIn ? '' : 'none';
-
-    if (signedIn) {
-      if (userMount && !userMount.hasChildNodes() && window.Clerk?.mountUserButton) {
-        window.Clerk.mountUserButton(userMount);
-      }
-      document.body.classList.add('authed');
-    } else {
-      if (userMount) userMount.replaceChildren();
-      document.body.classList.remove('authed');
-    }
-  }
-
-  // Re-render on Clerk state changes
-  if (window.Clerk?.addListener) window.Clerk.addListener(render);
-  render();
-
-  // Helper to get Clerk appearance config based on current theme
-  const getClerkAppearance = () => {
-    const currentTheme = document.documentElement.getAttribute('data-theme') ||
-                        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    return {
-      baseTheme: currentTheme === 'dark' ? 'dark' : 'light',
-      variables: {
-        colorPrimary: '#224d8f',
-        colorText: currentTheme === 'dark' ? '#ffffff' : '#000000',
-        colorBackground: currentTheme === 'dark' ? '#1e2a3f' : '#ffffff',
-        colorInputBackground: currentTheme === 'dark' ? '#0f1420' : '#ffffff',
-        colorInputText: currentTheme === 'dark' ? '#ffffff' : '#000000',
-      }
-    };
-  };
-
-  // Helpers: prefer modal, fall back to redirect (hosted pages)
-  const goSignIn = () => {
-    if (window.Clerk?.openSignIn) {
-      window.Clerk.openSignIn({
-        afterSignInUrl: window.location.href,
-        appearance: getClerkAppearance()
-      });
-    } else if (window.Clerk?.redirectToSignIn) {
-      window.Clerk.redirectToSignIn({ returnBackUrl: window.location.href });
-    } else {
-      console.error('[Clerk] No sign-in methods available.');
-    }
-  };
-
-  const goSignUp = () => {
-    if (window.Clerk?.openSignUp) {
-      window.Clerk.openSignUp({
-        afterSignUpUrl: window.location.href,
-        appearance: getClerkAppearance()
-      });
-    } else if (window.Clerk?.redirectToSignUp) {
-      window.Clerk.redirectToSignUp({ returnBackUrl: window.location.href });
-    } else {
-      console.error('[Clerk] No sign-up methods available.');
-    }
-  };
-
-  if (btnLogin)  btnLogin.onclick  = goSignIn;
-  if (btnSignup) btnSignup.onclick = goSignUp;
-  if (btnSignout) btnSignout.onclick = () => window.Clerk?.signOut?.();
-
-  // Dev helper: test the protected API
-  window.__pingProtected = async function () {
-    try {
-      const token = await window.Clerk?.session?.getToken({ skipCache: true });
-      const res = await fetch('/api/protected', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-      const text = await res.text();
-      try { return { status: res.status, body: JSON.parse(text) }; }
-      catch { return { status: res.status, body: text }; }
-    } catch (e) {
-      return { error: true, message: e?.message || String(e) };
-    }
-  };
 })();
 
 // /script.js — CONTACT FORM MASTER BLOCK (drop-in, replace previous)
