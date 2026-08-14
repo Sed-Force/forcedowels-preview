@@ -11,7 +11,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=101" />
+  <link rel="stylesheet" href="/styles.css?v=106" />
+  <link rel="stylesheet" href="styles/shared/navbar.css?v=2">
+  <link rel="stylesheet" href="styles/shared/footer.css?v=1">
 
   <!-- Clerk (Browser) -->
   <script
@@ -21,173 +23,247 @@
     src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
   </script>
 
+  <script defer src="scripts/shared/site-header.js?v=1"></script>
+  <script defer src="scripts/shared/site-footer.js?v=1"></script>
+  <script defer src="scripts/shared/script-badge.js?v=1"></script>
+  <script defer src="scripts/shared/products.js?v=1"></script>
   <script defer src="scripts/customer/script.js?v=102"></script>
-  <script defer src="scripts/customer/script-order.js?v=auth-fix-20251021"></script>
+  <script defer src="scripts/customer/script-order.js?v=members-20260814"></script>
   <!-- Force theme override for order page -->
   <style>
     /* Aggressive theme override - force theme variables to work */
-    [data-theme="dark"] .tier,
-    [data-theme="dark"] .kit {
-      background: #1e2a3f !important;
-      color: #ffffff !important;
-      border-color: #334155 !important;
-    }
-
-    [data-theme="dark"] .tier.active {
-      background: #243042 !important;
-      border-color: #eead1a !important;
-    }
-
-    [data-theme="dark"] .calc {
-      background: #1e2a3f !important;
-      border-color: #334155 !important;
-      color: #ffffff !important;
-    }
-
-    [data-theme="dark"] .tier-price {
-      color: #fbbf24 !important;
-      font-weight: 800 !important;
-    }
-
-    [data-theme="dark"] .tier-lock,
-    [data-theme="dark"] .kit .muted {
-      color: #cbd5e1 !important;
-    }
-
     [data-theme="light"] .tier,
     [data-theme="light"] .kit {
-      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
-      color: #000000 !important;
-      border-color: #9ca3af !important;
+      background: var(--brand) !important;
+      border-color: var(--border) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+    [data-theme="dark"] .tier,
+    [data-theme="dark"] .kit {
+      background: var(--brand) !important;
+      border-color: var(--border) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+    [data-theme="light"] .tier.locked,
+    [data-theme="light"] .kit.locked,
+    [data-theme="light"] .tier:disabled {
+      background: var(--bg-card) !important;
+    }
+    [data-theme="dark"] .tier.locked,
+    [data-theme="dark"] .kit.locked,
+    [data-theme="dark"] .tier:disabled {
+      background: var(--bg-card) !important;
+    }
+    [data-theme="light"] .tier:hover:not(:disabled):not(.locked),
+    [data-theme="light"] .kit:hover {
+      background: var(--brand-light) !important;
+      border-color: var(--border) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+    [data-theme="dark"] .tier:hover:not(:disabled):not(.locked),
+    [data-theme="dark"] .kit:hover {
+      background: var(--brand-ink) !important;
+      border-color: var(--border) !important;
       box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
     }
 
-    [data-theme="light"] .tier.active {
-      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
-      border-color: #eead1a !important;
-      box-shadow: 0 8px 24px rgba(238, 173, 26, 0.15) !important;
+    [data-theme="light"] .tier.active:hover:not(:disabled):not(.locked),
+    [data-theme="light"] .kit.active:hover {
+      background: var(--accent-light) !important;
+      border-color: var(--border) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
     }
-
-    [data-theme="light"] .calc {
-      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
-      border-color: #9ca3af !important;
-      color: #000000 !important;
+    [data-theme="dark"] .tier.active:hover:not(:disabled):not(.locked),
+    [data-theme="dark"] .kit.active:hover {
+      background: var(--accent-light) !important;
+      border-color: var(--border) !important;
       box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
     }
 
-    [data-theme="light"] .tier-price {
-      color: #d97706 !important;
+    
+    [data-theme="light"] .tier.active,
+    [data-theme="light"] .kit.active {
+      background: var(--accent) !important;
+      color: #000000 !important;
+      border-color: var(--accent) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+    [data-theme="dark"] .tier.active,
+    [data-theme="dark"] .kit.active {
+      background: var(--accent) !important;
+      color: #000000 !important;
+      border-color: var(--accent) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+    [data-theme="light"] .tier.active:hover,
+    [data-theme="light"] .kit.active:hover {
+      background: var(--accent-light) !important;
+    }
+    [data-theme="dark"] .tier.active:hover,
+    [data-theme="dark"] .kit.active:hover {
+      background: var(--accent-light) !important;
+    }
+    [data-theme="light"] .tier.disabled,
+    [data-theme="light"] .kit.disabled {
+      background: var(--brand-ink) !important;
+      color: #000000 !important;
+      border-color: var(--accent) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+    [data-theme="dark"] .tier.disabled,
+    [data-theme="dark"] .kit.disabled {
+      background: var(--brand-ink) !important;
+      color: #000000 !important;
+      border-color: var(--accent) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+
+    [data-theme="light"] .tier span,
+    [data-theme="light"] .kit span {
+      color: #ffffff !important;
+      border-color: var(--border) !important;
+    }
+    [data-theme="dark"] .tier span,
+    [data-theme="dark"] .kit span {
+      color: #ffffff !important;
+      border-color: var(--border) !important;
+    }
+    [data-theme="light"] .tier.active span,
+    [data-theme="light"] .kit.active span {
+      color: #000000 !important;
+      border-color: var(--border) !important;
+    }
+    [data-theme="dark"] .tier.active span,
+    [data-theme="dark"] .kit.active div {
+      color: #000000 !important;
+      border-color: var(--border) !important;
+    }
+
+    [data-theme="dark"] .tier-range {
+      color: #000000 !important;
       font-weight: 800 !important;
     }
-
-    [data-theme="light"] .tier-lock,
-    [data-theme="light"] .kit .muted {
-      color: #1f2937 !important;
+    [data-theme="dark"] .tier-price {
+      color: #000000 !important;
+      font-weight: 800 !important;
+    }
+    [data-theme="light"] .tier-range.active {
+      color: #000000 !important;
+      font-weight: 800 !important;
+    }
+    [data-theme="light"] .tier-price.active {
+      color: #000000 !important;
+      font-weight: 800 !important;
+    }
+    
+    [data-theme="light"] .tier.locked span,
+    [data-theme="light"] .tier:disabled span,
+    [data-theme="dark"] .tier.locked span,
+    [data-theme="dark"] .tier:disabled span {
+      color: var(--text-muted) !important;
+    }
+    [data-theme="dark"] .tier.locked .tier-range,
+    [data-theme="dark"] .tier.locked .tier-price,
+    [data-theme="dark"] .tier:disabled .tier-range,
+    [data-theme="dark"] .tier:disabled .tier-price {
+      color: var(--text) !important;
     }
 
+    [data-theme="light"] .kit div strong{
+      color: var(--accent);
+      font-weight: 800 !important;
+    }
+    [data-theme="light"] .kit div.muted {
+      color: #ffffff !important;
+      font-style: italic !important;
+    }
 
-  </style>
+    .size-option p {
+      color: #ffffff !important;
+    }
+    .size-option.active p {
+      color: #000000 !important;
+    }
+    </style>
 </head>
 <body>
 
 <!-- Header -->
-<header class="site-header">
-  <div class="container header-inner">
-    <a class="brand" href="/" aria-label="Force Dowel Company">
-      <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" />
-    </a>
-
-    <nav class="nav" aria-label="Primary">
-      <a href="/">Home</a>
-      <a href="/order.html" class="active">Order</a>
-      <a href="/videos.html">Videos</a>
-      <a href="/faq.html">FAQ</a>
-
-      <div class="nav-dropdown">
-        <button class="nav-dropbtn" type="button" aria-haspopup="true" aria-expanded="false">
-          <span class="nav-drop-label">Distributors</span>
-          <span class="nav-caret">▾</span>
-        </button>
-        <div class="nav-dropmenu" role="menu">
-          <a href="/distributors" role="menuitem">Find a Distributor</a>
-          <a href="/distributor-application" role="menuitem">Become a Distributor</a>
-        </div>
-      </div>
-
-      <a href="/contact.html" class="btn btn--accent">Contact</a>
-    </nav>
-
-    <div class="header-actions">
-      <!-- Theme Toggle -->
-      <button class="btn btn--ghost btn--invert" id="theme-toggle" type="button" aria-label="Toggle theme">
-        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" class="theme-icon theme-icon-light">
-          <path fill="currentColor" d="M12 18a6 6 0 1 1 0-12a6 6 0 0 1 0 12M12 2a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1m0 18a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1M20.66 7.34a1 1 0 0 1 0 1.41l-.71.71a1 1 0 1 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 0M5.46 17.54a1 1 0 0 1 0 1.41l-.71.71a1 1 0 1 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 0M22 12a1 1 0 0 1-1 1h-1a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1M4 12a1 1 0 0 1-1 1H2a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1m16.66 4.66a1 1 0 0 1-1.41 0l-.71-.71a1 1 0 0 1 1.41-1.41l.71.71a1 1 0 0 1 0 1.41M7.75 6.25a1 1 0 0 1-1.41 0l-.71-.71a1 1 0 0 1 1.41-1.41l.71.71a1 1 0 0 1 0 1.41"/>
-        </svg>
-        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" class="theme-icon theme-icon-dark">
-          <path fill="currentColor" d="M12 21q-3.75 0-6.375-2.625T3 12q0-3.75 2.625-6.375T12 3q.35 0 .688.025t.662.075q-1.025.725-1.638 1.888T11.1 7.5q0 2.25 1.575 3.825T16.5 12.9q1.375 0 2.525-.613T20.9 10.65q.05.325.075.662T21 12q0 3.75-2.625 6.375T12 21"/>
-        </svg>
-      </button>
-
-      <a href="/cart.html" class="btn btn--ghost btn--invert" aria-label="Shopping cart">
-        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="currentColor" d="M7 18a2 2 0 1 0 0 4a2 2 0 0 0 0-4m10 0a2 2 0 1 0 0 4a2 2 0 0 0 0-4M6.2 6l.3 2h12.3a1 1 0 0 1 1 1l-1.2 6a2 2 0 0 1-2 1.6H8.7a2 2 0 0 1-2-1.7L5.3 5H3V3h3a1 1 0 0 1 1 .9L7.2 6Z"/>
-        </svg>
-        <span class="hide-sm">Cart</span>
-        <span id="cart-count" class="badge"></span>
-      </a>
-
-      <!-- Shown when signed IN (Clerk mounts here) -->
-      <div id="user-button"></div>
-    </div>
-  </div>
-</header>
+<site-header></site-header>
 
 <main id="content" class="order-page">
-  <!-- Spacer -->
   <section class="section">
-    <div class="container"></div>
+    <div class="container">
+      <h1>Order Force Dowels™</h1>
+      <p class="subline">Choose a size, pick a bulk tier or starter kit, and check out in minutes.</p>
+    </div>
   </section>
 
   <!-- Pricing + Calculator -->
   <section class="section">
     <div class="container order-grid">
 
-      <!-- LEFT: Pricing tiers -->
+      <!-- LEFT: Size + Pricing tiers -->
       <div class="tiers">
+        <h2>Select a Size</h2>
+        <div class="size-picker" id="size-picker" role="tablist" aria-label="Dowel size">
+          <button type="button" class="btn btn--primary full-width size-option active" data-size="8x38" role="tab" aria-selected="true">
+            <p class="size-name">8mm × 38mm</p>
+            <!-- <p class="size-hint">8mm × 38mm</p> -->
+          </button>
+          <button type="button" class="btn btn--primary full-width size-option" data-size="8x30" role="tab" aria-selected="false">
+            <p class="size-name">8mm × 30mm</p>
+            <!-- <p class="size-hint">8mm × 30mm</p> -->
+          </button>
+          <button type="button" class="btn btn--primary full-width size-option" data-size="6x30" role="tab" aria-selected="false">
+            <p class="size-name">6mm × 30mm</p>
+            <!-- <p class="size-hint">6mm × 30mm</p> -->
+          </button>
+        </div>
+
         <h2>Pricing Tiers</h2>
 
         <div class="notice">
           <strong>Guest Checkout Available:</strong>
-          Orders of 5,000–20,000 units and all kit purchases can be completed without an account.
+          Orders of 5,000–25,000 units and all kit purchases can be completed without an account.
         </div>
 
         <!-- Exactly one tier is active at a time. Clicking swaps the yellow outline. -->
-        <button class="tier active" type="button" data-min="5000">
-          <span class="tier-range">5,000–24,999</span>
-          <span class="tier-price">$0.0720/Unit</span>
-        </button>
+        <div id="tier-list">
+          <button class="tier active" type="button" data-min="5000">
+            <span class="tier-main">
+              <span class="tier-range">5,000 - 24,999</span>
+            </span>
+            <span class="tier-price">$0.0720/Unit</span>
+          </button>
 
-        <button class="tier" type="button" data-min="25000" data-requires-auth="true">
-          <span class="tier-lock">🔒</span>
-          <span class="tier-range">25,000–164,999</span>
-          <span class="tier-price">$0.0675/Unit</span>
-        </button>
+          <button class="tier locked" type="button" data-min="25000" data-requires-auth="true" disabled aria-disabled="true" title="Sign in to unlock this pricing tier">
+            <span class="tier-main">
+              <span class="tier-range">25,000 - 164,999</span>
+              <span class="tier-lock">🔒 Members-Only</span>
+            </span>
+            <span class="tier-price">$0.0675/Unit</span>
+          </button>
 
-        <button class="tier" type="button" data-min="165000" data-requires-auth="true">
-          <span class="tier-lock">🔒</span>
-          <span class="tier-range">165,000–960,000</span>
-          <span class="tier-price">$0.0630/Unit</span>
-        </button>
+          <button class="tier locked" type="button" data-min="165000" data-requires-auth="true" disabled aria-disabled="true" title="Sign in to unlock this pricing tier">
+            <span class="tier-main">
+              <span class="tier-range">165,000 - 960,000</span>
+              <span class="tier-lock">🔒 Members-Only</span>
+            </span>
+            <span class="tier-price">$0.0630/Unit</span>
+          </button>
+        </div>
 
         <h3 class="mt">Or Try Our Starter Kit</h3>
+        
         <button class="kit" id="starter-kit" type="button">
           <div>
-            <strong>Force Dowels Kit</strong>
+            <strong id="kit-title">Force Dowels Kit — 8mm × 38mm</strong>
             <div class="muted">Perfect for small projects and testing</div>
           </div>
           <div class="kit-right">
-            <strong>$36.00</strong>
-            <div class="muted">300 dowels • $0.12/unit</div>
+            <strong id="kit-price">$36.00</strong>
+            <div class="muted" id="kit-meta">300 dowels • $0.12/unit</div>
           </div>
         </button>
 
@@ -197,32 +273,32 @@
 
         <h3 class="mt">International Orders</h3>
         <p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">Don't see your country listed? Click here to make an order and request shipping rates.</p>
-        <button class="btn btn--primary" type="button" onclick="openInternationalOrderModal()">International Orders</button>
+        <button class="btn btn--accent" type="button" onclick="openInternationalOrderModal()">International Orders</button>
       </div>
 
       <!-- RIGHT: Calculator -->
       <aside class="calc">
         <h2>Calculate Your Price</h2>
 
-        <div class="calc-callout">
+        <div class="calc-callout" id="calc-callout">
           <strong>Ordering Requirements:</strong> Orders are available in 5,000-unit increments only.
           Minimum 5,000 units, maximum 960,000 units.
         </div>
 
         <!-- Quantity controls -->
         <div class="field">
-          <label for="qty-units">Quantity (units)</label>
+          <label for="qty-units" id="qty-label">Quantity (units)</label>
           <div class="qtywrap">
             <button id="qty-minus" class="step" type="button" aria-label="decrease">–</button>
             <input id="qty-units" type="number" step="5000" min="5000" max="960000" value="5000" inputmode="numeric" />
             <button id="qty-plus" class="step" type="button" aria-label="increase">+</button>
-            <span class="units">units</span>
+            <span class="units" id="qty-unit-label">units</span>
           </div>
         </div>
 
         <!-- Price readouts -->
         <div class="row">
-          <span>Price per unit:</span>
+          <span id="price-per-label">Price per unit:</span>
           <strong id="price-per-unit">$0.0720</strong>
         </div>
 
@@ -239,64 +315,7 @@
   </section>
 </main>
 
-<footer class="site-footer">
-  <div class="container footer-main">
-    <section class="footer-sec footer-sec--brand">
-      <a href="/" aria-label="Force Dowels home" class="footer-brand-wrap">
-        <img src="/images/force-dowel-logo.jpg?v=4" alt="Force Dowels logo" class="footer-logo" />
-      </a>
-      <p class="footer-tagline">
-        Revolutionary cabinetry fasteners that deliver faster assembly, stronger connections, and flawless finishes.
-        Experience the next generation of cabinet construction.
-      </p>
-    </section>
-
-    <section class="footer-sec">
-      <h4>Quick Links</h4>
-      <ul class="footer-list">
-        <li><a href="/">Home</a></li>
-        <li><a href="/order.html">Order Now</a></li>
-        <li><a href="/videos.html">Product Videos</a></li>
-        <li><a href="/distributors">Find a Distributor</a></li>
-        <li><a href="/distributor-application">Become a Distributor</a></li>
-      </ul>
-    </section>
-
-    <section class="footer-sec">
-      <h4>Contact Us</h4>
-      <ul class="footer-list">
-        <li>(480)-581-7145</li>
-        <li>Hours: Mon–Thurs 7:30AM–4:30PM; Friday 7:30AM–11:30AM</li>
-        <li><a href="mailto:info@forcedowels.com">info@forcedowels.com</a></li>
-        <li>4455 E Nunneley Rd, Ste 103<br>Gilbert, AZ 85296</li>
-      </ul>
-    </section>
-
-    <section class="footer-sec">
-      <h4>Stay Updated</h4>
-      <p class="footer-note">Get the latest updates on our patent-pending technology and new product releases.</p>
-      <form class="footer-form" onsubmit="return false;">
-        <label class="sr-only" for="newsletter-email">Enter your email</label>
-        <input id="newsletter-email" type="email" placeholder="Enter your email" required>
-        <button type="submit" class="btn btn--accent">Subscribe</button>
-      </form>
-      <p class="footer-privacy-note">We respect your privacy. Unsubscribe at any time.</p>
-    </section>
-  </div>
-
-  <div class="footer-separator"></div>
-
-  <div class="container footer-bottom">
-    <div class="footer-bottom-left">
-      <p>© <span id="year"></span> Force Dowels. All rights reserved.</p>
-      <p class="footer-patent">Patent Pending Technology - Revolutionary Cabinetry Fasteners</p>
-    </div>
-    <nav class="footer-bottom-right">
-      <a href="/privacy.html">Privacy Policy</a>
-      <a href="/terms.html">Terms of Service</a>
-    </nav>
-  </div>
-</footer>
+<site-footer></site-footer>
 
 <!-- International Order Modal -->
 <div id="international-modal" class="modal" style="display: none;">
@@ -307,6 +326,15 @@
     </div>
 
     <form id="international-order-form" onsubmit="submitInternationalOrder(event)">
+      <div class="form-row">
+        <label for="intl-size">Dowel Size *</label>
+        <select id="intl-size" name="size" required>
+          <option value="8x38">8mm × 38mm</option>
+          <option value="8x30">8mm × 30mm</option>
+          <option value="6x30">6mm × 30mm</option>
+        </select>
+      </div>
+
       <div class="form-row">
         <label for="intl-order-type">Order Type *</label>
         <select id="intl-order-type" name="order_type" required onchange="toggleQuantityFields()">
@@ -536,7 +564,6 @@
 </style>
 
 <script>
-  (function(){var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})();
 
   // International Order Modal Functions
   function openInternationalOrderModal() {
@@ -604,6 +631,10 @@
     try {
       const formData = new FormData(form);
       const orderType = formData.get('order_type');
+      const sizeId = formData.get('size') || '8x38';
+      const sizeLabel = (window.FDProducts && window.FDProducts.sizeLabel)
+        ? window.FDProducts.sizeLabel(sizeId)
+        : sizeId;
 
       // Build quantity data based on order type
       let quantityData = {};
@@ -613,7 +644,7 @@
           order_type: 'kit',
           quantity: kitQty,
           units: kitQty * 300,
-          display: `${kitQty} Ship Kit${kitQty > 1 ? 's' : ''} (${kitQty * 300} dowels)`
+          display: `${kitQty} Ship Kit${kitQty > 1 ? 's' : ''} — ${sizeLabel} (${kitQty * 300} dowels)`
         };
       } else if (orderType === 'bulk') {
         const bulkQty = parseInt(formData.get('bulk_quantity')) || 5000;
@@ -621,12 +652,13 @@
           order_type: 'bulk',
           quantity: bulkQty,
           units: bulkQty,
-          display: `${bulkQty.toLocaleString()} dowels (Bulk)`
+          display: `${bulkQty.toLocaleString()} dowels — ${sizeLabel} (Bulk)`
         };
       }
 
       const data = {
         action: action,
+        size: formData.get('size') || '8x38',
         ...quantityData,
         business_name: formData.get('business_name'),
         contact_name: formData.get('contact_name'),

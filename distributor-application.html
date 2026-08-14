@@ -11,68 +11,28 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=32">
+  <link rel="stylesheet" href="/styles.css?v=105">
+  <link rel="stylesheet" href="styles/shared/navbar.css?v=2">
+  <link rel="stylesheet" href="styles/shared/footer.css?v=1">
+
+  <!-- Clerk (Browser) -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_dmlhYmxlLWhhZGRvY2stMzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
+  </script>
+
+  <script defer src="scripts/shared/site-header.js?v=1"></script>
+  <script defer src="scripts/shared/site-footer.js?v=1"></script>
+  <script defer src="scripts/shared/products.js?v=1"></script>
+  <script defer src="scripts/shared/script-badge.js?v=1"></script>
   <script defer src="scripts/customer/script.js?v=32"></script>
 </head>
 <body>
 
 <!-- Header -->
-<header class="site-header">
-  <div class="container header-inner">
-    <a class="brand" href="/" aria-label="Force Dowel Company">
-      <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" />
-    </a>
-
-    <nav class="nav" aria-label="Primary">
-      <a href="/">Home</a>
-      <a href="/order.html">Order</a>
-      <a href="/videos.html">Videos</a>
-      <a href="/faq.html">FAQ</a>
-
-      <div class="nav-dropdown">
-        <button class="nav-dropbtn active" type="button" aria-haspopup="true" aria-expanded="false">
-          <span class="nav-drop-label">Distributors</span>
-          <span class="nav-caret">▾</span>
-        </button>
-        <div class="nav-dropmenu" role="menu">
-          <a href="/distributors.html" role="menuitem">Find a Distributor</a>
-          <a href="/distributor-application.html" role="menuitem">Become a Distributor</a>
-        </div>
-      </div>
-
-      <a href="/contact.html" class="btn btn--accent">Contact</a>
-    </nav>
-
-    <div class="header-actions">
-      <!-- Theme Toggle -->
-      <button class="btn btn--ghost btn--invert" id="theme-toggle" type="button" aria-label="Toggle theme">
-        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" class="theme-icon theme-icon-light">
-          <path fill="currentColor" d="M12 18a6 6 0 1 1 0-12a6 6 0 0 1 0 12M12 2a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1m0 18a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1M20.66 7.34a1 1 0 0 1 0 1.41l-.71.71a1 1 0 1 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 0M5.46 17.54a1 1 0 0 1 0 1.41l-.71.71a1 1 0 1 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 0M22 12a1 1 0 0 1-1 1h-1a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1M4 12a1 1 0 0 1-1 1H2a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1m16.66 4.66a1 1 0 0 1-1.41 0l-.71-.71a1 1 0 0 1 1.41-1.41l.71.71a1 1 0 0 1 0 1.41M7.75 6.25a1 1 0 0 1-1.41 0l-.71-.71a1 1 0 0 1 1.41-1.41l.71.71a1 1 0 0 1 0 1.41"/>
-        </svg>
-        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" class="theme-icon theme-icon-dark">
-          <path fill="currentColor" d="M12 21q-3.75 0-6.375-2.625T3 12q0-3.75 2.625-6.375T12 3q.35 0 .688.025t.662.075q-1.025.725-1.638 1.888T11.1 7.5q0 2.25 1.575 3.825T16.5 12.9q1.375 0 2.525-.613T20.9 10.65q.05.325.075.662T21 12q0 3.75-2.625 6.375T12 21"/>
-        </svg>
-      </button>
-
-      <!-- FORCED CART LINK + BADGE -->
-      <a href="/cart.html"
-         class="btn btn--ghost btn--invert"
-         id="btn-cart"
-         aria-label="Shopping cart"
-         onclick="window.location='/cart.html'; return false;">
-        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="currentColor" d="M7 18a2 2 0 1 0 0 4a2 2 0 0 0 0-4M6.2 6l.3 2h12.3a1 1 0 0 1 1 1l-1.2 6a2 2 0 0 1-2 1.6H8.7a2 2 0 0 1-2-1.7L5.3 5H3V3h3a1 1 0 0 1 1 .9L7.2 6Z"/>
-        </svg>
-        <span class="hide-sm">Cart</span>
-        <span id="cart-count" class="badge"></span>
-      </a>
-      <div class="auth-buttons">
-        <button class="btn btn--ghost btn--invert" type="button">Login</button>
-        <button class="btn btn--accent" type="button">Sign Up</button>
-      </div>
-    </div>
-  </div>
-</header>
+<site-header></site-header>
 
 <main id="content">
   <section class="section">
@@ -93,7 +53,6 @@
       </div>
 
       <form id="distributor-form" class="dist-form" method="post" enctype="multipart/form-data">
-        <!-- Company & Contact -->
         <fieldset class="group">
           <legend>Company &amp; Contact</legend>
           <div class="form-grid">
@@ -101,27 +60,22 @@
               <span>Company Name <b>*</b></span>
               <input required name="company" type="text" autocomplete="organization">
             </label>
-
             <label class="field">
               <span>Website</span>
               <input name="website" type="url" placeholder="https://">
             </label>
-
             <label class="field">
               <span>Primary Contact (First &amp; Last) <b>*</b></span>
               <input required name="contact_name" type="text" autocomplete="name">
             </label>
-
             <label class="field">
               <span>Title / Role</span>
               <input name="title" type="text" autocomplete="organization-title">
             </label>
-
             <label class="field">
               <span>Work Email <b>*</b></span>
               <input required name="email" type="email" autocomplete="email">
             </label>
-
             <label class="field">
               <span>Phone</span>
               <input name="phone" type="tel" autocomplete="tel">
@@ -129,11 +83,10 @@
           </div>
         </fieldset>
 
-        <!-- Address -->
         <fieldset class="group">
           <legend>Business Address</legend>
           <div class="form-grid">
-            <label class="field">
+            <label class="field field--full">
               <span>Street</span>
               <input name="street" type="text" autocomplete="address-line1">
             </label>
@@ -156,7 +109,6 @@
           </div>
         </fieldset>
 
-        <!-- Business profile -->
         <fieldset class="group">
           <legend>Business Profile</legend>
           <div class="form-grid">
@@ -171,7 +123,6 @@
                 <option>Other</option>
               </select>
             </label>
-
             <label class="field">
               <span>Years in Business</span>
               <select name="years_in_business">
@@ -183,18 +134,10 @@
                 <option>10+ years</option>
               </select>
             </label>
-
             <label class="field">
               <span>Resale / Tax ID</span>
               <input name="resale_tax_id" type="text">
             </label>
-
-            <!-- Full-width upload -->
-            <label class="field field--full">
-              <span>Upload Resale Certificate (PDF or image)</span>
-              <input name="resale_certificate" type="file" accept=".pdf,.png,.jpg,.jpeg">
-            </label>
-
             <label class="field">
               <span>Estimated Monthly Volume</span>
               <select name="monthly_volume">
@@ -205,34 +148,40 @@
                 <option>960,000+ units</option>
               </select>
             </label>
-
-            <label class="field">
+            <label class="field field--full">
               <span>Territories / Regions Covered</span>
               <input name="territory" type="text" placeholder="e.g., Arizona, Nevada, SoCal">
+            </label>
+            <label class="field field--full">
+              <span>Upload Resale Certificate (PDF or image)</span>
+              <input name="resale_certificate" type="file" accept=".pdf,.png,.jpg,.jpeg">
             </label>
           </div>
 
           <div class="checks">
-            <span class="checks-label">Dowel System Compatibility (if applicable)</span>
-            <label><input type="checkbox" name="compatibility[]" value="8mm line boring"> 8mm line boring</label>
-            <label><input type="checkbox" name="compatibility[]" value="CNC drill/router"> CNC drill/router</label>
-            <label><input type="checkbox" name="compatibility[]" value="Other"> Other</label>
+            <span class="checks-label">Dowel System Compatibility</span>
+            <div class="checks-options">
+              <label><input type="checkbox" name="compatibility[]" value="8mm line boring"> 8mm line boring</label>
+              <label><input type="checkbox" name="compatibility[]" value="CNC drill/router"> CNC drill/router</label>
+              <label><input type="checkbox" name="compatibility[]" value="Other"> Other</label>
+            </div>
           </div>
         </fieldset>
 
-        <!-- Notes -->
-        <label class="field">
-          <span>Additional Notes</span>
-          <textarea name="notes" rows="5" placeholder="Tell us anything helpful about your business, timelines, or requirements."></textarea>
-        </label>
+        <fieldset class="group">
+          <legend>Additional Notes</legend>
+          <label class="field field--full">
+            <span class="sr-only">Additional Notes</span>
+            <textarea name="notes" rows="5" placeholder="Tell us anything helpful about your business, timelines, or requirements."></textarea>
+          </label>
+        </fieldset>
 
-        <!-- Consent & Submit -->
         <div class="submit-row">
           <label class="agree">
             <input required type="checkbox" name="agree">
             <span>I agree that the information provided is accurate and understand a Force Dowels representative will contact me.</span>
           </label>
-          <button class="btn btn--primary" type="submit">Submit Application</button>
+          <button class="btn btn--accent" type="submit">Submit Application</button>
         </div>
 
         <p class="form-note">By submitting, you agree to our <a href="/privacy.html">Privacy Policy</a> and <a href="/terms.html">Terms of Service</a>.</p>
@@ -242,67 +191,9 @@
 </main>
 
 <!-- Footer (same as other pages) -->
-<footer class="site-footer">
-  <div class="container footer-main">
-    <section class="footer-sec footer-sec--brand">
-      <a href="/" aria-label="Force Dowels home" class="footer-brand-wrap">
-        <img src="/images/force-dowel-logo.jpg?v=4" alt="Force Dowels logo" class="footer-logo" />
-      </a>
-      <p class="footer-tagline">
-        Revolutionary cabinetry fasteners that deliver faster assembly, stronger connections, and flawless finishes.
-        Experience the next generation of cabinet construction.
-      </p>
-    </section>
-
-    <section class="footer-sec">
-      <h4>Quick Links</h4>
-      <ul class="footer-list">
-        <li><a href="/">Home</a></li>
-        <li><a href="/order.html">Order Now</a></li>
-        <li><a href="/videos.html">Product Videos</a></li>
-        <li><a href="/distributors.html">Find a Distributor</a></li>
-        <li><a href="/distributor-application.html">Become a Distributor</a></li>
-      </ul>
-    </section>
-
-    <section class="footer-sec">
-      <h4>Contact Us</h4>
-      <ul class="footer-list">
-        <li>(480)-581-7145</li>
-        <li>Hours: Mon–Thurs 7:30AM–4:30PM; Friday 7:30AM–11:30AM</li>
-        <li><a href="mailto:info@forcedowels.com">info@forcedowels.com</a></li>
-        <li>4455 E Nunneley Rd, Ste 103<br>Gilbert, AZ 85296</li>
-      </ul>
-    </section>
-
-    <section class="footer-sec">
-      <h4>Stay Updated</h4>
-      <p class="footer-note">Get the latest updates on our patent-pending technology and new product releases.</p>
-      <form class="footer-form" onsubmit="return false;">
-        <label class="sr-only" for="newsletter-email">Enter your email</label>
-        <input id="newsletter-email" type="email" placeholder="Enter your email" required>
-        <button type="submit" class="btn btn--accent">Subscribe</button>
-      </form>
-      <p class="footer-privacy-note">We respect your privacy. Unsubscribe at any time.</p>
-    </section>
-  </div>
-
-  <div class="footer-separator"></div>
-
-  <div class="container footer-bottom">
-    <div class="footer-bottom-left">
-      <p>© <span id="year"></span> Force Dowels. All rights reserved.</p>
-      <p class="footer-patent">Patent Pending Technology - Revolutionary Cabinetry Fasteners</p>
-    </div>
-    <nav class="footer-bottom-right">
-      <a href="/privacy.html">Privacy Policy</a>
-      <a href="/terms.html">Terms of Service</a>
-    </nav>
-  </div>
-</footer>
+<site-footer></site-footer>
 
 <script>
-  (function(){ var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();})();
 
   // Distributor Application Form Handler
   (function() {

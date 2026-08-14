@@ -2,27 +2,22 @@
    Force Dowels — Cart page logic (precise pricing)
    - localStorage key: 'fd_cart'
    - Items:
-       { type: 'bulk', units: <int> }
-       { type: 'kit',  qty:   <int> }  // Starter Kit (300)
+       { type: 'bulk', sizeId: '8x38', units: <int> }
+       { type: 'kit',  sizeId: '8x38', qty:   <int> }
 */
 
 (function () {
-  // ---------- Config ----------
-  const STORAGE_KEY = 'fd_cart';
-
-  // Bulk constraints
-  const BULK_MIN = 5000;
-  const BULK_MAX = 960000;
-  const BULK_STEP = 5000;
-
-  // Precise per-unit pricing (dollars)
-  function unitPriceFor(units) {
-    if (units >= 160000) return 0.0630;   // $0.0630
-    if (units >= 20000)  return 0.0675;   // $0.0675
-    return 0.0720;                        // $0.0720
+  const catalog = window.FDProducts;
+  if (!catalog) {
+    console.error('FDProducts catalog missing');
+    return;
   }
 
-  // ---------- DOM helpers ----------
+  const STORAGE_KEY = 'fd_cart';
+  const BULK_MIN = catalog.MIN_UNITS;
+  const BULK_MAX = catalog.MAX_UNITS;
+  const BULK_STEP = catalog.STEP;
+
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
@@ -35,7 +30,6 @@
   const btnMore     = $('#btn-add-more');
   const btnCheckout = $('#btn-checkout');
 
-  // ---------- Storage ----------
   function loadCart() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -45,34 +39,27 @@
         .map((it) => {
           if (it.type === 'bulk') {
             let u = Number(it.units || 0);
-            // Only process if we have a valid positive number
-            if (!Number.isFinite(u) || u <= 0) {
-              return null; // Skip invalid items
-            }
-            // Clamp to valid range
+            if (!Number.isFinite(u) || u <= 0) return null;
             if (u > BULK_MAX) u = BULK_MAX;
-            // Round to nearest step
             u = Math.round(u / BULK_STEP) * BULK_STEP;
-            // After rounding, ensure it's still valid
             if (u < BULK_MIN) u = BULK_MIN;
-            return { type: 'bulk', units: u };
+            return { type: 'bulk', sizeId: catalog.normalizeSizeId(it.sizeId), units: u };
           }
           if (it.type === 'kit') {
             let q = Number(it.qty || 0);
             if (!Number.isFinite(q) || q < 1) q = 1;
-            return { type: 'kit', qty: q };
+            return { type: 'kit', sizeId: catalog.normalizeSizeId(it.sizeId), qty: q };
           }
           if (it.type === 'test') {
             return { type: 'test', qty: 1 };
           }
-          // Handle legacy format
           if ('units' in it) {
             const u = Number(it.units);
-            if (u > 0) return { type: 'bulk', units: u };
+            if (u > 0) return { type: 'bulk', sizeId: catalog.DEFAULT_SIZE_ID, units: u };
           }
           if ('qty' in it) {
             const q = Number(it.qty);
-            if (q > 0) return { type: 'kit', qty: Math.max(1, q) };
+            if (q > 0) return { type: 'kit', sizeId: catalog.DEFAULT_SIZE_ID, qty: Math.max(1, q) };
           }
           return null;
         })
@@ -91,41 +78,37 @@
     if (!badgeEl) return;
     let total = 0;
     for (const it of items) {
-      if (it.type === 'bulk') total += it.units; // total dowel units
-      else if (it.type === 'kit') total += it.qty * 300; // kits have 300 dowels each
-      else if (it.type === 'test') total += 1; // test order
+      if (it.type === 'bulk') total += it.units;
+      else if (it.type === 'kit') total += it.qty * catalog.kitUnits(it.sizeId);
+      else if (it.type === 'test') total += 1;
     }
     badgeEl.textContent = total > 0 ? total.toLocaleString() : '';
     badgeEl.style.display = total > 0 ? 'inline-block' : 'none';
   }
 
-  // ---------- Money helpers ----------
   const fmtMoney = (n) =>
     (Number(n) || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
   const fmtUnit = (d) =>
     (Number(d) || 0).toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 
-  // ---------- Totals with precise rounding ----------
-  function lineTotalCentsForBulk(units) {
-    const price = unitPriceFor(units);           // dollars per unit (e.g. 0.0720)
-    return Math.round(units * price * 100);      // round only after multiply → cents
+  function lineTotalCentsForBulk(sizeId, units) {
+    return catalog.bulkTotalCents(sizeId, units);
   }
 
   function computeSubtotal(items) {
     let cents = 0;
     for (const it of items) {
       if (it.type === 'bulk') {
-        cents += lineTotalCentsForBulk(it.units);
+        cents += lineTotalCentsForBulk(it.sizeId, it.units);
       } else if (it.type === 'kit') {
-        cents += Math.round(36.00 * 100) * it.qty; // $36.00 per kit
+        cents += Math.round(catalog.kitPriceUSD(it.sizeId) * 100) * it.qty;
       } else if (it.type === 'test') {
-        cents += 100; // $1.00 test order
+        cents += 100;
       }
     }
     return cents / 100;
   }
 
-  // ---------- Render ----------
   function render() {
     const items = loadCart();
 
@@ -145,12 +128,13 @@
         tr.dataset.index = String(idx);
 
         if (it.type === 'bulk') {
-          const unit = unitPriceFor(it.units);                                // dollars
-          const lineTotal = lineTotalCentsForBulk(it.units) / 100;           // dollars
+          const unit = catalog.unitPriceUSD(it.sizeId, it.units);
+          const lineTotal = lineTotalCentsForBulk(it.sizeId, it.units) / 100;
+          const label = catalog.sizeLabel(it.sizeId);
 
           tr.innerHTML = `
             <td class="col-item">
-              <div class="item-title"><strong>Force Dowels — Bulk</strong></div>
+              <div class="item-title"><strong>Force Dowels — ${label} Bulk</strong></div>
               <div class="muted">Tiered pricing applies automatically</div>
             </td>
 
@@ -169,16 +153,21 @@
             </td>
 
             <td class="col-total">
-              <span class="line-total">${fmtMoney(lineTotal)}</span>
-              <button class="btn-remove" type="button" aria-label="Remove item">Remove</button>
+              <div class="col-total-inner">
+                <span class="line-total">${fmtMoney(lineTotal)}</span>
+                <button class="btn-remove" type="button" aria-label="Remove item">Remove</button>
+              </div>
             </td>
           `;
         } else if (it.type === 'kit') {
-          const lineTotal = 36.0 * it.qty;
+          const kitPrice = catalog.kitPriceUSD(it.sizeId);
+          const kitCount = catalog.kitUnits(it.sizeId);
+          const lineTotal = kitPrice * it.qty;
+          const label = catalog.sizeLabel(it.sizeId);
           tr.innerHTML = `
             <td class="col-item">
-              <div class="item-title"><strong>Force Dowels — Starter Kit (300)</strong></div>
-              <div class="muted">300 units per kit</div>
+              <div class="item-title"><strong>Force Dowels — ${label} Kit (${kitCount})</strong></div>
+              <div class="muted">${kitCount} units per kit</div>
             </td>
 
             <td class="col-qty">
@@ -191,12 +180,14 @@
             </td>
 
             <td class="col-unitprice">
-              <span class="unit-price">$36.0000</span>
+              <span class="unit-price">$${kitPrice.toFixed(4)}</span>
             </td>
 
             <td class="col-total">
-              <span class="line-total">${fmtMoney(lineTotal)}</span>
-              <button class="btn-remove" type="button" aria-label="Remove item">Remove</button>
+              <div class="col-total-inner">
+                <span class="line-total">${fmtMoney(lineTotal)}</span>
+                <button class="btn-remove" type="button" aria-label="Remove item">Remove</button>
+              </div>
             </td>
           `;
         } else if (it.type === 'test') {
@@ -218,8 +209,10 @@
             </td>
 
             <td class="col-total">
-              <span class="line-total">${fmtMoney(1.0)}</span>
-              <button class="btn-remove" type="button" aria-label="Remove item">Remove</button>
+              <div class="col-total-inner">
+                <span class="line-total">${fmtMoney(1.0)}</span>
+                <button class="btn-remove" type="button" aria-label="Remove item">Remove</button>
+              </div>
             </td>
           `;
         }
@@ -298,7 +291,6 @@
     render();
   }
 
-  // ---------- Toolbar ----------
   if (btnClear) {
     btnClear.addEventListener('click', () => {
       if (!confirm('Clear your cart?')) return;
@@ -310,17 +302,29 @@
   if (btnCons) {
     btnCons.addEventListener('click', () => {
       const items = loadCart();
-      let bulkUnits = 0, kits = 0;
+      const bulkBySize = {};
+      const kitsBySize = {};
+      let tests = 0;
       for (const it of items) {
-        if (it.type === 'bulk') bulkUnits += Number(it.units || 0);
-        if (it.type === 'kit')  kits      += Number(it.qty || 0);
+        if (it.type === 'bulk') {
+          const sizeId = catalog.normalizeSizeId(it.sizeId);
+          bulkBySize[sizeId] = (bulkBySize[sizeId] || 0) + Number(it.units || 0);
+        } else if (it.type === 'kit') {
+          const sizeId = catalog.normalizeSizeId(it.sizeId);
+          kitsBySize[sizeId] = (kitsBySize[sizeId] || 0) + Number(it.qty || 0);
+        } else if (it.type === 'test') {
+          tests = 1;
+        }
       }
       const merged = [];
-      if (bulkUnits > 0) {
-        let u = Math.min(BULK_MAX, Math.max(BULK_MIN, Math.round(bulkUnits / BULK_STEP) * BULK_STEP));
-        merged.push({ type:'bulk', units:u });
+      for (const sizeId of Object.keys(bulkBySize)) {
+        let u = Math.min(BULK_MAX, Math.max(BULK_MIN, Math.round(bulkBySize[sizeId] / BULK_STEP) * BULK_STEP));
+        merged.push({ type: 'bulk', sizeId, units: u });
       }
-      if (kits > 0) merged.push({ type:'kit', qty:kits });
+      for (const sizeId of Object.keys(kitsBySize)) {
+        merged.push({ type: 'kit', sizeId, qty: kitsBySize[sizeId] });
+      }
+      if (tests) merged.push({ type: 'test', qty: 1 });
       saveCart(merged);
       render();
     });
@@ -330,13 +334,11 @@
     btnMore.addEventListener('click', () => { window.location.href = '/order.html'; });
   }
 
-  // On the cart page we now send users to the dedicated checkout page
   if (btnCheckout) {
     btnCheckout.addEventListener('click', () => {
       window.location.href = '/checkout.html';
     });
   }
 
-  // ---------- Init ----------
   render();
 })();

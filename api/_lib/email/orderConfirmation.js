@@ -39,7 +39,7 @@ export function buildOrderConfirmationEmail(data = {}) {
     `Date: ${order_date}`,
     ``,
     `Items`,
-    `- Force Dowels — ${units} units @ $${unit_usd}/unit`,
+    `- Force Dowels — ${tier_label || `${units} units`} @ $${unit_usd}/unit`,
     `  Line total: $${line_total}`,
     ``,
     `Summary`,

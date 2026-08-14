@@ -7,6 +7,18 @@
 export const config = { runtime: 'nodejs' };
 
 import Stripe from 'stripe';
+import {
+  MIN_UNITS,
+  STEP,
+  normalizeSizeId,
+  bulkTotalCents,
+  kitPriceCents,
+  kitUnits,
+  pickTier,
+  bulkProductName,
+  kitProductName,
+  compactSummaryLines
+} from './_lib/products.js';
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecret ? new Stripe(stripeSecret) : null;
@@ -19,32 +31,37 @@ const asJSON = (res, code, obj) => {
 const toStr = (v) => (v ?? '').toString().trim();
 
 // ---------- pricing ----------
-const BULK_MIN = 5000;
-const BULK_STEP = 5000;
+const BULK_MIN = MIN_UNITS;
+const BULK_STEP = STEP;
 
-// return unit price in MILLS (1 dollar = 1000 mills = 100 cents * 10)
-function unitPriceMillsFor(units) {
-  if (units >= 160000) return 630;  // $0.0630 = 63.0 mills? (No) => 0.063 * 1000 = 63 mills
-  if (units >= 20000)  return 675;  // $0.0675 = 67.5 mills
-  return 72;                        // $0.0720 = 72 mills
-}
+function validateItems(items) {
+  const lines = [];
+  let tests = 0;
 
-// Make sure the above constants are correct:
-// 0.063 * 1000 = 63 mills, 0.0675 * 1000 = 67.5 mills, 0.072 * 1000 = 72 mills.
-// We store as integer MILLs by multiplying by 10 where needed:
-function millsInt(v) {
-  // v can be 63, 67.5, 72 -> convert to integer mills (tenths of a cent)
-  return Math.round(v); // 63 -> 63, 67.5 -> 68, 72 -> 72 (safe for totals because units are multiples of 5000)
-}
+  for (const it of Array.isArray(items) ? items : []) {
+    if (it && it.type === 'bulk') {
+      let u = Number(it.units || 0);
+      if (!Number.isFinite(u)) continue;
+      u = Math.max(BULK_MIN, Math.round(u / BULK_STEP) * BULK_STEP);
+      const sizeId = normalizeSizeId(it.sizeId);
+      const existing = lines.find((l) => l.type === 'bulk' && l.sizeId === sizeId);
+      if (existing) existing.units += u;
+      else lines.push({ type: 'bulk', sizeId, units: u });
+    } else if (it && it.type === 'kit') {
+      let q = Number(it.qty || 0);
+      if (!Number.isFinite(q) || q < 1) q = 1;
+      const sizeId = normalizeSizeId(it.sizeId);
+      const existing = lines.find((l) => l.type === 'kit' && l.sizeId === sizeId);
+      if (existing) existing.qty += q;
+      else lines.push({ type: 'kit', sizeId, qty: q });
+    } else if (it && it.type === 'test') {
+      tests = 1;
+    }
+  }
 
-// Compute exact cents for bulk (single line item, quantity=1)
-function bulkTotalCents(units) {
-  if (!Number.isFinite(units) || units < BULK_MIN) return 0;
-  // Use precise math in mills (tenth of a cent).
-  const mills = unitPriceMillsFor(units); // e.g. 72 mills ($0.072)
-  // total cents = units * mills / 10
-  const cents = Math.round((units * mills) / 10);
-  return cents;
+  const bulkUnits = lines.filter((l) => l.type === 'bulk').reduce((sum, l) => sum + l.units, 0);
+  const kits = lines.filter((l) => l.type === 'kit').reduce((sum, l) => sum + l.qty, 0);
+  return { lines, bulkUnits, kits, tests };
 }
 
 // ---------- helpers ----------
@@ -58,33 +75,6 @@ function safeParseBody(req) {
     body = {};
   }
   return body;
-}
-
-function validateItems(items) {
-  const out = { bulkUnits: 0, kits: 0, tests: 0 };
-
-  for (const it of Array.isArray(items) ? items : []) {
-    if (it && it.type === 'bulk') {
-      let u = Number(it.units || 0);
-      if (!Number.isFinite(u)) continue;
-      // snap to step
-      u = Math.max(BULK_MIN, Math.round(u / BULK_STEP) * BULK_STEP);
-      out.bulkUnits += u;
-    } else if (it && it.type === 'kit') {
-      let q = Number(it.qty || 0);
-      if (!Number.isFinite(q) || q < 1) q = 1;
-      out.kits += q;
-    } else if (it && it.type === 'test') {
-      out.tests = 1;
-    }
-  }
-  return out;
-}
-
-function tierLabel(units) {
-  if (units >= 160000) return 'Tier: >160,000–960,000';
-  if (units >= 20000)  return 'Tier: >20,000–160,000';
-  return 'Tier: 5,000–20,000';
 }
 
 function originBaseUrl(req) {
@@ -112,7 +102,7 @@ export default async function handler(req, res) {
   const customerPhone = toStr(body.customerPhone);
   const customerName = toStr(body.customerName); // Company name from checkout form
   const contactName = toStr(body.contactName); // Contact person name from checkout form
-  const { bulkUnits, kits, tests } = validateItems(items);
+  const { lines, bulkUnits, kits, tests } = validateItems(items);
 
   if (!bulkUnits && !kits && !tests) {
     return asJSON(res, 400, { error: 'Cart is empty.' });
@@ -121,38 +111,38 @@ export default async function handler(req, res) {
   try {
     const line_items = [];
 
-    // Bulk (exact total as one line)
-    if (bulkUnits > 0) {
-      const cents = bulkTotalCents(bulkUnits);
-      if (cents <= 0) {
-        return asJSON(res, 400, { error: 'Invalid bulk amount.' });
+    for (const line of lines) {
+      if (line.type === 'bulk') {
+        const cents = bulkTotalCents(line.sizeId, line.units);
+        if (cents <= 0) {
+          return asJSON(res, 400, { error: 'Invalid bulk amount.' });
+        }
+        const tier = pickTier(line.sizeId, line.units);
+        line_items.push({
+          price_data: {
+            currency: 'usd',
+            unit_amount: cents,
+            product_data: {
+              name: bulkProductName(line.sizeId),
+              description: `${line.units.toLocaleString()} units • ${tier.label} • $${tier.unitUSD.toFixed(4)}/unit`,
+            },
+          },
+          quantity: 1,
+        });
+      } else if (line.type === 'kit') {
+        const unitsPerKit = kitUnits(line.sizeId);
+        line_items.push({
+          price_data: {
+            currency: 'usd',
+            unit_amount: kitPriceCents(line.sizeId),
+            product_data: {
+              name: kitProductName(line.sizeId),
+              description: `${unitsPerKit} units per kit`,
+            },
+          },
+          quantity: line.qty,
+        });
       }
-      line_items.push({
-        price_data: {
-          currency: 'usd',
-          unit_amount: cents, // total for this bulk line
-          product_data: {
-            name: 'Force Dowels — Bulk',
-            description: tierLabel(bulkUnits),
-          },
-        },
-        quantity: 1,
-      });
-    }
-
-    // Starter Kits ($36 ea)
-    if (kits > 0) {
-      line_items.push({
-        price_data: {
-          currency: 'usd',
-          unit_amount: 3600,
-          product_data: {
-            name: 'Force Dowels — Starter Kit (300)',
-            description: '300 units per kit',
-          },
-        },
-        quantity: kits,
-      });
     }
 
     // Test kit ($1)
@@ -199,7 +189,12 @@ export default async function handler(req, res) {
     // Basic metadata for webhook/email rendering
     const metadata = {
       ship_amount_cents: String(shipAmountCents || 0),
-      summary: JSON.stringify({ bulkUnits, kits, tests }),
+      summary: JSON.stringify({
+        bulkUnits,
+        kits,
+        tests,
+        lines: compactSummaryLines(lines)
+      }),
       ship_carrier: shipping?.carrier || '',
       ship_service: shipping?.service || '',
       ship_address: shippingAddress ? JSON.stringify(shippingAddress) : '',

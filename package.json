@@ -6,12 +6,17 @@
     "node": "22.x"
   },
   "scripts": {
-    "build": "echo \"static build\""
+    "build": "echo \"static build\"",
+    "dev": "node scripts/dev-server.mjs",
+    "dev:static": "npx serve . -l 4173"
   },
   "dependencies": {
     "@clerk/backend": "^2.18.0",
     "@neondatabase/serverless": "^1.0.2",
     "resend": "^6.1.3",
     "stripe": "^16.6.0"
+  },
+  "devDependencies": {
+    "vercel": "^58.9.5"
   }
 }

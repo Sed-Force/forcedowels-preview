@@ -2,6 +2,17 @@
 import { json, applyCORS, verifyAuth } from './_lib/auth.js';
 import { Resend } from 'resend';
 import Stripe from 'stripe';
+import {
+  normalizeSizeId,
+  bulkTotalCents,
+  kitPriceCents,
+  kitUnits,
+  pickTier,
+  bulkProductName,
+  kitProductName,
+  sizeLabel,
+  compactSummaryLines
+} from './_lib/products.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' });
 
@@ -39,24 +50,13 @@ const QUANTITY_MAP = {
   'box-25000': { units: 25000, type: 'bulk', label: 'Standard Box: 25,000 dowels' }
 };
 
-// Pricing functions (matching order page display: 5k-24,999 | 25k-164,999 | 165k+)
-function unitPriceMillsFor(units) {
-  if (units >= 165000) return 63;  // $0.0630 = 6.3 cents = 63 mills
-  if (units >= 25000)  return 67.5;  // $0.0675 = 6.75 cents = 67.5 mills
-  return 72;                       // $0.0720 = 7.2 cents = 72 mills
+function bulkLineCents(units, sizeId) {
+  return bulkTotalCents(sizeId, units);
 }
 
-function bulkTotalCents(units) {
-  if (!Number.isFinite(units) || units < 5000) return 0;
-  const mills = unitPriceMillsFor(units);
-  const cents = Math.round((units * mills) / 10);
-  return cents;
-}
-
-function tierLabel(units) {
-  if (units >= 165000) return 'Tier: 165,000–960,000';
-  if (units >= 25000)  return 'Tier: 25,000–164,999';
-  return 'Tier: 5,000–24,999';
+function tierLabelFor(units, sizeId) {
+  const size = sizeLabel(sizeId);
+  return `${size} • ${pickTier(sizeId, units).label}`;
 }
 
 // ---------- Handler ----------
@@ -86,8 +86,10 @@ export default async function handler(req, res) {
     shipping_address,
     tax_id,
     comments,
-    shipping_label
+    shipping_label,
+    size
   } = body || {};
+  const sizeId = normalizeSizeId(size);
 
   // Validate required fields
   if (!action || !order_type || !quantity || !business_name || !contact_name || !email || !phone || !shipping_address || !tax_id) {
@@ -128,7 +130,7 @@ export default async function handler(req, res) {
       const totalUnits = units || quantity;
 
       if (order_type === 'bulk') {
-        const cents = bulkTotalCents(quantity);
+        const cents = bulkLineCents(quantity, sizeId);
         if (cents <= 0) {
           return json(res, 400, { error: 'Invalid bulk amount' });
         }
@@ -137,8 +139,8 @@ export default async function handler(req, res) {
             currency: 'usd',
             unit_amount: cents,
             product_data: {
-              name: 'Force Dowels — Bulk (International Order)',
-              description: `${tierLabel(quantity)} • ${quantity.toLocaleString()} units • Awaiting shipping quote`,
+              name: `${bulkProductName(sizeId)} (International Order)`,
+              description: `${tierLabelFor(quantity, sizeId)} • ${quantity.toLocaleString()} units • Awaiting shipping quote`,
             },
           },
           quantity: 1,
@@ -147,10 +149,10 @@ export default async function handler(req, res) {
         line_items.push({
           price_data: {
             currency: 'usd',
-            unit_amount: 3600, // $36 per kit
+            unit_amount: kitPriceCents(sizeId),
             product_data: {
-              name: 'Force Dowels — Starter Kit (International Order)',
-              description: `300 units per kit • Awaiting shipping quote`,
+              name: `${kitProductName(sizeId)} (International Order)`,
+              description: `${kitUnits(sizeId)} units per kit • Awaiting shipping quote`,
             },
           },
           quantity: quantity, // quantity is the number of kits
@@ -189,7 +191,12 @@ export default async function handler(req, res) {
           summary: JSON.stringify({ // Add for webhook compatibility
             bulkUnits: order_type === 'bulk' ? quantity : 0,
             kits: order_type === 'kit' ? quantity : 0,
-            tests: 0
+            tests: 0,
+            lines: compactSummaryLines(
+              order_type === 'bulk'
+                ? [{ type: 'bulk', sizeId, units: quantity }]
+                : [{ type: 'kit', sizeId, qty: quantity }]
+            )
           }),
           units: String(totalUnits),
           order_type: order_type
@@ -220,7 +227,7 @@ export default async function handler(req, res) {
 
   const html = buildEmailHtml({
     action: 'request',
-    quantity_display: display || `${quantity} ${order_type === 'kit' ? 'kit(s)' : 'units'}`,
+    quantity_display: display || `${quantity} ${order_type === 'kit' ? 'kit(s)' : 'units'} — ${sizeLabel(sizeId)}`,
     business_name,
     contact_name,
     email,

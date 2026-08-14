@@ -1,327 +1,228 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Force Dowels™ — Revolutionary Cabinet Assembly</title>
-  <meta name="description" content="Force Dowels™: Experience the next generation of cabinet assembly—faster, stronger, and with a flawless finish. Patent Pending.">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Force Dowels™ — Revolutionary Cabinet Assembly</title>
+    <meta name="description" content="Force Dowels™: Experience the next generation of cabinet assembly—faster, stronger, and with a flawless finish. Patent Pending.">
 
-  <!-- Open Graph -->
-  <meta property="og:title" content="Force Dowels™ — Revolutionary Cabinet Assembly" />
-  <meta property="og:description" content="Experience the next generation of cabinet assembly: faster, stronger, and with a flawless finish. Patent Pending." />
-  <meta property="og:image" content="/images/og.jpg" />
-  <meta property="og:type" content="website" />
+    <!-- Open Graph -->
+    <meta property="og:title" content="Force Dowels™ — Revolutionary Cabinet Assembly" />
+    <meta property="og:description" content="Experience the next generation of cabinet assembly: faster, stronger, and with a flawless finish. Patent Pending." />
+    <meta property="og:image" content="/images/og.jpg" />
+    <meta property="og:type" content="website" />
 
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=101">
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css?v=104">
+    <link rel="stylesheet" href="styles/shared/navbar.css?v=2">
+    <link rel="stylesheet" href="styles/shared/footer.css?v=1">
 
-  <!-- Clerk (Browser) -->
-  <script
-    async
-    crossorigin="anonymous"
-    data-clerk-publishable-key="pk_test_dmlhYmxlLWhhZGRvY2stMzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
-    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
-  </script>
+    <!-- Clerk (Browser) -->
+    <script
+      async
+      crossorigin="anonymous"
+      data-clerk-publishable-key="pk_test_dmlhYmxlLWhhZGRvY2stMzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+      src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
+    </script>
 
-  <script defer src="scripts/shared/script-auth.js?v=101"></script>
-  <script defer src="scripts/customer/script.js?v=101"></script>
-</head>
-<body>
+    <script defer src="scripts/shared/site-header.js?v=1"></script>
+    <script defer src="scripts/shared/site-footer.js?v=1"></script>
+  <script defer src="scripts/shared/products.js?v=1"></script>
+  <script defer src="scripts/shared/script-badge.js?v=1"></script>
+    <script defer src="scripts/customer/script.js?v=101"></script>
+  </head>
   
-<!-- Header / Nav -->
-<header class="site-header">
-  <div class="container header-inner">
-    <!-- Left: Logo -->
-    <a class="brand" href="/" aria-label="Force Dowel Company">
-      <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" />
-    </a>
+  <body>
 
-    <!-- Center: Nav -->
-    <nav class="nav" aria-label="Primary">
-      <a href="/">Home</a>
-      <a href="/order.html">Order</a>
-      <a href="/videos.html">Videos</a>
-      <a href="/faq.html">FAQ</a>
+    <!-- Header / Nav -->
+    <site-header></site-header>
 
-      <!-- Distributors dropdown -->
-      <div class="nav-dropdown">
-        <button class="nav-dropbtn active" type="button" aria-haspopup="true" aria-expanded="false">
-          <span class="nav-drop-label">Distributors</span>
-          <span class="nav-caret">▾</span>
-        </button>
-        <div class="nav-dropmenu" role="menu">
-          <a href="/distributors" role="menuitem">Find a Distributor</a>
-          <a href="/distributor-application" role="menuitem">Become a Distributor</a>
-        </div>
-      </div>
+    <main id="content">
+      <!-- HERO (slider on the right) -->
+      <section class="section hero hero--apd">
+        <div class="container grid-2">
+          <!-- Left: headline + bullets -->
+          <div>
+            <h1>Force Dowels™</h1>
 
-      <a href="/contact.html" class="btn btn--accent">Contact</a>
-    </nav>
+            <!-- Orange "Patent Pending" line -->
+            <p class="eyebrow eyebrow--accent">Patent Pending</p>
 
-    <!-- Right: Actions -->
-    <div class="header-actions">
-      <!-- Theme Toggle -->
-      <button class="btn btn--ghost btn--invert" id="theme-toggle" type="button" aria-label="Toggle theme">
-        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" class="theme-icon theme-icon-light">
-          <path fill="currentColor" d="M12 18a6 6 0 1 1 0-12a6 6 0 0 1 0 12M12 2a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1m0 18a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1M20.66 7.34a1 1 0 0 1 0 1.41l-.71.71a1 1 0 1 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 0M5.46 17.54a1 1 0 0 1 0 1.41l-.71.71a1 1 0 1 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 0M22 12a1 1 0 0 1-1 1h-1a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1M4 12a1 1 0 0 1-1 1H2a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1m16.66 4.66a1 1 0 0 1-1.41 0l-.71-.71a1 1 0 0 1 1.41-1.41l.71.71a1 1 0 0 1 0 1.41M7.75 6.25a1 1 0 0 1-1.41 0l-.71-.71a1 1 0 0 1 1.41-1.41l.71.71a1 1 0 0 1 0 1.41"/>
-        </svg>
-        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" class="theme-icon theme-icon-dark">
-          <path fill="currentColor" d="M12 21q-3.75 0-6.375-2.625T3 12q0-3.75 2.625-6.375T12 3q.35 0 .688.025t.662.075q-1.025.725-1.638 1.888T11.1 7.5q0 2.25 1.575 3.825T16.5 12.9q1.375 0 2.525-.613T20.9 10.65q.05.325.075.662T21 12q0 3.75-2.625 6.375T12 21"/>
-        </svg>
-      </button>
+            <!-- Same size as above, standard color -->
+            <p class="subline">Experience the next generation of cabinet assembly: faster, stronger, and with a flawless finish.</p>
 
-      <a href="/cart.html"
-         class="btn btn--ghost btn--invert"
-         id="btn-cart"
-         aria-label="Shopping cart"
-         onclick="window.location='/cart.html'; return false;">
-        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="currentColor" d="M7 18a2 2 0 1 0 0 4a2 2 0 0 0 0-4M6.2 6l.3 2h12.3a1 1 0 0 1 1 1l-1.2 6a2 2 0 0 1-2 1.6H8.7a2 2 0 0 1-2-1.7L5.3 5H3V3h3a1 1 0 0 1 1 .9L7.2 6Z"/>
-        </svg>
-        <span class="hide-sm">Cart</span>
-        <span id="cart-count" class="badge"></span>
-      </a>
+            <div class="frame hero-notice">
+              <div class="hero-notice__content">
+                <p class="hero-notice__label">
+                  You asked, and we listened...
+                </p>
 
-      <!-- Shown when signed OUT -->
-      <div class="auth-buttons">
-        <button class="btn btn--ghost btn--invert" id="btn-login" type="button">Login</button>
-        <button class="btn btn--accent" id="btn-signup" type="button">Sign Up</button>
-      </div>
+                <p class="hero-notice__text">
+                  More sizes are available now!
+                </p>
+              </div>
 
-      <button class="btn btn--ghost btn--invert" id="btn-signout" type="button" style="display:none;">Sign Out</button>
-
-      <!-- Shown when signed IN (Clerk mounts here) -->
-      <div id="user-button"></div>
-    </div>
-  </div>
-</header>
-
-<main id="content">
-  <!-- HERO (slider on the right) -->
-  <section class="section hero hero--apd">
-    <div class="container grid-2">
-      <!-- Left: headline + bullets -->
-      <div>
-        <h1>Force Dowels™</h1>
-
-        <!-- Orange "Patent Pending" line -->
-        <p class="eyebrow eyebrow--accent">Patent Pending</p>
-
-        <!-- Same size as above, standard color -->
-        <p class="subline">Experience the next generation of cabinet assembly: faster, stronger, and with a flawless finish.</p>
-
-        <div class="actions">
-          <a class="btn btn--primary" href="/order.html">Order Now</a>
-          <a class="btn btn--ghost" href="/contact.html">Request a Quote</a>
-        </div>
-
-        <!-- “bubbles” -->
-        <ul class="badges">
-          <li>No Exterior Fastener for a Cleaner Look</li>
-          <li>No Glue Necessary</li>
-          <li>Significantly Reduced Labor Cost</li>
-          <li>Patent Pending</li>
-          <li>Built for RTA Efficiency — Strong, Simple, Reliable</li>
-          <li>Integrates Seamlessly With Most 8mm Dowel Systems</li>
-        </ul>
-      </div>
-
-      <!-- Right: slider lives inside the hero now -->
-      <div>
-        <div class="slider" aria-label="Product photos">
-          <div class="slider-viewport" id="fd-viewport">
-            <!-- Use your two renamed files first -->
-            <div class="slide is-active">
-              <img src="/images/dowel-still-photo.jpg?v=3" alt="Force Dowels close-up photo">
+              <ul class="hero-notice__list">
+                <li>
+                  <strong>8mm × 38mm</strong>
+                </li>
+                <li>
+                  <strong>8mm × 30mm</strong>
+                </li>
+                <li>
+                  <strong>6mm × 30mm</strong>
+                </li>
+              </ul>
             </div>
-            <div class="slide">
-              <img src="/images/dowel-group-photo.jpg?v=3" alt="Force Dowels group photo">
+
+            <div class="actions">
+              <a class="btn btn--accent" href="/order.html">Order Now</a>
+              <a class="btn btn--ghost" href="/contact.html">Request a Quote</a>
             </div>
-            <!-- Keep the 3 existing images -->
-            <div class="slide">
-              <img src="/images/slider-3.jpg?v=3" alt="Force Dowels product photo 3">
-            </div>
-            <div class="slide">
-              <img src="/images/slider-4.jpg?v=3" alt="Force Dowels product photo 4">
-            </div>
-            <div class="slide">
-              <img src="/images/slider-5.jpg?v=3" alt="Force Dowels product photo 5">
-            </div>
+
+            <!-- “bubbles” -->
+            <ul class="badges">
+              <li>No Exterior Fastener for a Cleaner Look</li>
+              <li>No Glue Necessary</li>
+              <li>Significantly Reduced Labor Cost</li>
+              <li>Patent Pending</li>
+              <li>Built for RTA Efficiency — Strong, Simple, Reliable</li>
+              <li>Integrates Seamlessly With Most 8mm Dowel Systems</li>
+            </ul>
           </div>
 
-          <!-- Controls -->
-          <button class="slider-arrow prev" aria-label="Previous slide" data-dir="prev">‹</button>
-          <button class="slider-arrow next" aria-label="Next slide" data-dir="next">›</button>
+          <!-- Right: slider lives inside the hero now -->
+          <div>
+            <div class="slider" aria-label="Product photos">
+              <div class="slider-viewport" id="fd-viewport">
+                <!-- Use your two renamed files first -->
+                <div class="slide is-active">
+                  <img src="/images/dowel-still-photo.jpg?v=3" alt="Force Dowels close-up photo">
+                </div>
+                <div class="slide">
+                  <img src="/images/dowel-group-photo.jpg?v=3" alt="Force Dowels group photo">
+                </div>
+                <!-- Keep the 3 existing images -->
+                <div class="slide">
+                  <img src="/images/slider-3.jpg?v=3" alt="Force Dowels product photo 3">
+                </div>
+                <div class="slide">
+                  <img src="/images/slider-4.jpg?v=3" alt="Force Dowels product photo 4">
+                </div>
+                <div class="slide">
+                  <img src="/images/slider-5.jpg?v=3" alt="Force Dowels product photo 5">
+                </div>
+              </div>
 
-          <!-- Dots (5) -->
-          <div class="slider-dots" role="tablist" aria-label="Slide dots">
-            <button class="dot is-active" role="tab" aria-selected="true" data-slide="0"><span class="sr-only">Slide 1</span></button>
-            <button class="dot" role="tab" aria-selected="false" data-slide="1"><span class="sr-only">Slide 2</span></button>
-            <button class="dot" role="tab" aria-selected="false" data-slide="2"><span class="sr-only">Slide 3</span></button>
-            <button class="dot" role="tab" aria-selected="false" data-slide="3"><span class="sr-only">Slide 4</span></button>
-            <button class="dot" role="tab" aria-selected="false" data-slide="4"><span class="sr-only">Slide 5</span></button>
+              <!-- Controls -->
+              <button class="slider-arrow prev" aria-label="Previous slide" data-dir="prev">‹</button>
+              <button class="slider-arrow next" aria-label="Next slide" data-dir="next">›</button>
+
+              <!-- Dots (5) -->
+              <div class="slider-dots" role="tablist" aria-label="Slide dots">
+                <button class="dot is-active" role="tab" aria-selected="true" data-slide="0"><span class="sr-only">Slide 1</span></button>
+                <button class="dot" role="tab" aria-selected="false" data-slide="1"><span class="sr-only">Slide 2</span></button>
+                <button class="dot" role="tab" aria-selected="false" data-slide="2"><span class="sr-only">Slide 3</span></button>
+                <button class="dot" role="tab" aria-selected="false" data-slide="3"><span class="sr-only">Slide 4</span></button>
+                <button class="dot" role="tab" aria-selected="false" data-slide="4"><span class="sr-only">Slide 5</span></button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  </section>
+      </section>
 
-  <!-- Why Choose Force Dowels -->
-  <section class="section alt" id="why">
-    <div class="container">
-      <h2>Why Choose Force Dowels</h2>
+      <!-- Why Choose Force Dowels -->
+      <section class="section alt" id="why">
+        <div class="container">
+          <h2>Why Choose Force Dowels</h2>
 
-      <div class="cards">
-        <article class="card">
-          <h3>Invisible Fasteners</h3>
-          <p>Completely hidden fastening system</p>
-        </article>
+          <div class="cards">
+            <article class="card">
+              <h3>Invisible Fasteners</h3>
+              <p>Completely hidden fastening system</p>
+            </article>
 
-        <article class="card">
-          <h3>Assembly Speed</h3>
-          <p>Reduce labor time and rework with a simple, process that takes only minutes.</p>
-        </article>
+            <article class="card">
+              <h3>Assembly Speed</h3>
+              <p>Reduce labor time and rework with a simple, process that takes only minutes.</p>
+            </article>
 
-        <article class="card">
-          <h3>Professional Finish</h3>
-          <p>No visible screws or fasteners—premium look out of the box.</p>
-        </article>
+            <article class="card">
+              <h3>Professional Finish</h3>
+              <p>No visible screws or fasteners—premium look out of the box.</p>
+            </article>
 
-        <article class="card">
-          <h3>Labor Costs</h3>
-          <p>Significantly reduce the costs on rework, and assembly.</p>
-        </article>
+            <article class="card">
+              <h3>Labor Costs</h3>
+              <p>Significantly reduce the costs on rework, and assembly.</p>
+            </article>
 
-        <article class="card">
-          <h3>No Glue Required</h3>
-          <p>No glue necessary for strong joints; No unnecessary dry time saving you countless hours.</p>
-        </article>
+            <article class="card">
+              <h3>No Glue Required</h3>
+              <p>No glue necessary for strong joints; No unnecessary dry time saving you countless hours.</p>
+            </article>
 
-        <article class="card">
-          <h3>Order With Ease</h3>
-          <p>Order online with simple replenishment and distribution options.</p>
-        </article>
+            <article class="card">
+              <h3>Order With Ease</h3>
+              <p>Order online with simple replenishment and distribution options.</p>
+            </article>
 
-        <!-- New bubble -->
-        <article class="card">
-          <h3>Long-Lasting Strength</h3>
-          <p>Built to withstand everyday use without loosening or failure.</p>
-        </article>
+            <!-- New bubble -->
+            <article class="card">
+              <h3>Long-Lasting Strength</h3>
+              <p>Built to withstand everyday use without loosening or failure.</p>
+            </article>
 
-        <!-- New bubble -->
-        <article class="card">
-          <h3>Universal Fit</h3>
-          <p>Works seamlessly with most 8mm dowel systems for easy integration.</p>
-        </article>
-      </div>
-    </div>
-  </section>
+            <!-- New bubble -->
+            <article class="card">
+              <h3>Universal Fit</h3>
+              <p>Works seamlessly with most 8mm dowel systems for easy integration.</p>
+            </article>
+          </div>
+        </div>
+      </section>
 
-  <!-- Contact / Quote -->
-  <section class="section" id="contact">
-    <div class="container grid-2">
-      <div>
-        <h2>Contact Us</h2>
-        <ul class="list">
-          <li><strong>Phone:</strong> (480)-581-7145</li>
-          <li><strong>Hours:</strong> Mon–Thurs 7:30AM–4:30PM; Friday 7:30AM–11:30AM</li>
-          <li><strong>Email:</strong> info@forcedowels.com</li>
-          <li><strong>Service:</strong> Will respond to customer requests within 1 business day</li>
-          <li><strong>Address:</strong> 4455 E Nunneley Rd, Ste 103, Gilbert, AZ 85296</li>
-        </ul>
-      </div>
+      <!-- Contact / Quote -->
+      <section class="section" id="contact">
+        <div class="container grid-2">
+          <div>
+            <h2>Contact Us</h2>
+            <ul class="list">
+              <li><strong>Phone:</strong> (480)-581-7145</li>
+              <li><strong>Hours:</strong> Mon–Thurs 7:30AM–4:30PM; Friday 7:30AM–11:30AM</li>
+              <li><strong>Email:</strong> info@forcedowels.com</li>
+              <li><strong>Service:</strong> Will respond to customer requests within 1 business day</li>
+              <li><strong>Address:</strong> 4455 E Nunneley Rd, Ste 103, Gilbert, AZ 85296</li>
+            </ul>
+          </div>
 
-      <form class="form" id="contact-form">
-        <label>
-          <span>Name</span>
-          <input required name="name" type="text" autocomplete="name">
-        </label>
-        <label>
-          <span>Email</span>
-          <input required name="email" type="email" autocomplete="email">
-        </label>
-        <label>
-          <span>Message</span>
-          <textarea required name="message" rows="5"></textarea>
-        </label>
-        <button class="btn btn--primary" type="submit">Send</button>
-        <p class="form-note">By submitting, you agree to our <a href="/privacy.html">Privacy Policy</a>.</p>
-      </form>
-    </div>
-  </section>
+          <form class="form" id="contact-form">
+            <label>
+              <span>Name</span>
+              <input required name="name" type="text" autocomplete="name">
+            </label>
+            <label>
+              <span>Email</span>
+              <input required name="email" type="email" autocomplete="email">
+            </label>
+            <label>
+              <span>Message</span>
+              <textarea required name="message" rows="5"></textarea>
+            </label>
+            <button class="btn btn--accent" type="submit">Send</button>
+            <p class="form-note">By submitting, you agree to our <a href="/privacy.html">Privacy Policy</a>.</p>
+          </form>
+        </div>
+      </section>
 
-</main>
+    </main>
 
-<!-- Footer -->
-<footer class="site-footer">
-  <div class="container footer-main">
-    <!-- 1) Brand + Tagline -->
-    <section class="footer-sec footer-sec--brand">
-      <a class="brand" href="/" aria-label="Force Dowels home">
-        <img src="/images/force-dowel-logo.jpg?v=8" alt="Force Dowels logo" />
-      </a>
-      <p class="footer-tagline">
-        Revolutionary cabinetry fasteners that deliver faster assembly, stronger connections, and flawless finishes.
-        Experience the next generation of cabinet construction.
-      </p>
-    </section>
-
-    <!-- 2) Quick Links -->
-    <section class="footer-sec">
-      <h4>Quick Links</h4>
-      <ul class="footer-list">
-        <li><a href="/">Home</a></li>
-        <li><a href="/order.html">Order Now</a></li>
-        <li><a href="/videos.html">Product Videos</a></li>
-        <li><a href="/distribution.html">Find a Distributor</a></li>
-        <li><a href="/distribution.html#become">Become a Distributor</a></li>
-      </ul>
-    </section>
-
-    <!-- 3) Contact Us -->
-    <section class="footer-sec">
-      <h4>Contact Us</h4>
-      <ul class="footer-list">
-        <li>(480)-581-7145</li>
-        <li>Hours: Mon–Thurs 7:30AM–4:30PM; Friday 7:30AM–11:30AM</li>
-        <li><a href="mailto:info@forcedowels.com">info@forcedowels.com</a></li>
-        <li>24/7 Support</li>
-        <li>4455 E Nunneley Rd, Ste 103<br>Gilbert, AZ 85296</li>
-      </ul>
-    </section>
-
-    <!-- 4) Stay Updated -->
-    <section class="footer-sec">
-      <h4>Stay Updated</h4>
-      <p class="footer-note">Get the latest updates on our patent-pending technology and new product releases.</p>
-      <form class="footer-form" onsubmit="return false;">
-        <label class="sr-only" for="newsletter-email">Enter your email</label>
-        <input id="newsletter-email" type="email" placeholder="Enter your email" required>
-        <button type="submit" class="btn btn--accent">Subscribe</button>
-      </form>
-      <p class="footer-privacy-note">We respect your privacy. Unsubscribe at any time.</p>
-    </section>
-  </div>
-
-  <!-- Divider line -->
-  <div class="footer-separator"></div>
-
-  <!-- Bottom bar -->
-  <div class="container footer-bottom">
-    <div class="footer-bottom-left">
-      <p>© <span id="year"></span> Force Dowels. All rights reserved.</p>
-      <p class="footer-patent">Patent Pending Technology - Revolutionary Cabinetry Fasteners</p>
-    </div>
-    <nav class="footer-bottom-right">
-      <a href="/privacy.html">Privacy Policy</a>
-      <a href="/terms.html">Terms of Service</a>
-    </nav>
-  </div>
-</footer>
-</body>
+    <!-- Footer -->
+    <site-footer></site-footer>
+  </body>
 </html>

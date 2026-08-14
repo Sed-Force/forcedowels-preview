@@ -1,34 +1,39 @@
 // /api/pricing.js — source of truth for tiered unit pricing
 import { json, applyCORS } from './_lib/auth.js';
-
-const STEP = 5000;
-const MIN_UNITS = 5000;
-const MAX_UNITS = 960000;
-
-// Edit tier numbers here if pricing changes
-const TIERS = [
-  { max: 20000,   unitUSD: 0.072,  requiresAuth: false, label: '5,000–20,000' },
-  { max: 160000,  unitUSD: 0.0675, requiresAuth: true,  label: '20,000–160,000' },
-  { max: 960000,  unitUSD: 0.063,  requiresAuth: true,  label: '160,000–960,000' }
-];
+import {
+  STEP,
+  MIN_UNITS,
+  MAX_UNITS,
+  normalizeSizeId,
+  pickTier,
+  unitPriceUSD,
+  bulkTotalCents,
+  listSizes,
+  getSize
+} from './_lib/products.js';
 
 const toCents = (usd) => Math.round(usd * 100);
-
-function pickTier(units) {
-  for (const t of TIERS) if (units <= t.max) return t;
-  return null;
-}
 
 export default async function handler(req, res) {
   if (applyCORS(req, res)) return;
 
   let units = 0;
+  let sizeId = '';
   if (req.method === 'GET') {
+    if (req.query.catalog === '1' || (!req.query.units && !req.query.size)) {
+      return json(res, 200, {
+        ok: true,
+        sizes: listSizes()
+      });
+    }
     units = Number(req.query.units || 0);
+    sizeId = normalizeSizeId(req.query.size);
   } else if (req.method === 'POST') {
     try {
       const raw = await readBody(req);
-      units = Number((raw && JSON.parse(raw).units) || 0);
+      const body = raw ? JSON.parse(raw) : {};
+      units = Number(body.units || 0);
+      sizeId = normalizeSizeId(body.size);
     } catch { return json(res, 400, { error: 'Invalid JSON body' }); }
   } else {
     return json(res, 405, { error: 'Method not allowed' });
@@ -38,14 +43,17 @@ export default async function handler(req, res) {
     return json(res, 400, { error: `Quantity must be between ${MIN_UNITS} and ${MAX_UNITS} in ${STEP}-unit increments.` });
   }
 
-  const tier = pickTier(units);
+  const size = getSize(sizeId);
+  const tier = pickTier(sizeId, units);
   if (!tier) return json(res, 400, { error: 'No tier matches the requested quantity.' });
 
-  const unitUSD = tier.unitUSD;
-  const totalCents = toCents(units * unitUSD);
+  const unitUSD = unitPriceUSD(sizeId, units);
+  const totalCents = bulkTotalCents(sizeId, units);
 
   return json(res, 200, {
     ok: true,
+    sizeId: size.id,
+    sizeLabel: size.label,
     units,
     unitUSD,
     unitCents: toCents(unitUSD),

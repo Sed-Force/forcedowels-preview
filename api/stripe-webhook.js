@@ -7,6 +7,16 @@ import { sql, nextCounter } from './_lib/db.js';
 import { buildOrderConfirmationEmail } from './_lib/email/orderConfirmation.js';
 import { buildInternationalOrderConfirmationEmail } from './_lib/email/internationalOrderConfirmation.js';
 import { buildInternationalInternalNotificationHTML } from './_lib/email/internationalInternalNotification.js';
+import {
+  bulkTotalCents,
+  kitPriceCents,
+  kitUnits,
+  pickTier,
+  sizeLabel,
+  expandSummaryLines,
+  formatItemsSummary,
+  DEFAULT_SIZE_ID
+} from './_lib/products.js';
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecret ? new Stripe(stripeSecret) : null;
@@ -41,26 +51,40 @@ function formatMoney(cents) {
   });
 }
 
-function unitPriceMillsFor(units) {
-  if (units >= 160000) return 63;   // $0.063
-  if (units >= 20000)  return 67.5; // $0.0675
-  return 72;                        // $0.072
+function unitPriceForLine(line) {
+  if (line.type === 'bulk') {
+    return pickTier(line.sizeId, line.units).unitUSD;
+  }
+  if (line.type === 'kit') {
+    const units = kitUnits(line.sizeId);
+    return kitPriceCents(line.sizeId) / 100 / units;
+  }
+  return 0;
 }
 
-function tierLabel(units) {
-  if (units >= 160000) return '160,000–960,000';
-  if (units >= 20000)  return '20,000–160,000';
-  return '5,000–20,000';
+function lineTotalCents(line) {
+  if (line.type === 'bulk') return bulkTotalCents(line.sizeId, line.units);
+  if (line.type === 'kit') return kitPriceCents(line.sizeId) * line.qty;
+  return 0;
 }
 
-function bulkTotalCents(units) {
-  if (!Number.isFinite(units) || units < 5000) return 0;
-  const mills = unitPriceMillsFor(units);
-  return Math.round((units * mills) / 10); // mills->cents
+function resolveOrderLines(metaSummary = {}) {
+  const expanded = expandSummaryLines(metaSummary.lines || []);
+  if (expanded.length) return expanded;
+
+  const lines = [];
+  if (metaSummary.bulkUnits > 0) {
+    lines.push({ type: 'bulk', sizeId: DEFAULT_SIZE_ID, units: Number(metaSummary.bulkUnits) });
+  }
+  if (metaSummary.kits > 0) {
+    lines.push({ type: 'kit', sizeId: DEFAULT_SIZE_ID, qty: Number(metaSummary.kits) });
+  }
+  return lines;
 }
 
 function buildInternalNotificationHTML({ invoiceNumber, customerName, customerEmail, customerPhone, orderDate, sessionId, subtotalCents, shippingCents, taxCents, totalCents, metaSummary, shippingMethod, shippingAddress, billingAddress, isTest }) {
-  const { bulkUnits = 0, kits = 0, tests = 0 } = metaSummary || {};
+  const { tests = 0 } = metaSummary || {};
+  const orderLines = resolveOrderLines(metaSummary);
 
   // Build order items table rows
   let itemRows = '';
@@ -73,28 +97,32 @@ function buildInternalNotificationHTML({ invoiceNumber, customerName, customerEm
         <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$1.00</td>
         <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$1.00</td>
       </tr>`;
-  } else if (bulkUnits > 0) {
-    const unitPrice = bulkTotalCents(bulkUnits) / bulkUnits / 100;
-    const tierName = tierLabel(bulkUnits);
-    itemRows += `
+  } else {
+    for (const line of orderLines) {
+      if (line.type === 'bulk') {
+        const unitPrice = unitPriceForLine(line);
+        const tierName = pickTier(line.sizeId, line.units).label;
+        itemRows += `
       <tr>
-        <td style="padding:12px;border-bottom:1px solid #e5e7eb;">Force Dowels</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;">Force Dowels — ${sizeLabel(line.sizeId)}</td>
         <td style="padding:12px;border-bottom:1px solid #e5e7eb;">${tierName}</td>
-        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:center;">${bulkUnits.toLocaleString()}</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:center;">${line.units.toLocaleString()}</td>
         <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$${unitPrice.toFixed(4)}</td>
-        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(bulkTotalCents(bulkUnits))}</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(lineTotalCents(line))}</td>
       </tr>`;
-  }
-
-  if (kits > 0) {
-    itemRows += `
+      } else if (line.type === 'kit') {
+        const unitsPerKit = kitUnits(line.sizeId);
+        const kitPrice = kitPriceCents(line.sizeId) / 100;
+        itemRows += `
       <tr>
-        <td style="padding:12px;border-bottom:1px solid #e5e7eb;">Force Dowels</td>
-        <td style="padding:12px;border-bottom:1px solid #e5e7eb;">Kit - 300 units</td>
-        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:center;">300</td>
-        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$0.12</td>
-        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$36.00</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;">Force Dowels — ${sizeLabel(line.sizeId)}</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;">Kit - ${unitsPerKit} units</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:center;">${line.qty} kit${line.qty > 1 ? 's' : ''}</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">$${kitPrice.toFixed(2)}</td>
+        <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(lineTotalCents(line))}</td>
       </tr>`;
+      }
+    }
   }
 
   const logoUrl = process.env.EMAIL_LOGO_URL || `${(process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels.com').replace(/\/$/, '')}/images/force-dowel-logo.jpg`;
@@ -332,6 +360,7 @@ export default async function handler(req, res) {
     try { metaSummary = JSON.parse(session.metadata?.summary || '{}'); } catch {}
 
     const { bulkUnits = 0, kits = 0, tests = 0 } = metaSummary;
+    const orderLines = resolveOrderLines(metaSummary);
     const shipCarrier = session.metadata?.ship_carrier || '';
     const shipService = session.metadata?.ship_service || '';
     const shippingMethod = [shipCarrier, shipService].filter(Boolean).join(' ');
@@ -388,15 +417,16 @@ export default async function handler(req, res) {
       orderType = 'test';
       itemsSummary = 'Test Order';
       quantity = 1;
-    } else if (bulkUnits > 0) {
-      orderType = 'bulk';
-      itemsSummary = `Bulk - ${bulkUnits.toLocaleString()} units`;
-      quantity = bulkUnits;
-    } else if (kits > 0) {
-      orderType = 'kit';
-      const totalUnits = kits * 300;
-      itemsSummary = `Kit - 300 units (${totalUnits}) (Qty: ${totalUnits})`;
-      quantity = totalUnits;
+    } else {
+      itemsSummary = formatItemsSummary(orderLines, tests);
+      quantity = orderLines.reduce((sum, line) => {
+        if (line.type === 'bulk') return sum + line.units;
+        if (line.type === 'kit') return sum + (line.qty * kitUnits(line.sizeId));
+        return sum;
+      }, 0);
+      if (bulkUnits > 0 && kits > 0) orderType = 'mixed';
+      else if (kits > 0) orderType = 'kit';
+      else orderType = 'bulk';
     }
 
     // Save order to database
@@ -485,18 +515,24 @@ export default async function handler(req, res) {
     let tierLabelText = '';
     let units = quantity;
 
-    if (orderType === 'bulk' && bulkUnits >= 5000) {
-      const mills = unitPriceMillsFor(bulkUnits);
-      unitUsd = (mills / 10000).toFixed(4); // mills to dollars
-      tierLabelText = tierLabel(bulkUnits);
-    } else if (orderType === 'kit') {
-      unitUsd = '36.0000';
-      tierLabelText = 'Starter Kit';
-      units = kits * 300;
-    } else if (orderType === 'test') {
+    if (orderType === 'test') {
       unitUsd = '1.0000';
       tierLabelText = 'Test Order';
       units = 1;
+    } else if (orderLines.length === 1 && orderLines[0].type === 'bulk') {
+      const line = orderLines[0];
+      unitUsd = unitPriceForLine(line).toFixed(4);
+      tierLabelText = `${sizeLabel(line.sizeId)} • ${pickTier(line.sizeId, line.units).label}`;
+      units = line.units;
+    } else if (orderLines.length === 1 && orderLines[0].type === 'kit') {
+      const line = orderLines[0];
+      unitUsd = (kitPriceCents(line.sizeId) / 100).toFixed(4);
+      tierLabelText = `${sizeLabel(line.sizeId)} Starter Kit`;
+      units = line.qty * kitUnits(line.sizeId);
+    } else {
+      unitUsd = (subtotalCents / Math.max(units, 1) / 100).toFixed(4);
+      tierLabelText = itemsSummary;
+      units = quantity;
     }
 
     const lineTotal = (subtotalCents / 100).toFixed(2);
@@ -617,7 +653,7 @@ export default async function handler(req, res) {
             shippingCents,
             taxCents,
             totalCents,
-            metaSummary: { bulkUnits, kits, tests },
+            metaSummary,
             shippingMethod,
             shippingAddress,
             billingAddress,

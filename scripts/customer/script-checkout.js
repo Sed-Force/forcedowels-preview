@@ -2,9 +2,13 @@
    Checkout page logic with cheapest-first sorting + styled selection state.
 */
 (function () {
+  const catalog = window.FDProducts;
+  if (!catalog) {
+    console.error('FDProducts catalog missing');
+    return;
+  }
   const KEY_CART='fd_cart', KEY_DEST='fd_dest', KEY_RATE='fd_ship_quote';
-  const BULK_MIN=5000, BULK_MAX=960000, BULK_STEP=5000;
-  const unitPriceFor = (u)=> (u>=160000?0.0630:(u>=20000?0.0675:0.0720));
+  const BULK_MIN=catalog.MIN_UNITS, BULK_MAX=catalog.MAX_UNITS, BULK_STEP=catalog.STEP;
   const fmtMoney = (n)=> (Number(n)||0).toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2});
   const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 
@@ -32,15 +36,15 @@
     try{
       const raw=localStorage.getItem(KEY_CART); const arr=raw?JSON.parse(raw):[];
       return arr.map(it=>{
-        if(it?.type==='bulk'){ let u=Number(it.units||0); if(!Number.isFinite(u)||u<BULK_MIN)u=BULK_MIN; if(u>BULK_MAX)u=BULK_MAX; u=Math.round(u/BULK_STEP)*BULK_STEP; return {type:'bulk',units:u}; }
-        if(it?.type==='kit'){ let q=Number(it.qty||0); if(!Number.isFinite(q)||q<1)q=1; return {type:'kit',qty:q}; }
+        if(it?.type==='bulk'){ let u=Number(it.units||0); if(!Number.isFinite(u)||u<BULK_MIN)u=BULK_MIN; if(u>BULK_MAX)u=BULK_MAX; u=Math.round(u/BULK_STEP)*BULK_STEP; return {type:'bulk',sizeId:catalog.normalizeSizeId(it.sizeId),units:u}; }
+        if(it?.type==='kit'){ let q=Number(it.qty||0); if(!Number.isFinite(q)||q<1)q=1; return {type:'kit',sizeId:catalog.normalizeSizeId(it.sizeId),qty:q}; }
         if(it?.type==='test'){ return {type:'test',qty:1}; }
         return null;
       }).filter(Boolean);
     }catch{return [];}
   }
-  function updateBadge(items){ if(!badgeEl)return; let t=0; for(const it of items){ if(it.type==='bulk')t+=it.units; else if(it.type==='kit')t+=(it.qty*300); else if(it.type==='test')t+=1; } badgeEl.textContent=t>0?t.toLocaleString():''; badgeEl.style.display=t>0?'inline-block':'none'; }
-  function computeSubtotal(items){ let c=0; for(const it of items){ if(it.type==='bulk') c+=Math.round(unitPriceFor(it.units)*it.units*100); else if(it.type==='kit') c+=3600*it.qty; else if(it.type==='test') c+=100; } return c/100; }
+  function updateBadge(items){ if(!badgeEl)return; let t=0; for(const it of items){ if(it.type==='bulk')t+=it.units; else if(it.type==='kit')t+=(it.qty*catalog.kitUnits(it.sizeId)); else if(it.type==='test')t+=1; } badgeEl.textContent=t>0?t.toLocaleString():''; badgeEl.style.display=t>0?'inline-block':'none'; }
+  function computeSubtotal(items){ let c=0; for(const it of items){ if(it.type==='bulk') c+=catalog.bulkTotalCents(it.sizeId,it.units); else if(it.type==='kit') c+=Math.round(catalog.kitPriceUSD(it.sizeId)*100)*it.qty; else if(it.type==='test') c+=100; } return c/100; }
   function getDest(){ try{return JSON.parse(localStorage.getItem(KEY_DEST)||'{}');}catch{return{};} }
   function setDest(d){ localStorage.setItem(KEY_DEST, JSON.stringify(d||{})); }
   function getChosenRate(){ try{return JSON.parse(localStorage.getItem(KEY_RATE)||'null');}catch{return null;} }
@@ -88,7 +92,7 @@
       setChosenRate(sorted[0]);
       recalcTotals();
     }else{
-      const li=document.createElement('li'); li.className='muted'; li.textContent='No rates yet. Enter address and click “Get Rates”.'; ratesList.appendChild(li);
+      const li=document.createElement('li'); li.className='rates-empty'; li.textContent='No rates yet. Enter an address and click Get Rates.'; ratesList.appendChild(li);
     }
 
     if(status && typeof status==='object'){
