@@ -9,7 +9,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '20
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const EMAIL_FROM = process.env.EMAIL_FROM || 'orders@forcedowels.com';
-const LOGO_URL = process.env.EMAIL_LOGO_URL || 'https://forcedowels-preview.vercel.app/images/force-dowel-logo.jpg';
+const LOGO_URL = process.env.EMAIL_LOGO_URL || 'https://forcedowels-preview.vercel.app/images/LOGO_Wordmark+Icon-WhiteAccent@1024.png';
 const BRAND_BLUE = '#1C4A99';
 
 function buildShippingEmail({ customerName, orderNumber, carrier, trackingNumber }) {

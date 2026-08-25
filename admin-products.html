@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Products - Force Dowel Admin</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/admin/navbar.css?v=1">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .page-intro {
+      background: white;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      border: 1px solid #e5e7eb;
+      font-size: 14px;
+      color: #4b5563;
+    }
+    .product-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .product-info h3 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .product-info .sku {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+    .stock-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .stock-badge {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .stock-badge.in {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .stock-badge.out {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .toggle {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: #dc2626;
+      border-radius: 999px;
+      transition: 0.2s;
+    }
+    .toggle-slider::before {
+      content: "";
+      position: absolute;
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      top: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.2s;
+    }
+    .toggle input:checked + .toggle-slider {
+      background: #059669;
+    }
+    .toggle input:checked + .toggle-slider::before {
+      transform: translateX(20px);
+    }
+    .toggle input:disabled + .toggle-slider {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .loading, .empty {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <script src="scripts/admin/script-admin-auth.js"></script>
+  <script defer src="scripts/admin/admin-header.js"></script>
+
+  <admin-header></admin-header>
+
+  <div class="container">
+    <div class="page-intro">
+      Toggle a size off to mark it <strong>Out of Stock</strong>. Out-of-stock sizes show crossed out
+      in red on the Order page and can’t be added to the cart or checked out until you turn them back on.
+    </div>
+
+    <div id="products-container">
+      <div class="loading">Loading products...</div>
+    </div>
+  </div>
+
+  <script>
+    async function loadProducts() {
+      try {
+        const res = await fetch('/api/admin/product-availability');
+        if (!res.ok) throw new Error('Failed to load products');
+        const data = await res.json();
+        renderProducts(data.products || []);
+      } catch (err) {
+        document.getElementById('products-container').innerHTML = `
+          <div class="empty">
+            <h2>Error loading products</h2>
+            <p>${err.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderProducts(products) {
+      const container = document.getElementById('products-container');
+      if (products.length === 0) {
+        container.innerHTML = '<div class="empty"><h2>No products found</h2></div>';
+        return;
+      }
+
+      container.innerHTML = products.map((p) => `
+        <div class="product-card" id="card-${p.id}">
+          <div class="product-info">
+            <h3>${p.label}</h3>
+            <div class="sku">${p.sku}</div>
+          </div>
+          <div class="stock-status">
+            <span class="stock-badge ${p.inStock ? 'in' : 'out'}" id="badge-${p.id}">
+              ${p.inStock ? 'In Stock' : 'Out of Stock'}
+            </span>
+            <label class="toggle">
+              <input type="checkbox" ${p.inStock ? 'checked' : ''} onchange="toggleStock('${p.id}', this)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function toggleStock(sizeId, checkbox) {
+      const inStock = checkbox.checked;
+      checkbox.disabled = true;
+
+      try {
+        const res = await fetch('/api/admin/product-availability', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sizeId, inStock })
+        });
+        if (!res.ok) throw new Error('Failed to update');
+
+        const badge = document.getElementById(`badge-${sizeId}`);
+        badge.textContent = inStock ? 'In Stock' : 'Out of Stock';
+        badge.className = `stock-badge ${inStock ? 'in' : 'out'}`;
+      } catch (err) {
+        alert('Could not update stock status: ' + err.message);
+        checkbox.checked = !inStock;
+      } finally {
+        checkbox.disabled = false;
+      }
+    }
+
+    loadProducts();
+  </script>
+</body>
+</html>

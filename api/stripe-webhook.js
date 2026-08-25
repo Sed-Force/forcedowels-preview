@@ -125,7 +125,7 @@ function buildInternalNotificationHTML({ invoiceNumber, customerName, customerEm
     }
   }
 
-  const logoUrl = process.env.EMAIL_LOGO_URL || `${(process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels.com').replace(/\/$/, '')}/images/force-dowel-logo.jpg`;
+  const logoUrl = process.env.EMAIL_LOGO_URL || `${(process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels.com').replace(/\/$/, '')}/images/LOGO_Wordmark+Icon-WhiteAccent@1024.png`;
   const testBanner = isTest ? '<tr><td style="padding:16px;background:#fbbf24;text-align:center;"><h2 style="margin:0;color:#1b2437;">🧪 TEST ORDER - Email System Verification</h2></td></tr>' : '';
 
   return `<!doctype html>

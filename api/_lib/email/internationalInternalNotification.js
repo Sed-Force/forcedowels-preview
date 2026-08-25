@@ -36,7 +36,7 @@ export function buildInternationalInternalNotificationHTML(data = {}) {
     });
   };
 
-  const logoUrl = `${(process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/$/, '')}/images/force-dowel-logo.jpg`;
+  const logoUrl = `${(process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/$/, '')}/images/LOGO_Wordmark+Icon-WhiteAccent@1024.png`;
 
   // Build order items row
   let itemRow = '';

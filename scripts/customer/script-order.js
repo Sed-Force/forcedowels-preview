@@ -24,6 +24,16 @@
   let orderMode = 'bulk'; // 'bulk' | 'kit'
   let bulkQty = MIN_QTY;
   let kitQty = KIT_MIN;
+  let availability = Object.fromEntries(catalog.SIZES.map((s) => [s.id, true]));
+
+  function isSizeInStock(sizeId) {
+    return availability[catalog.normalizeSizeId(sizeId)] !== false;
+  }
+
+  function firstInStockSizeId() {
+    const found = catalog.SIZES.find((s) => isSizeInStock(s.id));
+    return found ? found.id : catalog.DEFAULT_SIZE_ID;
+  }
 
   function guestMaxQty() {
     const size = catalog.getSize(currentSizeId);
@@ -88,6 +98,7 @@
   const testKitBtn = $('#test-kit');
   const tierList = $('#tier-list');
   const sizePicker = $('#size-picker');
+  const orderGrid = $('.order-grid');
   const qtyLabel = $('#qty-label');
   const qtyUnitLabel = $('#qty-unit-label');
   const priceLabel = $('#price-per-label');
@@ -99,6 +110,52 @@
 
   function setActiveTier(btn) {
     tierButtons().forEach((b) => b.classList.toggle('active', b === btn));
+  }
+
+  function setCheckingAvailability(isChecking) {
+    orderGrid?.classList.toggle('is-checking-availability', isChecking);
+  }
+
+  function applyAvailabilityToButtons() {
+    $$('.size-option', sizePicker || document).forEach((btn) => {
+      const inStock = isSizeInStock(btn.dataset.size);
+      btn.classList.toggle('out-of-stock', !inStock);
+      btn.disabled = !inStock;
+      btn.setAttribute('aria-disabled', inStock ? 'false' : 'true');
+      if (!inStock) btn.title = 'Currently out of stock';
+      else btn.removeAttribute('title');
+    });
+
+    const intlSelect = $('#intl-size');
+    if (intlSelect) {
+      Array.from(intlSelect.options).forEach((opt) => {
+        const inStock = isSizeInStock(opt.value);
+        opt.disabled = !inStock;
+        opt.classList.toggle('out-of-stock-option', !inStock);
+        const base = opt.dataset.baseLabel || (opt.dataset.baseLabel = opt.textContent);
+        opt.textContent = inStock ? base : `${base} (Out of Stock)`;
+      });
+    }
+  }
+
+  // Network-only: resolves the real availability map before we paint the
+  // initial size/tier/kit selection, so a customer never sees an out-of-stock
+  // size rendered as selectable and then disabled a moment later. Bounded by
+  // a timeout so a slow or unreachable API can't stall the page — if it
+  // doesn't resolve in time we fail open and treat everything as in stock.
+  async function fetchAvailability() {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    try {
+      const res = await fetch('/api/product-availability', { signal: controller.signal });
+      if (!res.ok) throw new Error('bad response');
+      const data = await res.json();
+      if (data && data.availability) availability = data.availability;
+    } catch {
+      // Fail open: keep the default all-in-stock map.
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   function setActiveSize(sizeId) {
@@ -269,13 +326,28 @@
     }
   }
 
-  initClerk();
-  applyModeUI('bulk');
-  setActiveSize(currentSizeId);
-  updateHeaderBadge();
+  async function boot() {
+    initClerk();
+    // The size/tier/kit/checkout controls start dimmed and non-interactive
+    // (see .is-checking-availability in order.html) until this resolves, so
+    // we never paint an out-of-stock size as available and then flip it.
+    await fetchAvailability();
+    if (!isSizeInStock(currentSizeId)) {
+      currentSizeId = firstInStockSizeId();
+    }
+    applyModeUI('bulk');
+    setActiveSize(currentSizeId);
+    applyAvailabilityToButtons();
+    setCheckingAvailability(false);
+    updateHeaderBadge();
+  }
+  boot();
 
   sizePicker?.querySelectorAll('.size-option').forEach((btn) => {
-    btn.addEventListener('click', () => setActiveSize(btn.dataset.size));
+    btn.addEventListener('click', () => {
+      if (btn.disabled || !isSizeInStock(btn.dataset.size)) return;
+      setActiveSize(btn.dataset.size);
+    });
   });
 
   minusBtn?.addEventListener('click', () => {
@@ -305,6 +377,11 @@
   });
 
   addBtn?.addEventListener('click', () => {
+    if (!isSizeInStock(currentSizeId)) {
+      alert('This size is currently out of stock. Please choose another size.');
+      return;
+    }
+
     let cart = loadCart();
 
     if (cart.some((i) => i.type === 'test')) {

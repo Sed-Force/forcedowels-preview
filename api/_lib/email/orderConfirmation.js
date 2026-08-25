@@ -22,7 +22,7 @@ export function buildOrderConfirmationEmail(data = {}) {
     ship_postal = '',
     ship_country = '',
     order_url = '',
-    absolute_logo_url = `${(process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/$/, '')}/images/force-dowel-logo.jpg`,
+    absolute_logo_url = `${(process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/$/, '')}/images/LOGO_Wordmark+Icon-WhiteAccent@1024.png`,
     is_test = false,
   } = data;
 
