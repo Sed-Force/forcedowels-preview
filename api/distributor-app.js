@@ -201,7 +201,7 @@ function buildProfessionalEmail({
   monthly_volume, territory, compatibility, notes,
   submittedDate, acceptUrl, rejectUrl
 }) {
-  const logoUrl = process.env.EMAIL_LOGO_URL || 'https://forcedowels-preview.vercel.app/images/force-dowel-logo.jpg';
+  const logoUrl = process.env.EMAIL_LOGO_URL || 'https://forcedowels-preview.vercel.app/images/LOGO_Wordmark+Icon-WhiteAccent@1024.png';
   const brandColor = '#1C4A99';
 
   return `

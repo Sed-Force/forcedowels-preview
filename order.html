@@ -184,6 +184,69 @@
     .size-option.active p {
       color: #000000 !important;
     }
+
+    .size-option.out-of-stock {
+      opacity: 0.75;
+      cursor: not-allowed;
+    }
+    .size-option.out-of-stock .size-name {
+      color: #fca5a5 !important;
+      text-decoration: line-through;
+    }
+    .size-option.out-of-stock.active .size-name {
+      color: #dc2626 !important;
+      text-decoration: line-through;
+    }
+    .size-option .stock-flag {
+      display: none;
+    }
+    .size-option.out-of-stock .stock-flag {
+      display: block;
+      margin-top: 2px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #dc2626 !important;
+    }
+    #intl-size option.out-of-stock-option {
+      color: #dc2626;
+    }
+
+    /* Hide the size/tier/kit/checkout controls behind a non-interactive, dimmed
+       state until we've confirmed real stock status — avoids showing an
+       out-of-stock size as selectable and then yanking it away a moment later. */
+    .order-grid.is-checking-availability .size-option,
+    .order-grid.is-checking-availability .tier,
+    .order-grid.is-checking-availability #starter-kit,
+    .order-grid.is-checking-availability #btn-add-to-cart {
+      opacity: 0.5;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+    }
+    .availability-checking-note {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-muted, #6b7280);
+      margin: -8px 0 16px;
+    }
+    .order-grid.is-checking-availability .availability-checking-note {
+      display: flex;
+    }
+    .availability-spinner {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      animation: availability-spin 0.6s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes availability-spin {
+      to { transform: rotate(360deg); }
+    }
     </style>
 </head>
 <body>
@@ -201,23 +264,24 @@
 
   <!-- Pricing + Calculator -->
   <section class="section">
-    <div class="container order-grid">
+    <div class="container order-grid is-checking-availability">
 
       <!-- LEFT: Size + Pricing tiers -->
       <div class="tiers">
         <h2>Select a Size</h2>
+        <p class="availability-checking-note"><span class="availability-spinner" aria-hidden="true"></span> Checking current availability…</p>
         <div class="size-picker" id="size-picker" role="tablist" aria-label="Dowel size">
           <button type="button" class="btn btn--primary full-width size-option active" data-size="8x38" role="tab" aria-selected="true">
             <p class="size-name">8mm × 38mm</p>
-            <!-- <p class="size-hint">8mm × 38mm</p> -->
+            <span class="stock-flag">Out of Stock</span>
           </button>
           <button type="button" class="btn btn--primary full-width size-option" data-size="8x30" role="tab" aria-selected="false">
             <p class="size-name">8mm × 30mm</p>
-            <!-- <p class="size-hint">8mm × 30mm</p> -->
+            <span class="stock-flag">Out of Stock</span>
           </button>
           <button type="button" class="btn btn--primary full-width size-option" data-size="6x30" role="tab" aria-selected="false">
             <p class="size-name">6mm × 30mm</p>
-            <!-- <p class="size-hint">6mm × 30mm</p> -->
+            <span class="stock-flag">Out of Stock</span>
           </button>
         </div>
 
@@ -237,7 +301,7 @@
             <span class="tier-price">$0.0720/Unit</span>
           </button>
 
-          <button class="tier locked" type="button" data-min="25000" data-requires-auth="true" disabled aria-disabled="true" title="Sign in to unlock this pricing tier">
+          <!-- <button class="tier locked" type="button" data-min="25000" data-requires-auth="true" disabled aria-disabled="true" title="Sign in to unlock this pricing tier">
             <span class="tier-main">
               <span class="tier-range">25,000 - 164,999</span>
               <span class="tier-lock">🔒 Members-Only</span>
@@ -251,7 +315,7 @@
               <span class="tier-lock">🔒 Members-Only</span>
             </span>
             <span class="tier-price">$0.0630/Unit</span>
-          </button>
+          </button> -->
         </div>
 
         <h3 class="mt">Or Try Our Starter Kit</h3>
@@ -697,7 +761,7 @@
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to submit request');
+        throw new Error(result.message || result.error || 'Failed to submit request');
       }
 
       // Handle success based on action

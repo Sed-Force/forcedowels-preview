@@ -17,6 +17,6 @@
     "stripe": "^16.6.0"
   },
   "devDependencies": {
-    "vercel": "^58.9.5"
+    "vercel": "^59.5.0"
   }
 }

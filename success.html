@@ -18,23 +18,25 @@
     /* Small page-local tweaks for the summary layout */
     .success-wrap { padding: 56px 0 32px; }
     .summary-card {
-      background: #0B1C2A; color: #fff; border-radius: 16px;
+      background: var(--bg-card); color: var(--text); border: 1px solid var(--border);
+      border-radius: 16px; box-shadow: var(--shadow-xs);
       padding: 24px; display: grid; gap: 24px;
     }
     .summary-head { display:flex; align-items:center; justify-content:space-between; }
-    .summary-head h1 { margin:0; font-size: clamp(20px, 2.2vw, 28px); }
+    .summary-head h1 { margin:0; font-size: clamp(20px, 2.2vw, 28px); color: var(--text); }
     .kv { list-style:none; padding:0; margin:0; display:grid; gap:10px; }
     .kv li { display:flex; gap:10px; align-items:baseline; }
-    .kv .k { font-weight:700; min-width:110px; }
+    .kv .k { font-weight:700; min-width:110px; color: var(--text); }
     .kv .k::after { content: ": "; }  /* <- adds colon + space after each label */
-    .kv .v { font-weight:600; opacity: 0.95; }
+    .kv .v { font-weight:600; color: var(--text-muted); }
     .items-card {
-      background: #081521; border-radius: 14px; padding: 18px; display:grid; gap: 8px;
+      background: var(--bg-card-alt); border: 1px solid var(--border);
+      border-radius: 14px; padding: 18px; display:grid; gap: 8px;
     }
     .item-line { display:flex; justify-content:space-between; gap:16px; }
     .item-main { display:grid; gap:4px; }
-    .item-title { font-weight:700; }
-    .item-note { font-size:14px; opacity:0.85; }
+    .item-title { font-weight:700; color: var(--text); }
+    .item-note { font-size:14px; color: var(--text-muted); }
     .continue-cta { display:flex; gap:12px; flex-wrap:wrap; }
   </style>
 
@@ -62,7 +64,9 @@
       <div class="summary-card">
         <div class="summary-head">
           <h1>Order Confirmed</h1>
-          <img src="/images/force-dowel-logo.jpg" alt="Force Dowels" style="height:34px;border-radius:999px;">
+          <span style="display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:999px;background:var(--brand);">
+            <img src="/images/LOGO_Wordmark+Icon-WhiteAccent@1024.png" alt="Force Dowels" style="height:20px;width:auto;display:block;">
+          </span>
         </div>
 
         <!-- Key values -->

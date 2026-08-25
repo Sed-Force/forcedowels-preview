@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/admin/navbar.css?v=1">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -17,49 +18,6 @@
       background: #f3f4f6;
       color: #111827;
       line-height: 1.5;
-    }
-    .admin-header {
-      background: #1C4A99;
-      color: white;
-      padding: 16px 24px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .admin-header-left {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    .admin-logo {
-      height: 40px;
-      width: auto;
-      border-radius: 4px;
-    }
-    .admin-header h1 {
-      font-size: 20px;
-      font-weight: 700;
-      margin: 0;
-    }
-    .admin-nav {
-      display: flex;
-      gap: 16px;
-    }
-    .admin-nav a {
-      color: white;
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 500;
-      padding: 6px 12px;
-      border-radius: 4px;
-      transition: background 0.2s;
-    }
-    .admin-nav a:hover {
-      background: rgba(255,255,255,0.1);
-    }
-    .admin-nav a.active {
-      background: rgba(255,255,255,0.2);
     }
     .container {
       max-width: 1400px;
@@ -390,20 +348,9 @@
 </head>
 <body>
   <script src="scripts/admin/script-admin-auth.js"></script>
+  <script defer src="scripts/admin/admin-header.js"></script>
 
-  <header class="admin-header">
-    <div class="admin-header-left">
-      <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" class="admin-logo" />
-      <h1>Force Dowel Admin</h1>
-    </div>
-    <nav class="admin-nav">
-      <a href="/admin.html" class="active">Orders</a>
-      <a href="/admin-customers.html">Customers</a>
-      <a href="/admin-distributors.html">Distributors</a>
-      <a href="/admin-sales.html">Sales</a>
-      <a href="#" onclick="adminLogout(); return false;" style="margin-left: auto;">Logout</a>
-    </nav>
-  </header>
+  <admin-header></admin-header>
 
   <div class="container">
     <div class="filters">
@@ -519,7 +466,7 @@
       if (!address) return '';
 
       // If it's already a formatted string, return it
-      if (typeof address === 'string' && !address.startsWith('{')) {
+      if (typeof address === 'string' && !address.trim().startsWith('{')) {
         return address;
       }
 
@@ -533,23 +480,23 @@
         }
       }
 
-      // Format as clean address string
-      const parts = [];
-      if (addrObj.name) parts.push(addrObj.name);
-      if (addrObj.line1) parts.push(addrObj.line1);
-      if (addrObj.line2) parts.push(addrObj.line2);
+      // Format as a clean, multi-line address:
+      //   Name
+      //   Street
+      //   City, ST ZIP
+      //   Country (omitted for domestic US addresses)
+      const lines = [];
+      if (addrObj.name) lines.push(addrObj.name);
+      if (addrObj.line1) lines.push(addrObj.line1);
+      if (addrObj.line2) lines.push(addrObj.line2);
 
-      // City, State ZIP format
-      const cityStateZip = [
-        addrObj.city,
-        addrObj.state,
-        addrObj.postal_code
-      ].filter(Boolean).join(', ');
+      const cityState = [addrObj.city, addrObj.state].filter(Boolean).join(', ');
+      const cityStateZip = [cityState, addrObj.postal_code].filter(Boolean).join(' ');
+      if (cityStateZip) lines.push(cityStateZip);
 
-      if (cityStateZip) parts.push(cityStateZip);
-      if (addrObj.country) parts.push(addrObj.country);
+      if (addrObj.country && addrObj.country.toUpperCase() !== 'US') lines.push(addrObj.country);
 
-      return parts.join(' ');
+      return lines.join('<br>');
     }
 
     async function loadOrders() {
@@ -962,7 +909,7 @@
     }
 
     function buildInvoiceHTML(order) {
-      const logoUrl = 'https://forcedowels-preview.vercel.app/images/force-dowel-logo.jpg';
+      const logoUrl = 'https://forcedowels-preview.vercel.app/images/LOGO_Wordmark+Icon-WhiteAccent@1024.png';
       const brandBlue = '#1C4A99';
 
       return `
@@ -970,7 +917,9 @@
           <!-- Header with Logo -->
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 3px solid ${brandBlue}; padding-bottom: 20px;">
             <div>
-              <img src="${logoUrl}" alt="Force Dowels" style="height: 60px; border-radius: 8px;">
+              <span style="display: inline-flex; align-items: center; height: 60px; padding: 0 16px; border-radius: 999px; background: ${brandBlue};">
+                <img src="${logoUrl}" alt="Force Dowels" style="height: 34px; width: auto; display: block;">
+              </span>
               <div style="margin-top: 10px; color: #6b7280; font-size: 13px;">
                 <strong>Force Dowels</strong><br>
                 info@forcedowels.com
@@ -997,13 +946,13 @@
                 ${order.billing_address ? `
                   <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px; font-weight: 600;">Billing Address:</div>
-                    <div>${order.billing_address}</div>
+                    <div>${formatAddress(order.billing_address)}</div>
                   </div>
                 ` : ''}
                 ${order.shipping_address ? `
                   <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px; font-weight: 600;">Shipping Address:</div>
-                    <div>${order.shipping_address}</div>
+                    <div>${formatAddress(order.shipping_address)}</div>
                   </div>
                 ` : ''}
               </div>

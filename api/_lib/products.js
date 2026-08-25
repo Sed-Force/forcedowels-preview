@@ -14,8 +14,9 @@ export const SIZES = [
     isOriginal: true,
     bulkTiers: [
       { min: 5000, max: 24999, unitUSD: 0.072, requiresAuth: false, label: '5,000–24,999' },
-      { min: 25000, max: 164999, unitUSD: 0.0675, requiresAuth: true, label: '25,000–164,999' },
-      { min: 165000, max: 960000, unitUSD: 0.063, requiresAuth: true, label: '165,000–960,000' }
+      { min: 25000, max: 960000, unitUSD: 0.0675, requiresAuth: true, label: '25,000–100,000' },
+      // { min: 25000, max: 164999, unitUSD: 0.0675, requiresAuth: true, label: '25,000–164,999' },
+      // { min: 165000, max: 960000, unitUSD: 0.063, requiresAuth: true, label: '165,000–960,000' }
     ],
     kit: { units: 300, priceUSD: 36, title: 'Force Dowels Kit' }
   },
@@ -27,8 +28,9 @@ export const SIZES = [
     // Same quantity breaks as 8x38; update unitUSD / kit.priceUSD when this size’s list prices are set.
     bulkTiers: [
       { min: 5000, max: 24999, unitUSD: 0.072, requiresAuth: false, label: '5,000–24,999' },
-      { min: 25000, max: 164999, unitUSD: 0.0675, requiresAuth: true, label: '25,000–164,999' },
-      { min: 165000, max: 960000, unitUSD: 0.063, requiresAuth: true, label: '165,000–960,000' }
+      { min: 25000, max: 960000, unitUSD: 0.0675, requiresAuth: true, label: '25,000–100,000' },
+      // { min: 25000, max: 164999, unitUSD: 0.0675, requiresAuth: true, label: '25,000–164,999' },
+      // { min: 165000, max: 960000, unitUSD: 0.063, requiresAuth: true, label: '165,000–960,000' }
     ],
     kit: { units: 300, priceUSD: 36, title: 'Force Dowels Kit' }
   },
@@ -40,8 +42,9 @@ export const SIZES = [
     // Same quantity breaks as 8x38; update unitUSD / kit.priceUSD when this size’s list prices are set.
     bulkTiers: [
       { min: 5000, max: 24999, unitUSD: 0.072, requiresAuth: false, label: '5,000–24,999' },
-      { min: 25000, max: 164999, unitUSD: 0.0675, requiresAuth: true, label: '25,000–164,999' },
-      { min: 165000, max: 960000, unitUSD: 0.063, requiresAuth: true, label: '165,000–960,000' }
+      { min: 25000, max: 960000, unitUSD: 0.0675, requiresAuth: true, label: '25,000–100,000' },
+      // { min: 25000, max: 164999, unitUSD: 0.0675, requiresAuth: true, label: '25,000–164,999' },
+      // { min: 165000, max: 960000, unitUSD: 0.063, requiresAuth: true, label: '165,000–960,000' }
     ],
     kit: { units: 300, priceUSD: 36, title: 'Force Dowels Kit' }
   }

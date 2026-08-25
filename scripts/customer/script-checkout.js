@@ -184,7 +184,14 @@
 
         if(rate) payload.shipping = {carrier:rate.carrier,service:rate.service,amount:rate.amount,currency:rate.currency||'USD'};
         const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-        if(!res.ok){ console.error('Checkout failed',await res.text()); alert('A server error occurred creating your checkout. Please try again.'); return; }
+        if(!res.ok){
+          const errText=await res.text();
+          console.error('Checkout failed',errText);
+          let msg='A server error occurred creating your checkout. Please try again.';
+          try{ const errData=JSON.parse(errText); if(errData?.message) msg=errData.message; }catch{}
+          alert(msg);
+          return;
+        }
         const data=await res.json(); if(!data?.url){ alert('Could not start checkout. Please try again.'); return; }
         window.location.assign(data.url);
       }catch(e){ console.error(e); alert('Network error creating checkout. Please try again.'); }

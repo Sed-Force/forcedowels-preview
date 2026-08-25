@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/admin/navbar.css?v=1">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -17,49 +18,6 @@
       background: #f3f4f6;
       color: #111827;
       line-height: 1.5;
-    }
-    .admin-header {
-      background: #1C4A99;
-      color: white;
-      padding: 16px 24px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .admin-header-left {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    .admin-logo {
-      height: 40px;
-      width: auto;
-      border-radius: 4px;
-    }
-    .admin-header h1 {
-      font-size: 20px;
-      font-weight: 700;
-      margin: 0;
-    }
-    .admin-nav {
-      display: flex;
-      gap: 16px;
-    }
-    .admin-nav a {
-      color: white;
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 500;
-      padding: 6px 12px;
-      border-radius: 4px;
-      transition: background 0.2s;
-    }
-    .admin-nav a:hover {
-      background: rgba(255,255,255,0.1);
-    }
-    .admin-nav a.active {
-      background: rgba(255,255,255,0.2);
     }
     .container {
       max-width: 1400px;
@@ -251,20 +209,9 @@
 </head>
 <body>
   <script src="scripts/admin/script-admin-auth.js"></script>
+  <script defer src="scripts/admin/admin-header.js"></script>
 
-  <header class="admin-header">
-    <div class="admin-header-left">
-      <img src="/images/force-dowel-logo.jpg" alt="Force Dowel Company logo" class="admin-logo" />
-      <h1>Force Dowel Admin</h1>
-    </div>
-    <nav class="admin-nav">
-      <a href="/admin.html">Orders</a>
-      <a href="/admin-customers.html">Customers</a>
-      <a href="/admin-distributors.html">Distributors</a>
-      <a href="/admin-sales.html" class="active">Sales</a>
-      <a href="#" onclick="adminLogout(); return false;" style="margin-left: auto;">Logout</a>
-    </nav>
-  </header>
+  <admin-header></admin-header>
 
   <div class="container">
     <div class="period-filters">

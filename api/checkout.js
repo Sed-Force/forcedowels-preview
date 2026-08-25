@@ -19,6 +19,7 @@ import {
   kitProductName,
   compactSummaryLines
 } from './_lib/products.js';
+import { getAvailabilityMap } from './_lib/availability.js';
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecret ? new Stripe(stripeSecret) : null;
@@ -106,6 +107,20 @@ export default async function handler(req, res) {
 
   if (!bulkUnits && !kits && !tests) {
     return asJSON(res, 400, { error: 'Cart is empty.' });
+  }
+
+  try {
+    const availability = await getAvailabilityMap();
+    const outOfStock = lines.find((line) => availability[line.sizeId] === false);
+    if (outOfStock) {
+      return asJSON(res, 400, {
+        error: 'size_out_of_stock',
+        message: `${bulkProductName(outOfStock.sizeId)} is currently out of stock. Please remove it from your cart.`,
+        sizeId: outOfStock.sizeId
+      });
+    }
+  } catch (err) {
+    console.error('checkout availability check failed:', err);
   }
 
   try {

@@ -13,6 +13,7 @@ import {
   sizeLabel,
   compactSummaryLines
 } from './_lib/products.js';
+import { getAvailabilityMap } from './_lib/availability.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' });
 
@@ -24,7 +25,7 @@ const PREFIX     = process.env.EMAIL_TAG_PREFIX || (IS_PREVIEW ? '[PREVIEW] ' : 
 // Branding
 const BRAND_BLUE   = process.env.EMAIL_PRIMARY_COLOR || '#1C4A99';
 const SITE_BASE    = (process.env.NEXT_PUBLIC_BASE_URL || 'https://forcedowels.com').replace(/\/$/, '');
-const LOGO_URL     = process.env.EMAIL_LOGO_URL || `${SITE_BASE}/images/force-dowel-logo.jpg`;
+const LOGO_URL     = process.env.EMAIL_LOGO_URL || `${SITE_BASE}/images/LOGO_Wordmark+Icon-WhiteAccent@1024.png`;
 const LOGO_HEIGHT  = Number(process.env.EMAIL_LOGO_HEIGHT || 48);
 
 // Helpers
@@ -98,6 +99,18 @@ export default async function handler(req, res) {
 
   if (action !== 'request' && action !== 'reserve') {
     return json(res, 400, { error: 'Invalid action. Must be "request" or "reserve"' });
+  }
+
+  try {
+    const availability = await getAvailabilityMap();
+    if (availability[sizeId] === false) {
+      return json(res, 400, {
+        error: 'size_out_of_stock',
+        message: `${sizeLabel(sizeId)} is currently out of stock. Please choose another size.`
+      });
+    }
+  } catch (err) {
+    console.error('international-order availability check failed:', err);
   }
 
   // Optional identity
@@ -357,13 +370,7 @@ function buildEmailHtml({
             International Order ${action === 'reserve' ? '(Stock Reserved)' : 'Request'}
           </td>
           <td align="right" style="padding:10px 20px; background:${BRAND_BLUE};">
-            <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
-              <tr>
-                <td style="background:#ffffff; border:1px solid #e5e7eb; border-radius:9999px; padding:6px;">
-                  <img src="${LOGO_URL}" height="${LOGO_HEIGHT}" alt="Force Dowels" style="display:block; border:0; outline:none; text-decoration:none; border-radius:9999px; height:${LOGO_HEIGHT}px; width:auto; line-height:1;">
-                </td>
-              </tr>
-            </table>
+            <img src="${LOGO_URL}" height="${LOGO_HEIGHT}" alt="Force Dowels" style="display:block; border:0; outline:none; text-decoration:none; height:${LOGO_HEIGHT}px; width:auto; line-height:1;">
           </td>
         </tr>
       </table>
