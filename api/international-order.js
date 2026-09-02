@@ -337,7 +337,7 @@ function escapeHtml(s = '') {
     .replace(/'/g, '&#039;');
 }
 
-function buildEmailHtml({
+export function buildEmailHtml({
   action,
   quantity_display,
   business_name,
@@ -362,7 +362,7 @@ function buildEmailHtml({
 
   return `
   <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#f7f7f7; padding:24px;">
-    <div style="max-width:720px; margin:0 auto; background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+    <div style="max-width:600px; margin:0 auto; background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
 
       <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
         <tr>
@@ -384,17 +384,17 @@ function buildEmailHtml({
 
       <div style="padding:16px 20px;">
         <h3 style="margin:0 0 12px 0; font-size:16px; color:${BRAND_BLUE};">Order Details</h3>
-        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate; border-spacing:0; font-size:14px; margin-bottom:20px;">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="table-layout:fixed; border-collapse:separate; border-spacing:0; font-size:14px; margin-bottom:20px; word-break:break-word;">
           <tr>
-            <td style="width:180px; padding:10px 12px; border:1px solid #e5e7eb; background:#f0f4ff;"><strong>Quantity</strong></td>
+            <td style="width:34%; padding:10px 12px; border:1px solid #e5e7eb; background:#f0f4ff;"><strong>Quantity</strong></td>
             <td style="padding:10px 12px; border:1px solid #e5e7eb;">${esc(quantityLabel)}</td>
           </tr>
         </table>
 
         <h3 style="margin:0 0 12px 0; font-size:16px; color:${BRAND_BLUE};">Business &amp; Contact</h3>
-        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate; border-spacing:0; font-size:14px; margin-bottom:20px;">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="table-layout:fixed; border-collapse:separate; border-spacing:0; font-size:14px; margin-bottom:20px; word-break:break-word;">
           <tr>
-            <td style="width:180px; padding:10px 12px; border:1px solid #e5e7eb; background:#f0f4ff;"><strong>Business Name</strong></td>
+            <td style="width:34%; padding:10px 12px; border:1px solid #e5e7eb; background:#f0f4ff;"><strong>Business Name</strong></td>
             <td style="padding:10px 12px; border:1px solid #e5e7eb;">${esc(business_name || '')}</td>
           </tr>
           <tr>
@@ -416,13 +416,13 @@ function buildEmailHtml({
         </table>
 
         <h3 style="margin:0 0 12px 0; font-size:16px; color:${BRAND_BLUE};">Shipping Address</h3>
-        <div style="padding:12px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb; margin-bottom:20px; font-size:14px;">
+        <div style="padding:12px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb; margin-bottom:20px; font-size:14px; word-break:break-word;">
           ${addressHtml}
         </div>
 
         ${comments ? `
         <h3 style="margin:0 0 12px 0; font-size:16px; color:${BRAND_BLUE};">Additional Comments</h3>
-        <div style="padding:12px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb; margin-bottom:20px; font-size:14px;">
+        <div style="padding:12px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb; margin-bottom:20px; font-size:14px; word-break:break-word;">
           ${commentsHtml}
         </div>` : ''}
 

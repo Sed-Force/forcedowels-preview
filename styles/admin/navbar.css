@@ -16,10 +16,14 @@ admin-header { display: block; }
   align-items: center;
   gap: 16px;
 }
+.admin-brand {
+  display: flex;
+  align-items: center;
+}
 .admin-logo {
   height: 40px;
   width: auto;
-  border-radius: 4px;
+  /* border-radius: 4px; */
 }
 .admin-header h1 {
   font-size: 20px;

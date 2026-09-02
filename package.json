@@ -8,7 +8,8 @@
   "scripts": {
     "build": "echo \"static build\"",
     "dev": "node scripts/dev-server.mjs",
-    "dev:static": "npx serve . -l 4173"
+    "dev:static": "npx serve . -l 4173",
+    "dev:emails": "node scripts/email-preview-server.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^2.18.0",

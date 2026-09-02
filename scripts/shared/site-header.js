@@ -155,6 +155,7 @@ class SiteHeader extends HTMLElement {
             <span id="cart-count" class="badge"></span>
           </a>
 
+          <!-- Authentication buttons
           <div class="auth-buttons">
             <button
               type="button"
@@ -164,7 +165,7 @@ class SiteHeader extends HTMLElement {
               Login
             </button>
     
-            <!--
+            
             <button
               type="button"
               id="btn-signup"
@@ -172,8 +173,8 @@ class SiteHeader extends HTMLElement {
             >
               Sign Up
             </button>
-            -->
           </div>
+          -->
 
           <button
             type="button"
@@ -184,9 +185,7 @@ class SiteHeader extends HTMLElement {
             Sign Out
           </button>
 
-          <div id="user-button"></div>
-
-          <button 
+          <button
             class="nav-toggle"
             type="button"
             aria-label="Toggle navigation menu"
@@ -216,13 +215,12 @@ class SiteHeader extends HTMLElement {
     const themeToggle = this.querySelector('#theme-toggle');
     const authButtons = this.querySelector('.auth-buttons');
     const btnSignout = this.querySelector('#btn-signout');
-    const userButton = this.querySelector('#user-button');
 
-    // In the drawer, the theme toggle and the auth control (login, or
-    // sign-out/account once signed in) share one row: a circular toggle
-    // on the left with the auth control filling the rest. Built only at
-    // the mobile breakpoint so desktop's header-actions row (where these
-    // are separate, independently-positioned items) is untouched.
+    // In the drawer, the theme toggle and the auth control (Login, or
+    // Sign Out once signed in) share one row: a circular toggle on the
+    // left with the auth control filling the rest. Built only at the
+    // mobile breakpoint so desktop's header-actions row (where these are
+    // separate, independently-positioned items) is untouched.
     const authRow = document.createElement('div');
     authRow.className = 'mobile-auth-row';
 
@@ -234,14 +232,12 @@ class SiteHeader extends HTMLElement {
         if (authButtons) authRow.appendChild(authButtons);
         nav.appendChild(authRow);
         if (btnSignout) nav.appendChild(btnSignout);
-        if (userButton) nav.appendChild(userButton);
       } else {
         // Restore the original header-actions order: toggle, cart
         // (never moved), auth controls, then the hamburger.
         if (themeToggle) actions.insertBefore(themeToggle, actions.firstChild);
         if (authButtons) actions.insertBefore(authButtons, toggle);
         if (btnSignout) actions.insertBefore(btnSignout, toggle);
-        if (userButton) actions.insertBefore(userButton, toggle);
       }
     };
     placeRelocatedControls();
@@ -324,35 +320,28 @@ class SiteHeader extends HTMLElement {
     const btnLogin = this.querySelector('#btn-login');
     const btnSignup = this.querySelector('#btn-signup');
     const btnSignout = this.querySelector('#btn-signout');
-    const userMount = this.querySelector('#user-button');
 
+    // Signed-in visitors get a Sign Out button and nothing more — no Clerk
+    // account menu (managing the account isn't something users should do here).
     const render = () => {
       const signedIn = !!(window.Clerk?.user && window.Clerk?.session);
       if (authWrap) authWrap.style.display = signedIn ? 'none' : '';
       if (btnSignout) btnSignout.style.display = signedIn ? '' : 'none';
-
-      if (signedIn) {
-        if (userMount && !userMount.hasChildNodes() && window.Clerk?.mountUserButton) {
-          window.Clerk.mountUserButton(userMount);
-        }
-        document.body.classList.add('authed');
-      } else {
-        if (userMount) userMount.replaceChildren();
-        document.body.classList.remove('authed');
-      }
+      document.body.classList.toggle('authed', signedIn);
     };
 
     if (window.Clerk?.addListener) window.Clerk.addListener(render);
     render();
 
     const goSignIn = () => {
-      if (window.Clerk?.openSignIn) {
-        window.Clerk.openSignIn({ afterSignInUrl: window.location.href, appearance: clerkAppearance() });
-      } else if (window.Clerk?.redirectToSignIn) {
-        window.Clerk.redirectToSignIn({ returnBackUrl: window.location.href });
-      } else {
-        console.error('[Clerk] No sign-in methods available.');
-      }
+      // Send the visitor to the dedicated login page, stashing where they were
+      // so it can return them there after a successful sign-in. Uses
+      // sessionStorage rather than a query param because Vercel's clean-URL
+      // redirect (/login.html -> /login) drops the query string.
+      try {
+        sessionStorage.setItem('fd_post_login_redirect', window.location.pathname + window.location.search);
+      } catch (_) {}
+      window.location.assign('/login.html');
     };
     const goSignUp = () => {
       if (window.Clerk?.openSignUp) {
@@ -364,9 +353,20 @@ class SiteHeader extends HTMLElement {
       }
     };
 
+    const goSignOut = async () => {
+      try {
+        await window.Clerk?.signOut?.();
+      } catch (e) {
+        console.error('[Clerk] signOut failed:', e);
+      }
+      // Hard reload to a clean, logged-out state regardless of whether the
+      // in-page Clerk listener updated the UI.
+      window.location.assign('/');
+    };
+
     if (btnLogin) btnLogin.onclick = goSignIn;
     if (btnSignup) btnSignup.onclick = goSignUp;
-    if (btnSignout) btnSignout.onclick = () => window.Clerk?.signOut?.();
+    if (btnSignout) btnSignout.onclick = goSignOut;
 
     // Dev helper: test the protected API
     window.__pingProtected = async function () {

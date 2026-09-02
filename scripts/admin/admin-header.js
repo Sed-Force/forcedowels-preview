@@ -44,7 +44,9 @@ class AdminHeader extends HTMLElement {
 
     return `
       <div class="admin-header-left">
-        <img src="/images/LOGO_Wordmark+Icon-WhiteAccent@1024.png" alt="Force Dowel Company logo" class="admin-logo" />
+        <a href="/" class="admin-brand" aria-label="Force Dowel Company — back to home">
+          <img src="/images/LOGO_Wordmark+Icon-WhiteAccent@1024.png" alt="Force Dowel Company logo" class="admin-logo" />
+        </a>
         <h1>Admin</h1>
       </div>
       <nav class="admin-nav">

@@ -219,7 +219,6 @@ site-header { display: block; }
   gap: 10px;
 }
 .authed .auth-buttons { display: none; }
-.authed #user-button { display: block; }
 
 /* Mobile nav toggle (hamburger) — hidden on desktop */
 .nav-toggle {
@@ -361,8 +360,7 @@ site-header { display: block; }
     justify-content: center;
     border-radius: 12px;
   }
-  .nav #btn-signout,
-  .nav #user-button {
+  .nav #btn-signout {
     width: 100%;
     justify-content: center;
     margin-top: 10px;
