@@ -13,7 +13,7 @@
       sku: 'FD-8X38',
       isOriginal: true,
       bulkTiers: [
-        { min: 5000, max: 24999, unitUSD: 0.072, requiresAuth: false, label: '5,000–24,999' },
+        { min: 5000, max: 24999, unitUSD: 0.072, requiresAuth: false, label: '5,000–20,000' },
         { min: 25000, max: 960000, unitUSD: 0.0675, requiresAuth: true, label: '25,000–100,000' },
         // { min: 25000, max: 164999, unitUSD: 0.0675, requiresAuth: true, label: '25,000–164,999' },
         // { min: 165000, max: 960000, unitUSD: 0.063, requiresAuth: true, label: '165,000–960,000' }
@@ -26,7 +26,7 @@
       sku: 'FD-8X30',
       isOriginal: false,
       bulkTiers: [
-        { min: 5000, max: 24999, unitUSD: 0.072, requiresAuth: false, label: '5,000–24,999' },
+        { min: 5000, max: 24999, unitUSD: 0.072, requiresAuth: false, label: '5,000–20,000' },
         { min: 25000, max: 960000, unitUSD: 0.0675, requiresAuth: true, label: '25,000–100,000' },
         // { min: 25000, max: 164999, unitUSD: 0.0675, requiresAuth: true, label: '25,000–164,999' },
         // { min: 165000, max: 960000, unitUSD: 0.063, requiresAuth: true, label: '165,000–960,000' }
@@ -39,7 +39,7 @@
       sku: 'FD-6X30',
       isOriginal: false,
       bulkTiers: [
-        { min: 5000, max: 24999, unitUSD: 0.072, requiresAuth: false, label: '5,000–24,999' },
+        { min: 5000, max: 24999, unitUSD: 0.072, requiresAuth: false, label: '5,000–20,000' },
         { min: 25000, max: 960000, unitUSD: 0.0675, requiresAuth: true, label: '25,000–100,000' },
         // // { min: 25000, max: 164999, unitUSD: 0.0675, requiresAuth: true, label: '25,000–164,999' },
         // { min: 165000, max: 960000, unitUSD: 0.063, requiresAuth: true, label: '165,000–960,000' }

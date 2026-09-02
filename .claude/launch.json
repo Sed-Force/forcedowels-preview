@@ -6,6 +6,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", ".", "-l", "4173"],
       "port": 4173
+    },
+    {
+      "name": "fd-email-preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/email-preview-server.mjs"],
+      "port": 4180
     }
   ]
 }

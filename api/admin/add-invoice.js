@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     } else if (quantity >= 25000) {
       items_summary = `25,000-164,999 (${quantity}) (Qty: ${quantity})`;
     } else if (quantity >= 5000) {
-      items_summary = `5,000-24,999 (${quantity}) (Qty: ${quantity})`;
+      items_summary = `5,000-20,000 (${quantity}) (Qty: ${quantity})`;
     } else if (quantity % 300 === 0) {
       // Assume it's a kit order
       const kitQty = quantity / 300;

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Log In — Force Dowels™</title>
+  <meta name="description" content="Log in to your Force Dowels account to place orders and track shipments.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=104">
+  <link rel="stylesheet" href="styles/shared/navbar.css?v=2">
+  <link rel="stylesheet" href="styles/shared/footer.css?v=1">
+
+  <!-- Clerk (Browser) — served from the Clerk Frontend API domain (not a public CDN) so the lazily-loaded UI component chunks resolve. -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_dmlhYmxlLWhhZGRvY2stMzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://viable-haddock-36.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
+  </script>
+
+  <script defer src="scripts/shared/site-header.js?v=1"></script>
+  <script defer src="scripts/shared/site-footer.js?v=1"></script>
+  <script defer src="scripts/shared/script-badge.js?v=1"></script>
+
+  <style>
+    .login-section { display: flex; justify-content: center; }
+    .login-wrap { width: 100%; max-width: 460px; text-align: center; }
+    .login-wrap h1 { margin-bottom: 8px; }
+    .login-wrap .subline { margin: 0 0 24px; }
+    #sign-in { display: flex; justify-content: center; min-height: 480px; }
+    #sign-in-fallback { margin-top: 16px; }
+  </style>
+</head>
+<body class="login-page">
+
+<site-header></site-header>
+
+<main id="content">
+  <section class="section login-section">
+    <div class="container login-wrap">
+      <h1>Log In</h1>
+      <p class="subline">Sign in to place orders and track your shipments.</p>
+
+      <div id="sign-in" aria-live="polite">
+        <p id="sign-in-fallback">Loading sign-in…</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<site-footer></site-footer>
+
+<script>
+  (function () {
+    // Only follow a same-origin, path-relative redirect target.
+    function safeRedirect(raw) {
+      if (!raw || typeof raw !== 'string') return '/';
+      if (!raw.startsWith('/') || raw.startsWith('//')) return '/';
+      return raw;
+    }
+
+    // Where to send the visitor once they're signed in — stashed by the
+    // navbar's Login button (see site-header.js). Consumed once.
+    let target = '/';
+    try {
+      target = safeRedirect(sessionStorage.getItem('fd_post_login_redirect'));
+      sessionStorage.removeItem('fd_post_login_redirect');
+    } catch (_) {}
+
+    const mount = document.getElementById('sign-in');
+
+    // Match the Clerk widget to the site's current theme (mirrors
+    // clerkAppearance() in site-header.js).
+    function clerkAppearance() {
+      const theme = document.documentElement.getAttribute('data-theme')
+        || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      const dark = theme === 'dark';
+      return {
+        baseTheme: dark ? 'dark' : 'light',
+        variables: {
+          colorPrimary: '#224d8f',
+          colorText: dark ? '#ffffff' : '#000000',
+          colorBackground: dark ? '#1e2a3f' : '#ffffff',
+          colorInputBackground: dark ? '#0f1420' : '#ffffff',
+          colorInputText: '#ffffff'
+        }
+      };
+    }
+
+    function waitForClerk() {
+      return new Promise((resolve) => {
+        if (window.Clerk) return resolve();
+        const t = setInterval(() => {
+          if (window.Clerk) { clearInterval(t); resolve(); }
+        }, 50);
+      });
+    }
+
+    waitForClerk()
+      .then(() => window.Clerk.load())
+      .then(() => {
+        // Already signed in — no need to show the form.
+        if (window.Clerk.user) {
+          window.location.replace(target);
+          return;
+        }
+
+        mount.replaceChildren();
+        window.Clerk.mountSignIn(mount, {
+          routing: 'hash',
+          fallbackRedirectUrl: target,
+          afterSignInUrl: target,
+          appearance: clerkAppearance()
+        });
+
+        // Redirect as soon as a session is established.
+        window.Clerk.addListener((clerk) => {
+          if (clerk.user) window.location.replace(target);
+        });
+      })
+      .catch((err) => {
+        console.error('[Clerk] sign-in mount failed:', err);
+        const fallback = document.getElementById('sign-in-fallback');
+        if (fallback) fallback.textContent = 'Sign-in is temporarily unavailable. Please try again shortly.';
+      });
+  })();
+</script>
+</body>
+</html>

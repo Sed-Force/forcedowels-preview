@@ -78,7 +78,7 @@ function tierLabel(units) {
 function tierLabelFor(units) {
   if (units >= 165000) return 'Tier: 165,000–960,000';
   if (units >= 25000)  return 'Tier: 25,000–164,999';
-  return 'Tier: 5,000–24,999';
+  return 'Tier: 5,000–20,000';
 }
 
 // Internal notification email for Force Dowels team
@@ -521,7 +521,7 @@ export default async function handler(req, res) {
         let itemsSummary = '';
         let quantity = 0;
         if (bulkUnits > 0) {
-          const tier = bulkUnits >= 165000 ? '165,000+' : bulkUnits >= 25000 ? '25,000-164,999' : '5,000-24,999';
+          const tier = bulkUnits >= 165000 ? '165,000+' : bulkUnits >= 25000 ? '25,000-164,999' : '5,000-20,000';
           itemsSummary = `${tier} (${bulkUnits}) (Qty: ${bulkUnits})`;
           quantity = bulkUnits;
         } else if (kits > 0) {

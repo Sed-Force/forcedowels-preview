@@ -218,6 +218,7 @@ h1 + .page-back {
 }
 .btn--ghost:hover {
   border-color: var(--accent);
+  transform: translateY(-1px);
   color: var(--accent);
 }
 .btn--invert { color: #fff; border-color: rgba(255,255,255,.45); }
@@ -1673,6 +1674,7 @@ h1 + .page-back {
 }
 .btn.btn--accent:hover {
   background: var(--accent-light);
+  color: #000000 !important;
   /* filter: brightness(.96); */
 }
 
@@ -2749,7 +2751,7 @@ button,
 }
 [data-theme="dark"] main a:hover {
   color: var(--accent-light) !important;
-  text-decoration: underline !important;
+  /* text-decoration: underline !important; */
 }
 
 /* Auto dark mode (when browser is in light mode but site theme is dark) */
