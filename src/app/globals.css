@@ -1,49 +1,195 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import 'tailwindcss';
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ==========================================================================
+   Force Dowels — design tokens + Tailwind entry point.
+
+   All component styling is inline Tailwind utilities. This file only holds:
+     1. the light/dark colour variables every utility is built on,
+     2. the Tailwind theme that exposes those variables as utilities
+        (bg-page, text-fg, border-line, bg-card, …),
+     3. a small base layer (typography defaults).
+   ========================================================================== */
+
+/* `dark:` follows the same switch as the variables: an explicit
+   data-theme="dark", or the OS preference while no theme is chosen. */
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
+      @slot;
+    }
   }
 }
 
-html {
-  height: 100%;
+/* ── 1. Variables ─────────────────────────────────────────────────────────
+   Every themed value is declared once with light-dark(light, dark).
+   color-scheme decides which side wins: the OS setting by default, or the
+   visitor's explicit choice stored on <html data-theme="light|dark">. */
+:root {
+  color-scheme: light dark;
+
+  /* Brand (same in both themes) */
+  --brand: #224d8f;
+  --brand-ink: #183a6b;
+  --brand-light: #4a6fa5;
+  --brand-tint: #1c74f83a;
+  --accent: #eead1a;
+  --accent-light: #ffd677;
+  --success: #10b981;
+  --danger: #b42318;
+
+  /* Surfaces */
+  --page: light-dark(#fdfeff, #0f1420);
+  --page-alt: light-dark(#f3f7fe, #10182a);
+  --card: light-dark(#e7effa, #121c33);
+  --card-alt: light-dark(#f1f5f9, #1a2543);
+  --field: light-dark(#ffffff, #0b0f1a);
+
+  /* Text */
+  --fg: light-dark(#000000, #ffffff);
+  --fg-muted: light-dark(#1f2937, #cbd5e1);
+  --fg-subtle: light-dark(#374151, #94a3b8);
+  --danger-soft: light-dark(#b42318, #f87171);
+  --notice-fg: light-dark(#000000, #f1f5f9);
+
+  /* Borders */
+  --line: light-dark(#d3def5, #253155);
+  --line-strong: light-dark(#d1d5db, #475569);
+
+  /* Chrome that flips between brand shades */
+  --footer-bg: light-dark(var(--brand), var(--brand-ink));
+  --footer-panel: light-dark(var(--brand-ink), var(--brand));
+
+  /* Layout */
+  --header-h: 84px;
 }
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
+:root[data-theme='light'] { color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
+
+/* ── 2. Tailwind theme (utilities read the variables above) ───────────── */
+@theme inline {
+  --font-sans: var(--font-inter), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-light: var(--brand-light);
+  --color-brand-tint: var(--brand-tint);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --color-page: var(--page);
+  --color-page-alt: var(--page-alt);
+  --color-card: var(--card);
+  --color-card-alt: var(--card-alt);
+  --color-field: var(--field);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-notice: var(--notice-fg);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-footer: var(--footer-bg);
+  --color-footer-panel: var(--footer-panel);
+
+  --radius-card: 16px;
+  --radius-field: 12px;
+
+  --shadow-card: 0 2px 6px light-dark(rgb(0 0 0 / 0.12), rgb(0 0 0 / 0.3));
+  --shadow-pop: 0 10px 30px light-dark(rgb(0 0 0 / 0.15), rgb(0 0 0 / 0.4));
+
+  /* Named text sizes (text-sm, text-xl, …) only change the size. `inherit` on a
+     custom property is invalid at computed-value time, which makes line-height
+     fall back to the inherited value, so the site's 1.6 (or any parent) is kept. */
+  --text-xs--line-height: inherit;
+  --text-sm--line-height: inherit;
+  --text-base--line-height: inherit;
+  --text-lg--line-height: inherit;
+  --text-xl--line-height: inherit;
+  --text-2xl--line-height: inherit;
+
+  --container-site: 1120px;
+  --container-wide: 1240px;
+  --container-narrow: 820px;
 }
 
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+/* ── 3. Base layer ────────────────────────────────────────────────────── */
+@layer base {
+  html,
+  body {
+    min-height: 100%;
+  }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
+  body {
+    @apply bg-page font-sans text-fg antialiased;
+    line-height: 1.6;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  /* Buttons stay clickable-looking (Tailwind resets them to the default cursor). */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+  /* Links are accent-colored everywhere. Components that need another colour
+     (nav items on brand blue, button-styled links) set it with a utility. */
+  a {
+    color: var(--accent);
+    font-weight: 800;
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--accent-light);
+  }
+
+  h1 {
+    margin: 0 0 16px;
+    font-size: clamp(32px, 4vw, 52px);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.3px;
+  }
+  h2 {
+    margin: 0 0 16px;
+    font-size: clamp(24px, 3vw, 34px);
+    font-weight: 700;
+    line-height: 1.15;
+  }
+  h3 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-weight: 700;
+  }
+  h4 {
+    font-weight: 700;
+  }
+
+  p {
+    margin-block: 1em;
+  }
+
+  /* Preflight zeroes margins; keep the native spacing around checkboxes and radios. */
+  input[type='checkbox'],
+  input[type='radio'] {
+    margin: 3px 3px 3px 4px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
   }
 }
