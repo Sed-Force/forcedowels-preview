@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Find a Local Distributor — Force Dowels™</title>
+  <meta name="description" content="Search for Force Dowels distributors near you by ZIP code or your current location.">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=105">
+  <link rel="stylesheet" href="styles/shared/navbar.css?v=2">
+  <link rel="stylesheet" href="styles/shared/footer.css?v=1">
+
+  <!-- Clerk (Browser) -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_dmlhYmxlLWhhZGRvY2stMzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
+  </script>
+
+  <script defer src="scripts/shared/site-header.js?v=1"></script>
+  <script defer src="scripts/shared/site-footer.js?v=1"></script>
+  <script defer src="scripts/shared/products.js?v=1"></script>
+  <script defer src="scripts/shared/script-badge.js?v=1"></script>
+  <script defer src="scripts/customer/script.js?v=32"></script>
+</head>
+<body class="find-distributor">
+
+<!-- Header -->
+<site-header></site-header>
+
+<main id="content">
+  <section class="section">
+    <div class="container text-center">
+      <h1>Find a Local Distributor</h1>
+      <p class="subline" style="max-width:780px;margin:8px auto 0;">
+        Work with one of our local partners for quick access and tailored purchasing options.
+      </p>
+    </div>
+  </section>
+
+  <section class="section pt-0">
+    <div class="container">
+      <div class="finder-card">
+        <header class="finder-head">
+          <h2>Find Distributors Near You</h2>
+          <p>Search by ZIP code or use your current location to see partners in your area.</p>
+        </header>
+
+        <div class="finder-controls">
+          <div class="finder-search">
+            <label class="finder-field">
+              <span>ZIP code</span>
+              <input class="input" id="zip" type="text" inputmode="numeric" autocomplete="postal-code" placeholder="e.g., 85296">
+            </label>
+            <div class="finder-actions">
+              <button class="btn btn--accent" id="btn-zip" type="button">Search ZIP</button>
+              <button class="btn btn--ghost" id="btn-geo" type="button">
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a1 1 0 0 1 1 1v1.1A7.9 7.9 0 0 1 19.9 11H21a1 1 0 1 1 0 2h-1.1A7.9 7.9 0 0 1 13 19.9V21a1 1 0 1 1-2 0v-1.1A7.9 7.9 0 0 1 4.1 13H3a1 1 0 1 1 0-2h1.1A7.9 7.9 0 0 1 11 4.1V3a1 1 0 0 1 1-1Z"/></svg>
+                Use Location
+              </button>
+            </div>
+          </div>
+
+          <div class="finder-filters">
+            <label class="finder-field">
+              <span>Search radius</span>
+              <select class="select" id="radius">
+                <option>25 miles</option>
+                <option selected>50 miles</option>
+                <option>100 miles</option>
+                <option>200 miles</option>
+              </select>
+            </label>
+            <label class="finder-check">
+              <input type="checkbox" id="showall">
+              <span>Show all distributors</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="results-card" id="results">
+          <div class="no-results">
+            <svg class="map-pin-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5a2.5 2.5 0 0 1 0 5Z"/>
+            </svg>
+            <p class="strong">No distributors found</p>
+            <p>Try a different ZIP code, expand the search radius, or <a href="/contact.html">contact us</a> directly.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Footer (same as other pages) -->
+<site-footer></site-footer>
+
+<script>
+  document.getElementById('btn-zip').addEventListener('click', () => {
+    document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+  });
+  document.getElementById('btn-geo').addEventListener('click', () => {
+    document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+  });
+</script>
+
+</body>
+</html>

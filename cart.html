@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Your Cart — Force Dowels™</title>
+  <meta name="description" content="Review your cart and proceed to checkout." />
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=104">
+  <link rel="stylesheet" href="styles/shared/navbar.css?v=2">
+  <link rel="stylesheet" href="styles/shared/footer.css?v=1">
+
+  <!-- Clerk (Browser) -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_dmlhYmxlLWhhZGRvY2stMzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
+  </script>
+
+  <script defer src="scripts/shared/site-header.js?v=1"></script>
+  <script defer src="scripts/shared/site-footer.js?v=1"></script>
+  <script defer src="scripts/shared/script-badge.js?v=1"></script>
+</head>
+<body>
+
+<site-header></site-header>
+
+<main id="content">
+  <section class="section">
+    <div class="container">
+      <h1>Your Cart</h1>
+      <p class="page-back"><a href="/order.html" class="muted">← Back to Order</a></p>
+
+      <div class="cart-layout">
+        <!-- Left: table -->
+        <div class="cart-table-wrap">
+          <table id="cart-table" class="cart-table">
+            <thead>
+              <tr>
+                <th class="col-item">Item</th>
+                <th class="col-qty">Units / Qty</th>
+                <th class="col-unitprice">Unit Price</th>
+                <th class="col-total">Line Total</th>
+              </tr>
+            </thead>
+            <tbody id="cart-body">
+              <!-- rows injected by script-cart.js -->
+            </tbody>
+          </table>
+
+          <div class="cart-actions">
+            <button id="btn-add-more" class="btn btn--accent">Add More Items</button>
+            <div class="spacer"></div>
+            <button id="btn-consolidate" class="btn btn--ghost">Consolidate</button>
+            <button id="btn-clear" class="btn btn--ghost">Clear Cart</button>
+          </div>
+        </div>
+
+        <!-- Right: simple summary -->
+        <aside class="cart-summary">
+          <div class="summary-card">
+            <h3>Order Summary</h3>
+            <div class="summary-rows">
+              <div class="summary-row">
+                <span>Subtotal</span>
+                <strong id="cart-subtotal">$0.00</strong>
+              </div>
+            </div>
+            <p class="muted" style="margin:8px 0 12px">Shipping &amp; taxes calculated on the next step.</p>
+
+            <!-- Route to the new checkout page -->
+            <button id="btn-checkout"
+                    class="btn btn--accent btn-wide"
+                    type="button"
+                    onclick="window.location.href='/checkout.html'">
+              Proceed to Checkout
+            </button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+</main>
+
+<site-footer></site-footer>
+
+<!-- Keep your existing cart logic; it only updates subtotal and rows here -->
+<script defer src="scripts/shared/products.js?v=1"></script>
+<script defer src="scripts/customer/script-cart.js?v=sizes-20260813"></script>
+</body>
+</html>

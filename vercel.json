@@ -1,0 +1,42 @@
+{
+  "devCommand": "npx serve . -l $PORT",
+  "outputDirectory": ".",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/admin.html",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.forcedowels.com"
+        }
+      ]
+    },
+    {
+      "source": "/:path((?!admin).*)",
+      "destination": "/admin-:path.html",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.forcedowels.com"
+        }
+      ]
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=300" }
+      ]
+    },
+    {
+      "source": "/scripts/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
+  ]
+}

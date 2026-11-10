@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Order — Force Dowels™</title>
+  <meta name="description" content="Order Force Dowels™ in bulk tiers or starter kits.">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=106" />
+  <link rel="stylesheet" href="styles/shared/navbar.css?v=2">
+  <link rel="stylesheet" href="styles/shared/footer.css?v=1">
+
+  <!-- Clerk (Browser) -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_dmlhYmxlLWhhZGRvY2stMzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
+  </script>
+
+  <script defer src="scripts/shared/site-header.js?v=1"></script>
+  <script defer src="scripts/shared/site-footer.js?v=1"></script>
+  <script defer src="scripts/shared/script-badge.js?v=1"></script>
+  <script defer src="scripts/shared/products.js?v=1"></script>
+  <script defer src="scripts/customer/script.js?v=102"></script>
+  <script defer src="scripts/customer/script-order.js?v=members-20260814"></script>
+  <!-- Force theme override for order page -->
+  <style>
+    /* Aggressive theme override - force theme variables to work */
+    [data-theme="light"] .tier,
+    [data-theme="light"] .kit {
+      background: var(--brand) !important;
+      border-color: var(--border) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+    [data-theme="dark"] .tier,
+    [data-theme="dark"] .kit {
+      background: var(--brand) !important;
+      border-color: var(--border) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+    [data-theme="light"] .tier.locked,
+    [data-theme="light"] .kit.locked,
+    [data-theme="light"] .tier:disabled {
+      background: var(--bg-card) !important;
+    }
+    [data-theme="dark"] .tier.locked,
+    [data-theme="dark"] .kit.locked,
+    [data-theme="dark"] .tier:disabled {
+      background: var(--bg-card) !important;
+    }
+    [data-theme="light"] .tier:hover:not(:disabled):not(.locked),
+    [data-theme="light"] .kit:hover {
+      background: var(--brand-light) !important;
+      border-color: var(--border) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+    [data-theme="dark"] .tier:hover:not(:disabled):not(.locked),
+    [data-theme="dark"] .kit:hover {
+      background: var(--brand-ink) !important;
+      border-color: var(--border) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+
+    [data-theme="light"] .tier.active:hover:not(:disabled):not(.locked),
+    [data-theme="light"] .kit.active:hover {
+      background: var(--accent-light) !important;
+      border-color: var(--border) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+    [data-theme="dark"] .tier.active:hover:not(:disabled):not(.locked),
+    [data-theme="dark"] .kit.active:hover {
+      background: var(--accent-light) !important;
+      border-color: var(--border) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+
+    
+    [data-theme="light"] .tier.active,
+    [data-theme="light"] .kit.active {
+      background: var(--accent) !important;
+      color: #000000 !important;
+      border-color: var(--accent) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+    [data-theme="dark"] .tier.active,
+    [data-theme="dark"] .kit.active {
+      background: var(--accent) !important;
+      color: #000000 !important;
+      border-color: var(--accent) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+    [data-theme="light"] .tier.active:hover,
+    [data-theme="light"] .kit.active:hover {
+      background: var(--accent-light) !important;
+    }
+    [data-theme="dark"] .tier.active:hover,
+    [data-theme="dark"] .kit.active:hover {
+      background: var(--accent-light) !important;
+    }
+    [data-theme="light"] .tier.disabled,
+    [data-theme="light"] .kit.disabled {
+      background: var(--brand-ink) !important;
+      color: #000000 !important;
+      border-color: var(--accent) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+    [data-theme="dark"] .tier.disabled,
+    [data-theme="dark"] .kit.disabled {
+      background: var(--brand-ink) !important;
+      color: #000000 !important;
+      border-color: var(--accent) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+
+    [data-theme="light"] .tier span,
+    [data-theme="light"] .kit span {
+      color: #ffffff !important;
+      border-color: var(--border) !important;
+    }
+    [data-theme="dark"] .tier span,
+    [data-theme="dark"] .kit span {
+      color: #ffffff !important;
+      border-color: var(--border) !important;
+    }
+    [data-theme="light"] .tier.active span,
+    [data-theme="light"] .kit.active span {
+      color: #000000 !important;
+      border-color: var(--border) !important;
+    }
+    [data-theme="dark"] .tier.active span,
+    [data-theme="dark"] .kit.active div {
+      color: #000000 !important;
+      border-color: var(--border) !important;
+    }
+
+    [data-theme="dark"] .tier-range {
+      color: #000000 !important;
+      font-weight: 800 !important;
+    }
+    [data-theme="dark"] .tier-price {
+      color: #000000 !important;
+      font-weight: 800 !important;
+    }
+    [data-theme="light"] .tier-range.active {
+      color: #000000 !important;
+      font-weight: 800 !important;
+    }
+    [data-theme="light"] .tier-price.active {
+      color: #000000 !important;
+      font-weight: 800 !important;
+    }
+    
+    [data-theme="light"] .tier.locked span,
+    [data-theme="light"] .tier:disabled span,
+    [data-theme="dark"] .tier.locked span,
+    [data-theme="dark"] .tier:disabled span {
+      color: var(--text-muted) !important;
+    }
+    [data-theme="dark"] .tier.locked .tier-range,
+    [data-theme="dark"] .tier.locked .tier-price,
+    [data-theme="dark"] .tier:disabled .tier-range,
+    [data-theme="dark"] .tier:disabled .tier-price {
+      color: var(--text) !important;
+    }
+
+    [data-theme="light"] .kit div strong{
+      color: var(--accent);
+      font-weight: 800 !important;
+    }
+    [data-theme="light"] .kit div.muted {
+      color: #ffffff !important;
+      font-style: italic !important;
+    }
+
+    .size-option p {
+      color: #ffffff !important;
+    }
+    .size-option.active p {
+      color: #000000 !important;
+    }
+
+    .size-option.out-of-stock {
+      opacity: 0.75;
+      cursor: not-allowed;
+    }
+    .size-option.out-of-stock .size-name {
+      color: #fca5a5 !important;
+      text-decoration: line-through;
+    }
+    .size-option.out-of-stock.active .size-name {
+      color: #dc2626 !important;
+      text-decoration: line-through;
+    }
+    .size-option .stock-flag {
+      display: none;
+    }
+    .size-option.out-of-stock .stock-flag {
+      display: block;
+      margin-top: 2px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #dc2626 !important;
+    }
+    #intl-size option.out-of-stock-option {
+      color: #dc2626;
+    }
+
+    /* Hide the size/tier/kit/checkout controls behind a non-interactive, dimmed
+       state until we've confirmed real stock status — avoids showing an
+       out-of-stock size as selectable and then yanking it away a moment later. */
+    .order-grid.is-checking-availability .size-option,
+    .order-grid.is-checking-availability .tier,
+    .order-grid.is-checking-availability #starter-kit,
+    .order-grid.is-checking-availability #btn-add-to-cart {
+      opacity: 0.5;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+    }
+    .availability-checking-note {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-muted, #6b7280);
+      margin: -8px 0 16px;
+    }
+    .order-grid.is-checking-availability .availability-checking-note {
+      display: flex;
+    }
+    .availability-spinner {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      animation: availability-spin 0.6s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes availability-spin {
+      to { transform: rotate(360deg); }
+    }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<site-header></site-header>
+
+<main id="content" class="order-page">
+  <section class="section">
+    <div class="container">
+      <h1>Order Force Dowels™</h1>
+      <p class="subline">Choose a size, pick a bulk tier or starter kit, and check out in minutes.</p>
+    </div>
+  </section>
+
+  <!-- Pricing + Calculator -->
+  <section class="section">
+    <div class="container order-grid is-checking-availability">
+
+      <!-- LEFT: Size + Pricing tiers -->
+      <div class="tiers">
+        <h2>Select a Size</h2>
+        <p class="availability-checking-note"><span class="availability-spinner" aria-hidden="true"></span> Checking current availability…</p>
+        <div class="size-picker" id="size-picker" role="tablist" aria-label="Dowel size">
+          <button type="button" class="btn btn--primary full-width size-option active" data-size="8x38" role="tab" aria-selected="true">
+            <p class="size-name">8mm × 38mm</p>
+            <span class="stock-flag">Out of Stock</span>
+          </button>
+          <button type="button" class="btn btn--primary full-width size-option" data-size="8x30" role="tab" aria-selected="false">
+            <p class="size-name">8mm × 30mm</p>
+            <span class="stock-flag">Out of Stock</span>
+          </button>
+          <button type="button" class="btn btn--primary full-width size-option" data-size="6x30" role="tab" aria-selected="false">
+            <p class="size-name">6mm × 30mm</p>
+            <span class="stock-flag">Out of Stock</span>
+          </button>
+        </div>
+
+        <h2>Pricing Tiers</h2>
+
+        <div class="notice">
+          <strong>Guest Checkout Available:</strong>
+          Orders of 5,000–20,000 units and all kit purchases can be completed without an account.
+        </div>
+
+        <!-- Exactly one tier is active at a time. Clicking swaps the yellow outline. -->
+        <div id="tier-list">
+          <button class="tier active" type="button" data-min="5000">
+            <span class="tier-main">
+              <span class="tier-range">5,000 - 20,000</span>
+            </span>
+            <span class="tier-price">$0.0720/Unit</span>
+          </button>
+
+          <!-- <button class="tier locked" type="button" data-min="25000" data-requires-auth="true" disabled aria-disabled="true" title="Sign in to unlock this pricing tier">
+            <span class="tier-main">
+              <span class="tier-range">25,000 - 164,999</span>
+              <span class="tier-lock">🔒 Members-Only</span>
+            </span>
+            <span class="tier-price">$0.0675/Unit</span>
+          </button>
+
+          <button class="tier locked" type="button" data-min="165000" data-requires-auth="true" disabled aria-disabled="true" title="Sign in to unlock this pricing tier">
+            <span class="tier-main">
+              <span class="tier-range">165,000 - 960,000</span>
+              <span class="tier-lock">🔒 Members-Only</span>
+            </span>
+            <span class="tier-price">$0.0630/Unit</span>
+          </button> -->
+        </div>
+
+        <h3 class="mt">Or Try Our Starter Kit</h3>
+        
+        <button class="kit" id="starter-kit" type="button">
+          <div>
+            <strong id="kit-title">Force Dowels Kit — 8mm × 38mm</strong>
+            <div class="muted">Perfect for small projects and testing</div>
+          </div>
+          <div class="kit-right">
+            <strong id="kit-price">$36.00</strong>
+            <div class="muted" id="kit-meta">300 dowels • $0.12/unit</div>
+          </div>
+        </button>
+
+        <h3 class="mt">Need a Custom Quote?</h3>
+        <p>For orders exceeding 960,000 units or for special requirements, please contact our sales team.</p>
+        <a class="btn btn--accent" href="/contact.html">Contact Sales</a>
+
+        <h3 class="mt">International Orders</h3>
+        <p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">Don't see your country listed? Click here to make an order and request shipping rates.</p>
+        <button class="btn btn--accent" type="button" onclick="openInternationalOrderModal()">International Orders</button>
+      </div>
+
+      <!-- RIGHT: Calculator -->
+      <aside class="calc">
+        <h2>Calculate Your Price</h2>
+
+        <div class="calc-callout" id="calc-callout">
+          <strong>Ordering Requirements:</strong> Orders are available in 5,000-unit increments only.
+          Minimum 5,000 units, maximum 960,000 units.
+        </div>
+
+        <!-- Quantity controls -->
+        <div class="field">
+          <label for="qty-units" id="qty-label">Quantity (units)</label>
+          <div class="qtywrap">
+            <button id="qty-minus" class="step" type="button" aria-label="decrease">–</button>
+            <input id="qty-units" type="number" step="5000" min="5000" max="960000" value="5000" inputmode="numeric" />
+            <button id="qty-plus" class="step" type="button" aria-label="increase">+</button>
+            <span class="units" id="qty-unit-label">units</span>
+          </div>
+        </div>
+
+        <!-- Price readouts -->
+        <div class="row">
+          <span id="price-per-label">Price per unit:</span>
+          <strong id="price-per-unit">$0.0720</strong>
+        </div>
+
+        <div class="row">
+          <span>Total price:</span>
+          <strong id="price-total">$360.00</strong>
+        </div>
+
+        <!-- Add to cart -->
+        <button id="btn-add-to-cart" class="btn btn--accent btn-wide" type="button">Add to Cart</button>
+        <p class="viewcart"><a href="/cart.html">View Cart</a></p>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<site-footer></site-footer>
+
+<!-- International Order Modal -->
+<div id="international-modal" class="modal" style="display: none;">
+  <div class="modal-content" style="max-width: 700px;">
+    <div class="modal-header">
+      <h2>International Order Form</h2>
+      <button class="close-btn" onclick="closeInternationalOrderModal()">&times;</button>
+    </div>
+
+    <form id="international-order-form" onsubmit="submitInternationalOrder(event)">
+      <div class="form-row">
+        <label for="intl-size">Dowel Size *</label>
+        <select id="intl-size" name="size" required>
+          <option value="8x38">8mm × 38mm</option>
+          <option value="8x30">8mm × 30mm</option>
+          <option value="6x30">6mm × 30mm</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label for="intl-order-type">Order Type *</label>
+        <select id="intl-order-type" name="order_type" required onchange="toggleQuantityFields()">
+          <option value="">Select order type...</option>
+          <option value="kit">Ship Kits (300 dowels each)</option>
+          <option value="bulk">Bulk Boxes (5,000+ dowels in 5,000 increments)</option>
+        </select>
+      </div>
+
+      <!-- Ship Kit Quantity -->
+      <div id="kit-quantity-section" class="form-row" style="display: none;">
+        <label for="intl-kit-qty">Number of Ship Kits *</label>
+        <input type="number" id="intl-kit-qty" name="kit_quantity" min="1" max="100" placeholder="e.g., 5 kits = 1,500 dowels">
+        <small>Each kit contains 300 dowels ($36.00 per kit)</small>
+      </div>
+
+      <!-- Bulk Quantity -->
+      <div id="bulk-quantity-section" class="form-row" style="display: none;">
+        <label for="intl-bulk-qty">Bulk Quantity (units) *</label>
+        <input type="number" id="intl-bulk-qty" name="bulk_quantity" min="5000" step="5000" max="960000" placeholder="e.g., 35000">
+        <small>Minimum 5,000 units in 5,000 unit increments (max 960,000)</small>
+      </div>
+
+      <div class="form-row">
+        <label for="intl-business-name">Official Business Name *</label>
+        <input type="text" id="intl-business-name" name="business_name" required>
+      </div>
+
+      <div class="form-row">
+        <label for="intl-contact-name">Contact Name *</label>
+        <input type="text" id="intl-contact-name" name="contact_name" required>
+      </div>
+
+      <div class="form-row">
+        <label for="intl-email">Email Address *</label>
+        <input type="email" id="intl-email" name="email" required>
+      </div>
+
+      <div class="form-row">
+        <label for="intl-phone">Valid Phone Number *</label>
+        <input type="tel" id="intl-phone" name="phone" required placeholder="+1 234 567 8900">
+      </div>
+
+      <div class="form-row">
+        <label for="intl-address">Official Shipping Address *</label>
+        <textarea id="intl-address" name="shipping_address" rows="4" required placeholder="Street Address&#10;City, State/Province&#10;Postal/Zip Code&#10;Country"></textarea>
+      </div>
+
+      <div class="form-row">
+        <label for="intl-shipping-label">Shipping Label (Optional)</label>
+        <input type="file" id="intl-shipping-label" name="shipping_label" accept="image/*,.pdf">
+        <small>Upload an image or PDF of your shipping label if available</small>
+      </div>
+
+      <div class="form-row">
+        <label for="intl-tax-id">Business Tax ID Number *</label>
+        <input type="text" id="intl-tax-id" name="tax_id" required placeholder="e.g., VAT, GST, or EIN">
+      </div>
+
+      <div class="form-row">
+        <label for="intl-comments">Additional Comments (Optional)</label>
+        <textarea id="intl-comments" name="comments" rows="3" placeholder="Any special requirements or notes..."></textarea>
+      </div>
+
+      <div class="form-disclaimer">
+        <p><small>For international orders, we use a third-party shipper. Requests for international rates can take up to 1–3 business days.</small></p>
+      </div>
+
+      <div class="modal-actions">
+        <button type="submit" class="btn btn--primary" name="action" value="request">
+          Submit Request
+        </button>
+        <button type="submit" class="btn btn--accent" name="action" value="reserve">
+          Reserve Stock & Request Rates
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  .modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 0;
+    max-height: 90vh;
+    overflow-y: auto;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+
+  .modal-header {
+    padding: 24px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1C4A99;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    color: #ffffff;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 32px;
+    color: #ffffff;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+
+  .close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  #international-order-form {
+    padding: 24px;
+  }
+
+  .form-row {
+    margin-bottom: 20px;
+  }
+
+  .form-row label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #374151;
+    font-size: 14px;
+  }
+
+  .form-row input[type="text"],
+  .form-row input[type="email"],
+  .form-row input[type="tel"],
+  .form-row select,
+  .form-row textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+
+  .form-row input:focus,
+  .form-row select:focus,
+  .form-row textarea:focus {
+    outline: none;
+    border-color: #1C4A99;
+    box-shadow: 0 0 0 3px rgba(28, 74, 153, 0.1);
+  }
+
+  .form-row input[type="file"] {
+    padding: 8px 0;
+  }
+
+  .form-row small {
+    display: block;
+    margin-top: 4px;
+    color: #6b7280;
+    font-size: 12px;
+  }
+
+  .form-disclaimer {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 12px 16px;
+    margin: 20px 0;
+    border-radius: 4px;
+  }
+
+  .form-disclaimer p {
+    margin: 0;
+    color: #92400e;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .modal-actions button {
+    flex: 1;
+    max-width: 250px;
+  }
+
+  @media (max-width: 640px) {
+    .modal-actions {
+      flex-direction: column;
+    }
+
+    .modal-actions button {
+      max-width: none;
+    }
+  }
+</style>
+
+<script>
+
+  // International Order Modal Functions
+  function openInternationalOrderModal() {
+    document.getElementById('international-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeInternationalOrderModal() {
+    document.getElementById('international-modal').style.display = 'none';
+    document.body.style.overflow = '';
+    document.getElementById('international-order-form').reset();
+    // Hide both quantity sections on reset
+    document.getElementById('kit-quantity-section').style.display = 'none';
+    document.getElementById('bulk-quantity-section').style.display = 'none';
+  }
+
+  function toggleQuantityFields() {
+    const orderType = document.getElementById('intl-order-type').value;
+    const kitSection = document.getElementById('kit-quantity-section');
+    const bulkSection = document.getElementById('bulk-quantity-section');
+    const kitInput = document.getElementById('intl-kit-qty');
+    const bulkInput = document.getElementById('intl-bulk-qty');
+
+    if (orderType === 'kit') {
+      kitSection.style.display = 'block';
+      bulkSection.style.display = 'none';
+      kitInput.required = true;
+      bulkInput.required = false;
+      bulkInput.value = '';
+    } else if (orderType === 'bulk') {
+      kitSection.style.display = 'none';
+      bulkSection.style.display = 'block';
+      kitInput.required = false;
+      bulkInput.required = true;
+      kitInput.value = '';
+    } else {
+      kitSection.style.display = 'none';
+      bulkSection.style.display = 'none';
+      kitInput.required = false;
+      bulkInput.required = false;
+    }
+  }
+
+  // Close modal when clicking outside
+  document.getElementById('international-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      closeInternationalOrderModal();
+    }
+  });
+
+  async function submitInternationalOrder(event) {
+    event.preventDefault();
+
+    const form = event.target;
+    const submitBtn = event.submitter;
+    const action = submitBtn.value; // 'request' or 'reserve'
+
+    // Disable buttons during submission
+    const buttons = form.querySelectorAll('button[type="submit"]');
+    buttons.forEach(btn => {
+      btn.disabled = true;
+      btn.textContent = btn.value === action ? 'Processing...' : btn.textContent;
+    });
+
+    try {
+      const formData = new FormData(form);
+      const orderType = formData.get('order_type');
+      const sizeId = formData.get('size') || '8x38';
+      const sizeLabel = (window.FDProducts && window.FDProducts.sizeLabel)
+        ? window.FDProducts.sizeLabel(sizeId)
+        : sizeId;
+
+      // Build quantity data based on order type
+      let quantityData = {};
+      if (orderType === 'kit') {
+        const kitQty = parseInt(formData.get('kit_quantity')) || 1;
+        quantityData = {
+          order_type: 'kit',
+          quantity: kitQty,
+          units: kitQty * 300,
+          display: `${kitQty} Ship Kit${kitQty > 1 ? 's' : ''} — ${sizeLabel} (${kitQty * 300} dowels)`
+        };
+      } else if (orderType === 'bulk') {
+        const bulkQty = parseInt(formData.get('bulk_quantity')) || 5000;
+        quantityData = {
+          order_type: 'bulk',
+          quantity: bulkQty,
+          units: bulkQty,
+          display: `${bulkQty.toLocaleString()} dowels — ${sizeLabel} (Bulk)`
+        };
+      }
+
+      const data = {
+        action: action,
+        size: formData.get('size') || '8x38',
+        ...quantityData,
+        business_name: formData.get('business_name'),
+        contact_name: formData.get('contact_name'),
+        email: formData.get('email'),
+        phone: formData.get('phone'),
+        shipping_address: formData.get('shipping_address'),
+        tax_id: formData.get('tax_id'),
+        comments: formData.get('comments') || ''
+      };
+
+      // Handle file upload if present
+      const fileInput = document.getElementById('intl-shipping-label');
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        // Convert file to base64 for email attachment
+        const reader = new FileReader();
+        const fileData = await new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        data.shipping_label = {
+          filename: file.name,
+          content: fileData,
+          type: file.type
+        };
+      }
+
+      // Submit to API
+      const response = await fetch('/api/international-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || result.error || 'Failed to submit request');
+      }
+
+      // Handle success based on action
+      if (action === 'reserve') {
+        if (result.checkoutUrl) {
+          // Redirect to Stripe checkout for payment
+          window.location.href = result.checkoutUrl;
+        } else {
+          throw new Error('Failed to create checkout session. Please try again or contact us directly.');
+        }
+      } else {
+        // Show success message for quote request
+        alert('Your international order request has been submitted successfully! Our team will contact you within 1-3 business days with shipping rates and a payment link.');
+        closeInternationalOrderModal();
+      }
+
+    } catch (error) {
+      console.error('Error submitting international order:', error);
+      alert('Error: ' + error.message);
+
+      // Re-enable buttons
+      buttons.forEach(btn => {
+        btn.disabled = false;
+        if (btn.value === 'request') {
+          btn.textContent = 'Submit Request';
+        } else {
+          btn.textContent = 'Reserve Stock & Request Rates';
+        }
+      });
+    }
+  }
+</script>
+
+<!-- Clean theme toggle for order page -->
+<script>
+// Immediate theme application
+function applyThemeImmediate() {
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme && savedTheme !== 'auto') {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  }
+}
+
+// Apply theme immediately
+applyThemeImmediate();
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Multiple attempts to find and initialize the theme toggle
+  function initThemeToggle() {
+    const themeToggle = document.getElementById('theme-toggle');
+
+    if (themeToggle) {
+      // Remove any existing listeners
+      const newButton = themeToggle.cloneNode(true);
+      themeToggle.parentNode.replaceChild(newButton, themeToggle);
+
+      // Add fresh click handler
+      newButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+
+        let newTheme;
+        if (!currentTheme || currentTheme === 'light') {
+          newTheme = 'dark';
+        } else {
+          newTheme = 'light';
+        }
+
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+
+        // Force a visual update
+        document.body.style.transition = 'none';
+        document.body.offsetHeight; // Trigger reflow
+        document.body.style.transition = '';
+      });
+
+      return true;
+    }
+    return false;
+  }
+
+  // Try multiple times with delays
+  if (!initThemeToggle()) {
+    setTimeout(() => {
+      if (!initThemeToggle()) {
+        setTimeout(() => {
+          initThemeToggle();
+        }, 500);
+      }
+    }, 100);
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checkout — Force Dowels™</title>
+  <meta name="description" content="Enter shipping details, get live rates (UPS/USPS/LTL), and proceed to payment." />
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=107">
+  <link rel="stylesheet" href="styles/shared/navbar.css?v=2">
+  <link rel="stylesheet" href="styles/shared/footer.css?v=1">
+
+  <!-- Clerk (Browser) -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_dmlhYmxlLWhhZGRvY2stMzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
+  </script>
+
+  <script defer src="scripts/shared/site-header.js?v=1"></script>
+  <script defer src="scripts/shared/site-footer.js?v=1"></script>
+  <script defer src="scripts/shared/script-badge.js?v=1"></script>
+</head>
+<body class="checkout-page">
+
+<!-- Header -->
+<site-header></site-header>
+
+<main id="content">
+  <section class="section">
+    <div class="container">
+      <h1>Checkout</h1>
+      <p class="page-back"><a href="/cart.html" class="muted">← Back to Cart</a></p>
+
+      <div class="checkout-layout">
+        <!-- LEFT: Shipping address + rates -->
+        <div class="checkout-left">
+          <div class="card">
+            <h3>Shipping Address</h3>
+
+            <form id="ship-form" class="ship-form" onsubmit="return false;">
+              <label class="field">
+                <span>Company Name <b>*</b></span>
+                <input id="ship-company" class="input" type="text" autocomplete="organization" placeholder="Your Company Name" required>
+              </label>
+
+              <label class="field">
+                <span>Contact Name <b>*</b></span>
+                <input id="ship-contact" class="input" type="text" autocomplete="name" placeholder="Contact Person Name" required>
+              </label>
+
+              <label class="field">
+                <span>Email Address <b>*</b></span>
+                <input id="ship-email" class="input" type="email" autocomplete="email" placeholder="your@email.com" required>
+              </label>
+
+              <label class="field">
+                <span>Phone Number <b>*</b></span>
+                <input id="ship-phone" class="input" type="tel" autocomplete="tel" placeholder="(555) 555-5555" required>
+              </label>
+
+              <label class="field">
+                <span>Country <b>*</b></span>
+                <select id="ship-country" class="select" required>
+                  <option value="US">United States</option>
+                  <option value="CA">Canada</option>
+                  <option value="MX">Mexico</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>State / Province <b>*</b></span>
+                <select id="ship-state" class="select" required></select>
+              </label>
+
+              <label class="field">
+                <span>City <b>*</b></span>
+                <input id="ship-city" class="input" autocomplete="address-level2" placeholder="City" required>
+              </label>
+
+              <label class="field">
+                <span>ZIP / Postal <b>*</b></span>
+                <input id="ship-postal" class="input" inputmode="text" autocomplete="postal-code" placeholder="85142" required>
+              </label>
+
+              <label class="field field--full">
+                <span>Street Address <b>*</b></span>
+                <input id="ship-street" class="input" autocomplete="address-line1" placeholder="Street address" required>
+              </label>
+
+              <div class="actions">
+                <button id="btn-get-rates" type="button" class="btn btn--primary">Get Rates</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="card">
+            <h3>Shipping Options</h3>
+            <ul id="rates-list" class="rates-list">
+              <li class="rates-empty">No rates yet. Enter an address and click Get Rates.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- RIGHT: Order summary -->
+        <aside class="checkout-right">
+          <div class="summary-card">
+            <h3>Order Summary</h3>
+            <div class="summary-rows">
+              <div class="summary-row">
+                <span>Subtotal</span>
+                <strong id="summary-subtotal">$0.00</strong>
+              </div>
+              <div class="summary-row">
+                <span>Shipping</span>
+                <strong id="summary-shipping">$0.00</strong>
+              </div>
+              <div class="summary-row total">
+                <span>Grand Total</span>
+                <strong id="summary-grand">$0.00</strong>
+              </div>
+            </div>
+
+            <button id="btn-checkout" class="btn btn--accent btn-wide" type="button">
+              Proceed to Payment
+            </button>
+
+            <div id="test-mode-section" class="checkout-test-mode" hidden>
+              <label class="checkout-test-mode-label">
+                <input type="checkbox" id="test-mode-checkbox">
+                <span>Test Mode (free checkout — no payment required)</span>
+              </label>
+              <p>Enable this to test the checkout flow without creating a real charge. Order confirmation and emails will still be sent.</p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Footer -->
+<site-footer></site-footer>
+
+<script defer src="scripts/shared/products.js?v=1"></script>
+<script defer src="scripts/customer/script-checkout.js?v=checkout-20260814"></script>
+</body>
+</html>

@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Distributor Database - Force Dowel Admin</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/admin/navbar.css?v=1">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .toolbar {
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid #e5e7eb;
+      flex-wrap: wrap;
+    }
+    .toolbar input {
+      flex: 1;
+      min-width: 250px;
+      padding: 10px 16px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 15px;
+      font-family: inherit;
+    }
+    .toolbar input:focus {
+      outline: none;
+      border-color: #1C4A99;
+      box-shadow: 0 0 0 3px rgba(28, 74, 153, 0.1);
+    }
+    .filter-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      width: 100%;
+      margin-top: 8px;
+    }
+    .filter-tab {
+      padding: 8px 16px;
+      border: 2px solid #e5e7eb;
+      background: white;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #6b7280;
+    }
+    .filter-tab:hover {
+      border-color: #1C4A99;
+      color: #1C4A99;
+    }
+    .filter-tab.active {
+      background: #1C4A99;
+      color: white;
+      border-color: #1C4A99;
+    }
+    .filter-tab .count {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 2px 8px;
+      background: rgba(0,0,0,0.1);
+      border-radius: 10px;
+      font-size: 12px;
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .btn-primary {
+      background: #1C4A99;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #163a7a;
+    }
+    .distributor-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 0;
+      margin-bottom: 20px;
+      transition: all 0.2s;
+      overflow: hidden;
+    }
+    .distributor-card:hover {
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    .card-header {
+      background: linear-gradient(135deg, #1C4A99 0%, #2563eb 100%);
+      color: white;
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-body {
+      padding: 24px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1C4A99;
+      margin: 20px 0 12px 0;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .section-title:first-child {
+      margin-top: 0;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .info-item {
+      background: #f9fafb;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border-left: 3px solid #1C4A99;
+    }
+    .company-name {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .submitted-date {
+      font-size: 13px;
+      opacity: 0.9;
+      margin-top: 4px;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .status-active {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .status-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .status-inactive {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+    .status-approved {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .status-rejected {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .distributor-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .detail-item {
+      font-size: 14px;
+    }
+    .detail-label {
+      color: #6b7280;
+      font-weight: 600;
+      display: block;
+      margin-bottom: 2px;
+    }
+    .detail-value {
+      color: #111827;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #f3f4f6;
+    }
+    .btn-accept {
+      background: #10b981;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-accept:hover {
+      background: #059669;
+    }
+    .btn-reject {
+      background: #ef4444;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-reject:hover {
+      background: #dc2626;
+    }
+    .btn-edit {
+      background: #6b7280;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-edit:hover {
+      background: #4b5563;
+    }
+    .order-history {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #f3f4f6;
+      display: none;
+    }
+    .order-history.expanded {
+      display: block;
+    }
+    .order-history h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #374151;
+    }
+    .order-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .order-table th {
+      text-align: left;
+      padding: 8px;
+      background: #f9fafb;
+      font-weight: 600;
+      color: #6b7280;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .order-table td {
+      padding: 8px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .order-table tr:last-child td {
+      border-bottom: none;
+    }
+    .loading, .empty {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+    }
+    .expand-icon {
+      transition: transform 0.2s;
+      display: inline-block;
+    }
+    .expand-icon.expanded {
+      transform: rotate(180deg);
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.active {
+      display: flex;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #6b7280;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: #1C4A99;
+      box-shadow: 0 0 0 3px rgba(28, 74, 153, 0.1);
+    }
+    @media (max-width: 768px) {
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .toolbar input {
+        min-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <script src="scripts/admin/script-admin-auth.js"></script>
+  <script defer src="scripts/admin/admin-header.js"></script>
+
+  <admin-header></admin-header>
+
+  <div class="container">
+    <div class="toolbar">
+      <input type="text" id="search-input" placeholder="Search distributors...">
+      <button class="btn btn-primary" onclick="openAddModal()">+ Add Distributor</button>
+
+      <div class="filter-tabs">
+        <button class="filter-tab active" onclick="filterByStatus('all')" data-status="all">
+          All <span class="count" id="count-all">0</span>
+        </button>
+        <button class="filter-tab" onclick="filterByStatus('pending')" data-status="pending">
+          Pending <span class="count" id="count-pending">0</span>
+        </button>
+        <button class="filter-tab" onclick="filterByStatus('approved')" data-status="approved">
+          Approved <span class="count" id="count-approved">0</span>
+        </button>
+        <button class="filter-tab" onclick="filterByStatus('rejected')" data-status="rejected">
+          Rejected <span class="count" id="count-rejected">0</span>
+        </button>
+        <button class="filter-tab" onclick="filterByStatus('active')" data-status="active">
+          Active <span class="count" id="count-active">0</span>
+        </button>
+        <button class="filter-tab" onclick="filterByStatus('inactive')" data-status="inactive">
+          Inactive <span class="count" id="count-inactive">0</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="distributors-container">
+      <div class="loading">Loading distributors...</div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Modal -->
+  <div class="modal" id="distributor-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">Add Distributor</h2>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="distributor-form" onsubmit="saveDistributor(event)">
+        <input type="hidden" id="distributor-id">
+        <div class="form-group">
+          <label for="company-name">Company Name *</label>
+          <input type="text" id="company-name" required>
+        </div>
+        <div class="form-group">
+          <label for="contact-name">Contact Name</label>
+          <input type="text" id="contact-name">
+        </div>
+        <div class="form-group">
+          <label for="email">Email *</label>
+          <input type="email" id="email" required>
+        </div>
+        <div class="form-group">
+          <label for="phone">Phone</label>
+          <input type="tel" id="phone">
+        </div>
+        <div class="form-group">
+          <label for="territory">Territory</label>
+          <input type="text" id="territory" placeholder="e.g., Arizona, Nevada">
+        </div>
+        <div class="form-group">
+          <label for="status">Status</label>
+          <select id="status">
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="notes">Notes</label>
+          <textarea id="notes" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Save Distributor</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let allDistributors = [];
+    let currentFilter = 'all';
+
+    async function loadDistributors() {
+      try {
+        const res = await fetch('/api/admin/distributors');
+        if (!res.ok) throw new Error('Failed to load distributors');
+        const data = await res.json();
+        allDistributors = data.distributors || [];
+        updateCounts();
+        renderDistributors();
+      } catch (err) {
+        document.getElementById('distributors-container').innerHTML = `
+          <div class="empty">
+            <h2>Error loading distributors</h2>
+            <p>${err.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    function updateCounts() {
+      const counts = {
+        all: 0,
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+        active: 0,
+        inactive: 0
+      };
+
+      allDistributors.forEach(dist => {
+        // Count for "All" excludes rejected
+        if (dist.status !== 'rejected') {
+          counts.all++;
+        }
+
+        if (counts[dist.status] !== undefined) {
+          counts[dist.status]++;
+        }
+      });
+
+      Object.keys(counts).forEach(status => {
+        const countEl = document.getElementById(`count-${status}`);
+        if (countEl) countEl.textContent = counts[status];
+      });
+    }
+
+    function filterByStatus(status) {
+      currentFilter = status;
+
+      // Update active tab
+      document.querySelectorAll('.filter-tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      document.querySelector(`[data-status="${status}"]`).classList.add('active');
+
+      renderDistributors();
+    }
+
+    function renderDistributors() {
+      const container = document.getElementById('distributors-container');
+      const searchTerm = document.getElementById('search-input').value.toLowerCase();
+
+      // Filter by status
+      let filtered = allDistributors.filter(dist => {
+        // "All" filter excludes rejected applications
+        if (currentFilter === 'all' && dist.status === 'rejected') {
+          return false;
+        }
+
+        if (currentFilter !== 'all' && dist.status !== currentFilter) {
+          return false;
+        }
+
+        // Filter by search term
+        return !searchTerm ||
+          dist.company_name.toLowerCase().includes(searchTerm) ||
+          (dist.contact_name && dist.contact_name.toLowerCase().includes(searchTerm)) ||
+          (dist.territory && dist.territory.toLowerCase().includes(searchTerm));
+      });
+
+      // Sort: Pending first, then by created date (newest first)
+      filtered.sort((a, b) => {
+        // Pending applications always come first
+        if (a.status === 'pending' && b.status !== 'pending') return -1;
+        if (a.status !== 'pending' && b.status === 'pending') return 1;
+
+        // Then sort by created date (newest first)
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty">
+            <h2>No distributors found</h2>
+            <p>Click "Add Distributor" to create one</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(dist => {
+        let details = {};
+        try {
+          details = dist.notes ? JSON.parse(dist.notes) : {};
+        } catch (e) {
+          details = { additional_notes: dist.notes };
+        }
+
+        return `
+        <div class="distributor-card">
+          <div class="card-header">
+            <div>
+              <h3 class="company-name">${escapeHtml(dist.company_name)}</h3>
+              <div class="submitted-date">Submitted: ${dist.created_at}</div>
+            </div>
+            <span class="status-badge status-${dist.status}">${dist.status.charAt(0).toUpperCase() + dist.status.slice(1)}</span>
+          </div>
+
+          <div class="card-body">
+            <!-- Contact Information -->
+            <h4 class="section-title">Contact Information</h4>
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="detail-label">Contact Name</div>
+                <div class="detail-value">${escapeHtml(dist.contact_name || 'N/A')}</div>
+              </div>
+              ${details.title ? `
+              <div class="info-item">
+                <div class="detail-label">Title</div>
+                <div class="detail-value">${escapeHtml(details.title)}</div>
+              </div>
+              ` : ''}
+              <div class="info-item">
+                <div class="detail-label">Email</div>
+                <div class="detail-value"><a href="mailto:${dist.email}" style="color: #1C4A99;">${escapeHtml(dist.email)}</a></div>
+              </div>
+              ${dist.phone ? `
+              <div class="info-item">
+                <div class="detail-label">Phone</div>
+                <div class="detail-value">${escapeHtml(dist.phone)}</div>
+              </div>
+              ` : ''}
+              ${details.website ? `
+              <div class="info-item">
+                <div class="detail-label">Website</div>
+                <div class="detail-value"><a href="${escapeHtml(details.website)}" target="_blank" style="color: #1C4A99;">${escapeHtml(details.website)}</a></div>
+              </div>
+              ` : ''}
+            </div>
+
+            <!-- Address -->
+            ${details.street || details.city || details.state || details.zip || details.country ? `
+            <h4 class="section-title">Business Address</h4>
+            <div class="info-grid">
+              ${details.street ? `
+              <div class="info-item">
+                <div class="detail-label">Street</div>
+                <div class="detail-value">${escapeHtml(details.street)}</div>
+              </div>
+              ` : ''}
+              ${details.city ? `
+              <div class="info-item">
+                <div class="detail-label">City</div>
+                <div class="detail-value">${escapeHtml(details.city)}</div>
+              </div>
+              ` : ''}
+              ${details.state ? `
+              <div class="info-item">
+                <div class="detail-label">State</div>
+                <div class="detail-value">${escapeHtml(details.state)}</div>
+              </div>
+              ` : ''}
+              ${details.zip ? `
+              <div class="info-item">
+                <div class="detail-label">ZIP Code</div>
+                <div class="detail-value">${escapeHtml(details.zip)}</div>
+              </div>
+              ` : ''}
+              ${details.country ? `
+              <div class="info-item">
+                <div class="detail-label">Country</div>
+                <div class="detail-value">${escapeHtml(details.country)}</div>
+              </div>
+              ` : ''}
+            </div>
+            ` : ''}
+
+            <!-- Business Details -->
+            <h4 class="section-title">Business Profile</h4>
+            <div class="info-grid">
+              ${details.business_type ? `
+              <div class="info-item">
+                <div class="detail-label">Business Type</div>
+                <div class="detail-value">${escapeHtml(details.business_type)}</div>
+              </div>
+              ` : ''}
+              ${details.years_in_business ? `
+              <div class="info-item">
+                <div class="detail-label">Years in Business</div>
+                <div class="detail-value">${escapeHtml(details.years_in_business)}</div>
+              </div>
+              ` : ''}
+              ${details.resale_tax_id ? `
+              <div class="info-item">
+                <div class="detail-label">Resale/Tax ID</div>
+                <div class="detail-value">${escapeHtml(details.resale_tax_id)}</div>
+              </div>
+              ` : ''}
+              ${details.monthly_volume ? `
+              <div class="info-item">
+                <div class="detail-label">Monthly Volume</div>
+                <div class="detail-value">${escapeHtml(details.monthly_volume)}</div>
+              </div>
+              ` : ''}
+              ${dist.territory ? `
+              <div class="info-item">
+                <div class="detail-label">Territory</div>
+                <div class="detail-value">${escapeHtml(dist.territory)}</div>
+              </div>
+              ` : ''}
+              ${details.compatibility ? `
+              <div class="info-item">
+                <div class="detail-label">System Compatibility</div>
+                <div class="detail-value">${escapeHtml(details.compatibility)}</div>
+              </div>
+              ` : ''}
+            </div>
+
+            <!-- Additional Notes -->
+            ${details.additional_notes ? `
+            <h4 class="section-title">Additional Information</h4>
+            <div style="background: #f9fafb; padding: 16px; border-radius: 8px; border-left: 3px solid #1C4A99;">
+              <div class="detail-value" style="white-space: pre-wrap;">${escapeHtml(details.additional_notes)}</div>
+            </div>
+            ` : ''}
+
+            <!-- Purchase History (for approved/active distributors) -->
+            ${(dist.status === 'approved' || dist.status === 'active') ? `
+            <h4 class="section-title">Purchase History</h4>
+            <div id="orders-${dist.id}" class="orders-section">
+              <button class="btn btn-secondary" onclick="loadDistributorOrders(${dist.id}, event)" style="margin-bottom: 12px;">
+                📦 View Order History
+              </button>
+              <button class="btn btn-primary" onclick="addDistributorOrder(${dist.id}, event)" style="margin-bottom: 12px; margin-left: 8px;">
+                ➕ Add Order
+              </button>
+              <div id="orders-list-${dist.id}" style="display: none;"></div>
+            </div>
+            ` : ''}
+
+            <!-- Action Buttons -->
+            ${dist.status === 'pending' ? `
+            <div class="action-buttons">
+              <button class="btn-accept" onclick="updateStatus(${dist.id}, 'approved', event)">✅ Accept Application</button>
+              <button class="btn-reject" onclick="updateStatus(${dist.id}, 'rejected', event)">❌ Decline Application</button>
+              <button class="btn-edit" onclick="editDistributor(${dist.id}, event)">Edit</button>
+            </div>
+            ` : `
+            <div class="action-buttons">
+              <button class="btn-edit" onclick="editDistributor(${dist.id}, event)">Edit Details</button>
+            </div>
+            `}
+          </div>
+        </div>
+      `;
+      }).join('');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function openAddModal() {
+      document.getElementById('modal-title').textContent = 'Add Distributor';
+      document.getElementById('distributor-form').reset();
+      document.getElementById('distributor-id').value = '';
+      document.getElementById('distributor-modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('distributor-modal').classList.remove('active');
+    }
+
+    async function saveDistributor(event) {
+      event.preventDefault();
+
+      const id = document.getElementById('distributor-id').value;
+      const data = {
+        company_name: document.getElementById('company-name').value,
+        contact_name: document.getElementById('contact-name').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+        territory: document.getElementById('territory').value,
+        status: document.getElementById('status').value,
+        notes: document.getElementById('notes').value
+      };
+
+      if (id) {
+        data.id = parseInt(id);
+      }
+
+      try {
+        const res = await fetch('/api/admin/distributors', {
+          method: id ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (!res.ok) throw new Error('Failed to save distributor');
+
+        closeModal();
+        await loadDistributors();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function updateStatus(id, newStatus, event) {
+      event.stopPropagation();
+
+      const distributor = allDistributors.find(d => d.id === id);
+      if (!distributor) return;
+
+      const confirmMsg = newStatus === 'approved'
+        ? `✅ Accept application from ${distributor.company_name}?\n\nThis will mark them as approved.`
+        : `❌ Reject application from ${distributor.company_name}?\n\nThis will mark them as rejected.`;
+
+      if (!confirm(confirmMsg)) return;
+
+      // Show loading state
+      const button = event.target;
+      const originalText = button.textContent;
+      button.textContent = '⏳ Processing...';
+      button.disabled = true;
+
+      try {
+        const res = await fetch('/api/admin/distributors', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: id,
+            company_name: distributor.company_name,
+            contact_name: distributor.contact_name,
+            email: distributor.email,
+            phone: distributor.phone,
+            territory: distributor.territory,
+            status: newStatus,
+            notes: distributor.notes
+          })
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.message || 'Failed to update status');
+        }
+
+        // Reload the distributors list
+        await loadDistributors();
+
+        // Show success message
+        const successMsg = newStatus === 'approved'
+          ? `✅ Application accepted! ${distributor.company_name} is now approved.`
+          : `❌ Application rejected. ${distributor.company_name} has been marked as rejected.`;
+
+        alert(successMsg);
+      } catch (err) {
+        console.error('Error updating status:', err);
+        alert('❌ Error: ' + err.message);
+        button.textContent = originalText;
+        button.disabled = false;
+      }
+    }
+
+    function editDistributor(id, event) {
+      event.stopPropagation();
+
+      const distributor = allDistributors.find(d => d.id === id);
+      if (!distributor) return;
+
+      document.getElementById('modal-title').textContent = 'Edit Distributor';
+      document.getElementById('distributor-id').value = distributor.id;
+      document.getElementById('company-name').value = distributor.company_name;
+      document.getElementById('contact-name').value = distributor.contact_name || '';
+      document.getElementById('email').value = distributor.email;
+      document.getElementById('phone').value = distributor.phone || '';
+      document.getElementById('territory').value = distributor.territory || '';
+      document.getElementById('status').value = distributor.status;
+      document.getElementById('notes').value = distributor.notes || '';
+      document.getElementById('distributor-modal').classList.add('active');
+    }
+
+    // Event listeners
+    document.getElementById('search-input').addEventListener('input', renderDistributors);
+
+    // Close modal on outside click
+    document.getElementById('distributor-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'distributor-modal') closeModal();
+    });
+
+    // Load distributor orders
+    async function loadDistributorOrders(distributorId, event) {
+      event.stopPropagation();
+
+      const listEl = document.getElementById(`orders-list-${distributorId}`);
+      const button = event.target;
+
+      // Toggle visibility
+      if (listEl.style.display === 'block') {
+        listEl.style.display = 'none';
+        button.textContent = '📦 View Order History';
+        return;
+      }
+
+      button.textContent = '⏳ Loading...';
+      button.disabled = true;
+
+      try {
+        const res = await fetch(`/api/admin/distributor-orders?distributor_id=${distributorId}`);
+        if (!res.ok) throw new Error('Failed to load orders');
+
+        const data = await res.json();
+        const orders = data.orders || [];
+
+        if (orders.length === 0) {
+          listEl.innerHTML = '<div style="padding: 16px; background: #f9fafb; border-radius: 8px; text-align: center; color: #6b7280;">No orders yet</div>';
+        } else {
+          listEl.innerHTML = `
+            <table style="width: 100%; border-collapse: collapse; margin-top: 12px;">
+              <thead>
+                <tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                  <th style="padding: 12px; text-align: left; font-weight: 600;">Order ID</th>
+                  <th style="padding: 12px; text-align: left; font-weight: 600;">Date</th>
+                  <th style="padding: 12px; text-align: right; font-weight: 600;">Total</th>
+                  <th style="padding: 12px; text-align: left; font-weight: 600;">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${orders.map(order => `
+                  <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 12px;">${escapeHtml(order.order_id)}</td>
+                    <td style="padding: 12px;">${order.order_date}</td>
+                    <td style="padding: 12px; text-align: right;">$${Number(order.total_amount).toFixed(2)}</td>
+                    <td style="padding: 12px;">
+                      <span class="status-badge status-${order.status}">${order.status}</span>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          `;
+        }
+
+        listEl.style.display = 'block';
+        button.textContent = '📦 Hide Order History';
+        button.disabled = false;
+      } catch (err) {
+        alert('Error loading orders: ' + err.message);
+        button.textContent = '📦 View Order History';
+        button.disabled = false;
+      }
+    }
+
+    // Add order to distributor
+    async function addDistributorOrder(distributorId, event) {
+      event.stopPropagation();
+
+      const distributor = allDistributors.find(d => d.id === distributorId);
+      if (!distributor) return;
+
+      const orderId = prompt(`Add order for ${distributor.company_name}\n\nEnter Order ID:`);
+      if (!orderId) return;
+
+      const totalAmount = prompt('Enter total amount (e.g., 1250.00):');
+      if (!totalAmount) return;
+
+      const items = prompt('Enter items description (optional):');
+
+      try {
+        const res = await fetch('/api/admin/distributor-orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            distributor_id: distributorId,
+            order_id: orderId,
+            total_amount: parseFloat(totalAmount),
+            items: items || null,
+            status: 'completed'
+          })
+        });
+
+        if (!res.ok) throw new Error('Failed to add order');
+
+        alert('✅ Order added successfully!');
+
+        // Reload orders if they're currently displayed
+        const listEl = document.getElementById(`orders-list-${distributorId}`);
+        if (listEl.style.display === 'block') {
+          // Trigger reload by simulating button click
+          const viewButton = event.target.previousElementSibling;
+          listEl.style.display = 'none';
+          viewButton.click();
+        }
+      } catch (err) {
+        alert('❌ Error adding order: ' + err.message);
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Load on page load
+    loadDistributors();
+  </script>
+</body>
+</html>
+

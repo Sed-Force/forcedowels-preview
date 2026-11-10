@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Thank You — Force Dowels™</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=33">
+  <link rel="stylesheet" href="styles/shared/navbar.css?v=2">
+  <link rel="stylesheet" href="styles/shared/footer.css?v=1">
+  <style>
+    .wrap{max-width:760px;margin:56px auto 48px;padding:0 16px}
+    .card{background:#0f172a;color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:28px}
+    .card h1{margin:0 0 8px;font-size:28px}
+    .muted{opacity:.8;margin:0 0 20px}
+    .btnbar{display:flex;gap:12px;flex-wrap:wrap}
+  </style>
+
+  <!-- Clerk (Browser) -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_dmlhYmxlLWhhZGRvY2stMzYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
+  </script>
+
+  <script defer src="scripts/shared/site-header.js?v=1"></script>
+  <script defer src="scripts/shared/site-footer.js?v=1"></script>
+  <script defer src="scripts/shared/products.js?v=1"></script>
+  <script defer src="scripts/shared/script-badge.js?v=1"></script>
+</head>
+<body>
+<site-header></site-header>
+
+  <main class="wrap">
+    <div class="card">
+      <h1>Thank you! 🎉</h1>
+      <p class="muted">Your payment was successful. A receipt has been emailed to you.</p>
+      <div class="btnbar">
+        <a class="btn btn--accent" href="/order.html">Back to Order Page</a>
+        <a class="btn btn--ghost" href="/">Return Home</a>
+      </div>
+    </div>
+  </main>
+
+<site-footer></site-footer>
+</body>
+</html>
